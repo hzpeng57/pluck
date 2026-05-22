@@ -3,6 +3,7 @@ use crate::git::ops::branch::{create_branch, delete_branch};
 use crate::git::ops::checkout::checkout_branch;
 use crate::git::ops::commit::commit_files;
 use crate::git::ops::fetch::fetch_all;
+use crate::git::ops::merge::{merge_abort, merge_continue, merge_into_current};
 use crate::git::ops::push::push;
 use crate::git::snapshot::RepoSnapshot;
 use crate::state::{refresh_session, AppState};
@@ -127,5 +128,29 @@ pub async fn fetch(id: String, state: State<'_, AppState>) -> GitResult<RepoSnap
     let sess = state.get(&id).await.ok_or_else(|| GitError::parse("unknown repo id"))?;
     let path = { sess.lock().await.path.clone() };
     fetch_all(&path).await?;
+    refresh_session(&sess).await
+}
+
+#[tauri::command]
+pub async fn merge(id: String, branch: String, state: State<'_, AppState>) -> GitResult<RepoSnapshot> {
+    let sess = state.get(&id).await.ok_or_else(|| GitError::parse("unknown repo id"))?;
+    let path = { sess.lock().await.path.clone() };
+    merge_into_current(&path, &branch).await?;
+    refresh_session(&sess).await
+}
+
+#[tauri::command]
+pub async fn merge_abort_cmd(id: String, state: State<'_, AppState>) -> GitResult<RepoSnapshot> {
+    let sess = state.get(&id).await.ok_or_else(|| GitError::parse("unknown repo id"))?;
+    let path = { sess.lock().await.path.clone() };
+    merge_abort(&path).await?;
+    refresh_session(&sess).await
+}
+
+#[tauri::command]
+pub async fn merge_continue_cmd(id: String, state: State<'_, AppState>) -> GitResult<RepoSnapshot> {
+    let sess = state.get(&id).await.ok_or_else(|| GitError::parse("unknown repo id"))?;
+    let path = { sess.lock().await.path.clone() };
+    merge_continue(&path).await?;
     refresh_session(&sess).await
 }

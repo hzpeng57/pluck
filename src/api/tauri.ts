@@ -17,4 +17,7 @@ export const ops = {
     invoke<RepoSnapshot>("branch_delete", { id, name, force }),
   commit: (id: string, files: string[], message: string, skipHooks: boolean) =>
     invoke<RepoSnapshot>("commit", { id, files, message, skipHooks }),
+  merge: (id: string, branch: string) => invoke<RepoSnapshot>("merge", { id, branch }),
+  mergeAbort: (id: string) => invoke<RepoSnapshot>("merge_abort_cmd", { id }),
+  mergeContinue: (id: string) => invoke<RepoSnapshot>("merge_continue_cmd", { id }),
 };

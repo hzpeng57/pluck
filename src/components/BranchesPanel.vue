@@ -56,6 +56,14 @@ async function del() {
   }
 }
 
+async function mergeIntoCurrent() {
+  if (!menu.value || !repos.activeId) return;
+  const id = repos.activeId; const name = menu.value.branch.name;
+  menu.value = null;
+  try { state.snapshot = await ops.merge(id, name); }
+  catch (e: any) { state.lastError = e?.data?.friendly ?? String(e); }
+}
+
 window.addEventListener("click", () => (menu.value = null));
 </script>
 
@@ -92,6 +100,8 @@ window.addEventListener("click", () => (menu.value = null));
               @click="newFromHere">New branch from here…</button>
       <button class="block w-full text-left px-3 py-1 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-red-600"
               @click="del" :disabled="menu.branch.isCurrent">Delete</button>
+      <button class="block w-full text-left px-3 py-1 hover:bg-neutral-100 dark:hover:bg-neutral-700"
+              @click="mergeIntoCurrent" :disabled="menu.branch.isCurrent">Merge into current</button>
     </div>
   </div>
 </template>
