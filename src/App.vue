@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { watch } from "vue";
+import { invoke } from "@tauri-apps/api/core";
 import { useReposStore } from "./stores/repos";
 import { useRepoStateStore } from "./stores/repoState";
+import type { RepoSnapshot } from "./types/git";
 import RepoSwitcher from "./components/RepoSwitcher.vue";
 import TitleBar from "./components/TitleBar.vue";
 import StatusBar from "./components/StatusBar.vue";
@@ -16,6 +18,27 @@ const repos = useReposStore();
 const state = useRepoStateStore();
 watch(() => repos.activeId, id => { if (id) state.open(id); }, { immediate: true });
 window.addEventListener("focus", () => { if (repos.activeId) state.refresh(repos.activeId); });
+
+function isMeta(e: KeyboardEvent) { return e.metaKey || e.ctrlKey; }
+
+window.addEventListener("keydown", async (e) => {
+  if (!repos.activeId) return;
+  if (isMeta(e) && e.key.toLowerCase() === "k" && !e.shiftKey) {
+    e.preventDefault();
+    (document.querySelector("textarea") as HTMLTextAreaElement | null)?.focus();
+  } else if (isMeta(e) && e.shiftKey && e.key.toLowerCase() === "k") {
+    e.preventDefault();
+    try { state.snapshot = await invoke<RepoSnapshot>("push_branch", { id: repos.activeId, forceWithLease: false }); }
+    catch (err: any) { state.pushToast("error", err?.data?.friendly ?? String(err)); }
+  } else if (isMeta(e) && e.key.toLowerCase() === "t") {
+    e.preventDefault();
+    try { state.snapshot = await invoke<RepoSnapshot>("fetch", { id: repos.activeId }); }
+    catch (err: any) { state.pushToast("error", err?.data?.friendly ?? String(err)); }
+  } else if (isMeta(e) && e.key.toLowerCase() === "r") {
+    e.preventDefault();
+    state.refresh(repos.activeId);
+  }
+});
 </script>
 
 <template>
