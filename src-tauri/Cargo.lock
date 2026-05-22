@@ -3341,6 +3341,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "taptap-git-bridge"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "target-lexicon"
 version = "0.12.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
