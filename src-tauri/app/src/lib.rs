@@ -18,6 +18,7 @@ pub fn run() {
             commands::branch_delete,
             commands::commit,
             commands::push_branch,
+            commands::fetch,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
