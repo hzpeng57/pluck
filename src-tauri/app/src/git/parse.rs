@@ -32,6 +32,7 @@ pub struct StatusOutput {
 
 pub fn parse_status_porcelain_v2(raw: &str) -> GitResult<StatusOutput> {
     let mut head = HeadInfo { branch: None, detached_at: None };
+    let mut oid: Option<String> = None;
     let mut upstream = None;
     let mut ahead = 0u32;
     let mut behind = 0u32;
@@ -41,7 +42,7 @@ pub fn parse_status_porcelain_v2(raw: &str) -> GitResult<StatusOutput> {
         if let Some(rest) = line.strip_prefix("# branch.head ") {
             if rest == "(detached)" { head.branch = None } else { head.branch = Some(rest.to_string()) }
         } else if let Some(rest) = line.strip_prefix("# branch.oid ") {
-            if head.branch.is_none() { head.detached_at = Some(rest.to_string()) }
+            oid = Some(rest.to_string());
         } else if let Some(rest) = line.strip_prefix("# branch.upstream ") {
             upstream = Some(rest.to_string());
         } else if let Some(rest) = line.strip_prefix("# branch.ab +") {
@@ -68,12 +69,16 @@ pub fn parse_status_porcelain_v2(raw: &str) -> GitResult<StatusOutput> {
             let old_path = np.next().map(|s| s.to_string());
             files.push(WorkingFile { path: new_path, old_path, status: classify(xy) });
         } else if let Some(rest) = line.strip_prefix("u ") {
-            let parts: Vec<&str> = rest.splitn(11, ' ').collect();
-            let path = parts.get(10).ok_or_else(|| GitError::parse("missing path in u"))?;
+            let parts: Vec<&str> = rest.splitn(10, ' ').collect();
+            let path = parts.get(9).ok_or_else(|| GitError::parse("missing path in u"))?;
             files.push(WorkingFile { path: (*path).to_string(), old_path: None, status: FileStatus::Conflicted });
         } else if let Some(rest) = line.strip_prefix("? ") {
             files.push(WorkingFile { path: rest.to_string(), old_path: None, status: FileStatus::Untracked });
         }
+    }
+
+    if head.branch.is_none() {
+        head.detached_at = oid;
     }
 
     Ok(StatusOutput { head, upstream, ahead, behind, files })
@@ -128,7 +133,7 @@ mod tests {
 
     #[test]
     fn parses_conflict() {
-        let raw = "# branch.head main\nu UU N... 100644 100644 100644 100644 a b c d conflict.ts\n";
+        let raw = "# branch.head main\nu UU N... 100644 100644 100644 100644 hhh1 hhh2 hhh3 conflict.ts\n";
         let out = parse_status_porcelain_v2(raw).unwrap();
         assert_eq!(out.files[0].status, FileStatus::Conflicted);
         assert_eq!(out.files[0].path, "conflict.ts");
@@ -140,5 +145,22 @@ mod tests {
         let out = parse_status_porcelain_v2(raw).unwrap();
         assert_eq!(out.ahead, 3);
         assert_eq!(out.behind, 2);
+    }
+
+    #[test]
+    fn normal_branch_does_not_set_detached_at() {
+        // Real git emits oid BEFORE head
+        let raw = "# branch.oid abc123def\n# branch.head main\n# branch.upstream origin/main\n# branch.ab +0 -0\n";
+        let out = parse_status_porcelain_v2(raw).unwrap();
+        assert_eq!(out.head.branch.as_deref(), Some("main"));
+        assert_eq!(out.head.detached_at, None);
+    }
+
+    #[test]
+    fn detached_head_sets_detached_at() {
+        let raw = "# branch.oid abc123def\n# branch.head (detached)\n";
+        let out = parse_status_porcelain_v2(raw).unwrap();
+        assert_eq!(out.head.branch, None);
+        assert_eq!(out.head.detached_at.as_deref(), Some("abc123def"));
     }
 }
