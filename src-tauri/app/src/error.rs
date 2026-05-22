@@ -28,6 +28,10 @@ impl GitError {
             "Not a git repository.".into()
         } else if lower.contains("non-fast-forward") {
             "Push rejected: remote has commits you don't have. Pull first or use force-with-lease.".into()
+        } else if lower.contains("fetch first") {
+            "Push rejected: remote has new commits. Fetch and merge/rebase, or use force-with-lease.".into()
+        } else if lower.contains("stale info") {
+            "Push rejected: your view of the remote is stale. Fetch, then retry force-with-lease.".into()
         } else if lower.contains("would be overwritten") {
             "Operation blocked: uncommitted changes would be overwritten.".into()
         } else {
