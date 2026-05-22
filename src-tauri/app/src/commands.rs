@@ -1,4 +1,5 @@
 use crate::error::{GitError, GitResult};
+use crate::git::ops::checkout::checkout_branch;
 use crate::git::snapshot::RepoSnapshot;
 use crate::state::{refresh_session, AppState};
 use serde::Serialize;
@@ -52,4 +53,19 @@ pub async fn repo_refresh(
 #[tauri::command]
 pub async fn repo_open(id: String, state: State<'_, AppState>) -> GitResult<RepoSnapshot> {
     repo_refresh(id, None, state).await
+}
+
+#[tauri::command]
+pub async fn branch_checkout(
+    id: String,
+    name: String,
+    state: State<'_, AppState>,
+) -> GitResult<RepoSnapshot> {
+    let sess = state
+        .get(&id)
+        .await
+        .ok_or_else(|| GitError::parse("unknown repo id"))?;
+    let path = { sess.lock().await.path.clone() };
+    checkout_branch(&path, &name).await?;
+    refresh_session(&sess).await
 }

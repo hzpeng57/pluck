@@ -13,6 +13,7 @@ pub fn run() {
             commands::repo_add,
             commands::repo_refresh,
             commands::repo_open,
+            commands::branch_checkout,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

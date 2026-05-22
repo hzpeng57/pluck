@@ -7,3 +7,8 @@ export const api = {
   repoRefresh: (id: string, logBranch?: string) =>
     invoke<RepoSnapshot>("repo_refresh", { id, logBranch: logBranch ?? null }),
 };
+
+export const ops = {
+  branchCheckout: (id: string, name: string) =>
+    invoke<RepoSnapshot>("branch_checkout", { id, name }),
+};
