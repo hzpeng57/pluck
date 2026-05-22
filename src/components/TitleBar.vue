@@ -21,6 +21,12 @@ async function fetch() {
   try { state.snapshot = await invoke<RepoSnapshot>("fetch", { id: repos.activeId }); }
   catch (e: any) { state.lastError = e?.data?.friendly ?? String(e); }
 }
+
+async function pull() {
+  const b = state.snapshot?.head.branch; if (!b || !repos.activeId) return;
+  try { state.snapshot = await invoke<RepoSnapshot>("pull", { id: repos.activeId, targetBranch: b }); }
+  catch (e: any) { state.lastError = e?.data?.friendly ?? String(e); }
+}
 </script>
 <template>
   <div class="flex items-center px-3 py-1.5 border-b border-neutral-200 dark:border-neutral-800 gap-2">
@@ -35,6 +41,6 @@ async function fetch() {
         <button class="block w-full text-left px-3 py-1 hover:bg-neutral-100 dark:hover:bg-neutral-700" @click="push(true)">Push (force-with-lease)</button>
       </div>
     </div>
-    <button class="px-2 py-0.5 rounded hover:bg-neutral-200 dark:hover:bg-neutral-800" disabled>Pull --rebase</button>
+    <button class="px-2 py-0.5 rounded hover:bg-neutral-200 dark:hover:bg-neutral-800" @click="pull">Pull --rebase</button>
   </div>
 </template>

@@ -22,6 +22,7 @@ pub fn run() {
             commands::merge,
             commands::merge_abort_cmd,
             commands::merge_continue_cmd,
+            commands::pull,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

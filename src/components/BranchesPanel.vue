@@ -2,8 +2,9 @@
 import { ref } from "vue";
 import { useRepoStateStore } from "../stores/repoState";
 import { useReposStore } from "../stores/repos";
-import type { Branch } from "../types/git";
+import type { Branch, RepoSnapshot } from "../types/git";
 import { ops } from "../api/tauri";
+import { invoke } from "@tauri-apps/api/core";
 
 const state = useRepoStateStore();
 const repos = useReposStore();
@@ -64,6 +65,14 @@ async function mergeIntoCurrent() {
   catch (e: any) { state.lastError = e?.data?.friendly ?? String(e); }
 }
 
+async function pullInto() {
+  if (!menu.value || !repos.activeId) return;
+  const id = repos.activeId; const name = menu.value.branch.name;
+  menu.value = null;
+  try { state.snapshot = await invoke<RepoSnapshot>("pull", { id, targetBranch: name }); }
+  catch (e: any) { state.lastError = e?.data?.friendly ?? String(e); }
+}
+
 window.addEventListener("click", () => (menu.value = null));
 </script>
 
@@ -102,6 +111,8 @@ window.addEventListener("click", () => (menu.value = null));
               @click="del" :disabled="menu.branch.isCurrent">Delete</button>
       <button class="block w-full text-left px-3 py-1 hover:bg-neutral-100 dark:hover:bg-neutral-700"
               @click="mergeIntoCurrent" :disabled="menu.branch.isCurrent">Merge into current</button>
+      <button class="block w-full text-left px-3 py-1 hover:bg-neutral-100 dark:hover:bg-neutral-700"
+              @click="pullInto">Pull --rebase</button>
     </div>
   </div>
 </template>

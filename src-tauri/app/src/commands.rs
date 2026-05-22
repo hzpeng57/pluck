@@ -4,6 +4,7 @@ use crate::git::ops::checkout::checkout_branch;
 use crate::git::ops::commit::commit_files;
 use crate::git::ops::fetch::fetch_all;
 use crate::git::ops::merge::{merge_abort, merge_continue, merge_into_current};
+use crate::git::ops::pull::pull_rebase;
 use crate::git::ops::push::push;
 use crate::git::snapshot::RepoSnapshot;
 use crate::state::{refresh_session, AppState};
@@ -152,5 +153,13 @@ pub async fn merge_continue_cmd(id: String, state: State<'_, AppState>) -> GitRe
     let sess = state.get(&id).await.ok_or_else(|| GitError::parse("unknown repo id"))?;
     let path = { sess.lock().await.path.clone() };
     merge_continue(&path).await?;
+    refresh_session(&sess).await
+}
+
+#[tauri::command]
+pub async fn pull(id: String, target_branch: String, state: State<'_, AppState>) -> GitResult<RepoSnapshot> {
+    let sess = state.get(&id).await.ok_or_else(|| GitError::parse("unknown repo id"))?;
+    let path = { sess.lock().await.path.clone() };
+    pull_rebase(&path, &target_branch).await?;
     refresh_session(&sess).await
 }
