@@ -1,0 +1,55 @@
+use crate::error::{GitError, GitResult};
+use crate::git::snapshot::RepoSnapshot;
+use crate::state::{refresh_session, AppState};
+use serde::Serialize;
+use std::path::PathBuf;
+use tauri::State;
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct RepoMeta {
+    pub id: String,
+    pub path: PathBuf,
+    pub name: String,
+}
+
+fn make_id(p: &std::path::Path) -> String {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+    let mut h = DefaultHasher::new();
+    p.hash(&mut h);
+    format!("{:x}", h.finish())
+}
+
+#[tauri::command]
+pub async fn repo_add(path: String, state: State<'_, AppState>) -> GitResult<RepoMeta> {
+    let p = PathBuf::from(&path);
+    if !p.join(".git").exists() {
+        return Err(GitError::parse(format!("Not a git repository: {path}")));
+    }
+    let id = make_id(&p);
+    let name = p.file_name().and_then(|s| s.to_str()).unwrap_or("repo").to_string();
+    state.add(id.clone(), p.clone()).await;
+    Ok(RepoMeta { id, path: p, name })
+}
+
+#[tauri::command]
+pub async fn repo_refresh(
+    id: String,
+    log_branch: Option<String>,
+    state: State<'_, AppState>,
+) -> GitResult<RepoSnapshot> {
+    let sess = state
+        .get(&id)
+        .await
+        .ok_or_else(|| GitError::parse("unknown repo id"))?;
+    if let Some(b) = log_branch {
+        sess.lock().await.log_branch = Some(b);
+    }
+    refresh_session(&sess).await
+}
+
+#[tauri::command]
+pub async fn repo_open(id: String, state: State<'_, AppState>) -> GitResult<RepoSnapshot> {
+    repo_refresh(id, None, state).await
+}
