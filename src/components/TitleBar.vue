@@ -13,19 +13,19 @@ async function push(force: boolean) {
   if (!repos.activeId) return;
   showPushMenu.value = false;
   try { state.snapshot = await invoke<RepoSnapshot>("push_branch", { id: repos.activeId, forceWithLease: force }); }
-  catch (e: any) { state.lastError = e?.data?.friendly ?? String(e); }
+  catch (e: any) { state.pushToast("error", e?.data?.friendly ?? String(e)); }
 }
 
 async function fetch() {
   if (!repos.activeId) return;
   try { state.snapshot = await invoke<RepoSnapshot>("fetch", { id: repos.activeId }); }
-  catch (e: any) { state.lastError = e?.data?.friendly ?? String(e); }
+  catch (e: any) { state.pushToast("error", e?.data?.friendly ?? String(e)); }
 }
 
 async function pull() {
   const b = state.snapshot?.head.branch; if (!b || !repos.activeId) return;
   try { state.snapshot = await invoke<RepoSnapshot>("pull", { id: repos.activeId, targetBranch: b }); }
-  catch (e: any) { state.lastError = e?.data?.friendly ?? String(e); }
+  catch (e: any) { state.pushToast("error", e?.data?.friendly ?? String(e)); }
 }
 </script>
 <template>

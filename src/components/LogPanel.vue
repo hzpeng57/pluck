@@ -19,7 +19,7 @@ async function interactiveRebase() {
   const id = repos.activeId; const from = menu.value.commit.hash;
   menu.value = null;
   try { state.snapshot = await invoke<RepoSnapshot>("rebase_interactive_start", { id, fromCommit: from }); }
-  catch (e: any) { state.lastError = e?.data?.friendly ?? String(e); }
+  catch (e: any) { state.pushToast("error", e?.data?.friendly ?? String(e)); }
 }
 </script>
 

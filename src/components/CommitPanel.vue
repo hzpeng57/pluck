@@ -22,7 +22,7 @@ async function doCommit() {
   try {
     state.snapshot = await ops.commit(repos.activeId, checkedFiles.value, message.value, skipHooks.value);
     message.value = ""; for (const f of files.value) selected[f.path] = false;
-  } catch (e: any) { state.lastError = e?.data?.friendly ?? String(e); }
+  } catch (e: any) { state.pushToast("error", e?.data?.friendly ?? String(e)); }
 }
 </script>
 

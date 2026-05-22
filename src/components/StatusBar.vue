@@ -13,6 +13,5 @@ const counts = computed(() => {
     <span>↑ {{ counts.ahead }}</span>
     <span>↓ {{ counts.behind }}</span>
     <span v-if="state.loading">refreshing…</span>
-    <span v-if="state.lastError" class="text-red-500 truncate">{{ state.lastError }}</span>
   </div>
 </template>

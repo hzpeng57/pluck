@@ -30,7 +30,7 @@ async function checkout() {
   try {
     state.snapshot = await ops.branchCheckout(id, name);
   } catch (e: any) {
-    state.lastError = e?.data?.friendly ?? String(e);
+    state.pushToast("error", e?.data?.friendly ?? String(e));
   }
 }
 
@@ -41,7 +41,7 @@ async function newFromHere() {
   const id = repos.activeId; const from = menu.value.branch.name;
   menu.value = null;
   try { state.snapshot = await ops.branchCreate(id, name, from); }
-  catch (e: any) { state.lastError = e?.data?.friendly ?? String(e); }
+  catch (e: any) { state.pushToast("error", e?.data?.friendly ?? String(e)); }
 }
 async function del() {
   if (!menu.value || !repos.activeId) return;
@@ -52,7 +52,7 @@ async function del() {
   catch (e: any) {
     if (confirm(`${e?.data?.friendly ?? e}\n\nForce delete?`)) {
       try { state.snapshot = await ops.branchDelete(id, name, true); }
-      catch (e2: any) { state.lastError = e2?.data?.friendly ?? String(e2); }
+      catch (e2: any) { state.pushToast("error", e2?.data?.friendly ?? String(e2)); }
     }
   }
 }
@@ -62,7 +62,7 @@ async function mergeIntoCurrent() {
   const id = repos.activeId; const name = menu.value.branch.name;
   menu.value = null;
   try { state.snapshot = await ops.merge(id, name); }
-  catch (e: any) { state.lastError = e?.data?.friendly ?? String(e); }
+  catch (e: any) { state.pushToast("error", e?.data?.friendly ?? String(e)); }
 }
 
 async function pullInto() {
@@ -70,7 +70,7 @@ async function pullInto() {
   const id = repos.activeId; const name = menu.value.branch.name;
   menu.value = null;
   try { state.snapshot = await invoke<RepoSnapshot>("pull", { id, targetBranch: name }); }
-  catch (e: any) { state.lastError = e?.data?.friendly ?? String(e); }
+  catch (e: any) { state.pushToast("error", e?.data?.friendly ?? String(e)); }
 }
 
 window.addEventListener("click", () => (menu.value = null));

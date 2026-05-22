@@ -12,7 +12,7 @@ const op = computed(() => state.snapshot?.inProgress ?? null);
 async function call(cmd: string) {
   if (!repos.activeId) return;
   try { state.snapshot = await invoke<RepoSnapshot>(cmd, { id: repos.activeId }); }
-  catch (e: any) { state.lastError = e?.data?.friendly ?? String(e); }
+  catch (e: any) { state.pushToast("error", e?.data?.friendly ?? String(e)); }
 }
 </script>
 
