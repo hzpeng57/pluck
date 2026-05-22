@@ -264,3 +264,60 @@ mod tests {
         assert_eq!(out.head.detached_at.as_deref(), Some("abc123def"));
     }
 }
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct Commit {
+    pub hash: String, pub short: String,
+    pub author: String, pub email: String, pub date_unix: i64,
+    pub subject: String, pub body: String,
+    pub parents: Vec<String>,
+    pub refs: Vec<String>,
+}
+
+/// Invocation:
+///   git log --format='%H%x1f%h%x1f%an%x1f%ae%x1f%at%x1f%P%x1f%D%x1f%s%x1f%b%x1e' [branch] -n N
+/// %x1f = unit separator, %x1e = record separator.
+pub fn parse_log(raw: &str) -> GitResult<Vec<Commit>> {
+    let mut commits = Vec::new();
+    for record in raw.split('\u{001e}') {
+        let r = record.trim_matches(|c: char| c == '\n' || c == '\u{001e}');
+        if r.is_empty() { continue }
+        let fields: Vec<&str> = r.split('\u{001f}').collect();
+        if fields.len() < 9 { return Err(GitError::parse(format!("log record short: {} fields", fields.len()))) }
+        let date_unix: i64 = fields[4].parse().map_err(|_| GitError::parse("bad date"))?;
+        let parents = if fields[5].is_empty() { vec![] } else { fields[5].split(' ').map(String::from).collect() };
+        let refs = if fields[6].is_empty() {
+            vec![]
+        } else {
+            fields[6].split(", ").map(|s| s.trim_start_matches("HEAD -> ").to_string()).collect()
+        };
+        commits.push(Commit {
+            hash: fields[0].into(), short: fields[1].into(),
+            author: fields[2].into(), email: fields[3].into(), date_unix,
+            parents, refs,
+            subject: fields[7].into(),
+            body: fields[8].into(),
+        });
+    }
+    Ok(commits)
+}
+
+#[cfg(test)]
+mod log_tests {
+    use super::*;
+
+    #[test]
+    fn parses_two_commits() {
+        let raw = "abc123\u{001f}abc1234\u{001f}hzp\u{001f}h@z.p\u{001f}1700000000\u{001f}def456\u{001f}HEAD -> main, origin/main\u{001f}fix: x\u{001f}long body\n\u{001e}\
+                   def456\u{001f}def4567\u{001f}hzp\u{001f}h@z.p\u{001f}1699000000\u{001f}\u{001f}\u{001f}init\u{001f}\n\u{001e}";
+        let log = parse_log(raw).unwrap();
+        assert_eq!(log.len(), 2);
+        assert_eq!(log[0].short, "abc1234");
+        assert_eq!(log[0].subject, "fix: x");
+        assert_eq!(log[0].refs, vec!["main", "origin/main"]);
+        assert_eq!(log[0].parents, vec!["def456"]);
+        assert_eq!(log[1].parents.len(), 0);
+        assert_eq!(log[1].subject, "init");
+    }
+}
