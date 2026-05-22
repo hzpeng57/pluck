@@ -19,7 +19,9 @@ pub fn run() {
             let handle = app.handle().clone();
             let b = bridge_for_setup.clone();
             tauri::async_runtime::spawn(async move {
-                let _ = rebase_editor::start_listener(handle, b).await;
+                if let Err(e) = rebase_editor::start_listener(handle, b).await {
+                    eprintln!("rebase bridge listener failed to start: {e}");
+                }
             });
             Ok(())
         })

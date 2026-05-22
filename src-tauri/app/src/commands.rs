@@ -231,5 +231,13 @@ fn current_bridge_path() -> GitResult<PathBuf> {
     let dev = std::env::current_dir()
         .unwrap_or_default()
         .join("src-tauri/target/debug/taptap-git-bridge");
-    Ok(dev)
+    if dev.exists() {
+        Ok(dev)
+    } else {
+        Err(GitError::parse(format!(
+            "bridge binary not found at {} or {}",
+            candidate.display(),
+            dev.display()
+        )))
+    }
 }
