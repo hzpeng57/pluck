@@ -221,23 +221,24 @@ pub async fn rebase_abort_cmd(
 
 fn current_bridge_path() -> GitResult<PathBuf> {
     let exe = std::env::current_exe().map_err(|e| GitError::parse(e.to_string()))?;
-    let candidate = exe
-        .parent()
-        .unwrap_or_else(|| std::path::Path::new("."))
-        .join("taptap-git-bridge");
-    if candidate.exists() {
-        return Ok(candidate);
+    if let Some(parent) = exe.parent() {
+        let bundled = parent.join("../Resources/binaries/taptap-git-bridge");
+        if bundled.exists() {
+            return Ok(bundled);
+        }
+        let sibling = parent.join("taptap-git-bridge");
+        if sibling.exists() {
+            return Ok(sibling);
+        }
     }
     let dev = std::env::current_dir()
         .unwrap_or_default()
         .join("src-tauri/target/debug/taptap-git-bridge");
     if dev.exists() {
-        Ok(dev)
-    } else {
-        Err(GitError::parse(format!(
-            "bridge binary not found at {} or {}",
-            candidate.display(),
-            dev.display()
-        )))
+        return Ok(dev);
     }
+    Err(GitError::parse(format!(
+        "bridge binary not found (searched bundled, sibling of {:?}, and {:?})",
+        exe, dev
+    )))
 }
