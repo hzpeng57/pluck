@@ -6,10 +6,13 @@ use crate::git::ops::fetch::fetch_all;
 use crate::git::ops::merge::{merge_abort, merge_continue, merge_into_current};
 use crate::git::ops::pull::pull_rebase;
 use crate::git::ops::push::push;
+use crate::git::ops::rebase::{rebase_abort, rebase_continue, rebase_interactive};
 use crate::git::snapshot::RepoSnapshot;
+use crate::rebase_editor::{deliver_reply, socket_path, EditReply, RebaseBridge};
 use crate::state::{refresh_session, AppState};
 use serde::Serialize;
 use std::path::PathBuf;
+use std::sync::Arc;
 use tauri::State;
 
 #[derive(Serialize, Clone)]
@@ -162,4 +165,71 @@ pub async fn pull(id: String, target_branch: String, state: State<'_, AppState>)
     let path = { sess.lock().await.path.clone() };
     pull_rebase(&path, &target_branch).await?;
     refresh_session(&sess).await
+}
+
+#[tauri::command]
+pub async fn rebase_interactive_start(
+    id: String,
+    from_commit: String,
+    state: State<'_, AppState>,
+) -> GitResult<RepoSnapshot> {
+    let sess = state
+        .get(&id)
+        .await
+        .ok_or_else(|| GitError::parse("unknown repo id"))?;
+    let path = { sess.lock().await.path.clone() };
+    let bridge_bin = current_bridge_path()?;
+    rebase_interactive(&path, &from_commit, &bridge_bin, &socket_path()).await?;
+    refresh_session(&sess).await
+}
+
+#[tauri::command]
+pub async fn rebase_reply(
+    reply: EditReply,
+    bridge: State<'_, Arc<RebaseBridge>>,
+) -> GitResult<()> {
+    deliver_reply(&bridge, reply).await
+}
+
+#[tauri::command]
+pub async fn rebase_continue_cmd(
+    id: String,
+    state: State<'_, AppState>,
+) -> GitResult<RepoSnapshot> {
+    let sess = state
+        .get(&id)
+        .await
+        .ok_or_else(|| GitError::parse("unknown repo id"))?;
+    let path = { sess.lock().await.path.clone() };
+    rebase_continue(&path).await?;
+    refresh_session(&sess).await
+}
+
+#[tauri::command]
+pub async fn rebase_abort_cmd(
+    id: String,
+    state: State<'_, AppState>,
+) -> GitResult<RepoSnapshot> {
+    let sess = state
+        .get(&id)
+        .await
+        .ok_or_else(|| GitError::parse("unknown repo id"))?;
+    let path = { sess.lock().await.path.clone() };
+    rebase_abort(&path).await?;
+    refresh_session(&sess).await
+}
+
+fn current_bridge_path() -> GitResult<PathBuf> {
+    let exe = std::env::current_exe().map_err(|e| GitError::parse(e.to_string()))?;
+    let candidate = exe
+        .parent()
+        .unwrap_or_else(|| std::path::Path::new("."))
+        .join("taptap-git-bridge");
+    if candidate.exists() {
+        return Ok(candidate);
+    }
+    let dev = std::env::current_dir()
+        .unwrap_or_default()
+        .join("src-tauri/target/debug/taptap-git-bridge");
+    Ok(dev)
 }

@@ -1,14 +1,28 @@
 pub mod commands;
 pub mod error;
 pub mod git;
+pub mod rebase_editor;
 pub mod state;
+
+use std::sync::Arc;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let bridge = Arc::new(rebase_editor::RebaseBridge::default());
+    let bridge_for_setup = bridge.clone();
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .manage(state::AppState::default())
+        .manage(bridge)
+        .setup(move |app| {
+            let handle = app.handle().clone();
+            let b = bridge_for_setup.clone();
+            tauri::async_runtime::spawn(async move {
+                let _ = rebase_editor::start_listener(handle, b).await;
+            });
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             commands::repo_add,
             commands::repo_refresh,
@@ -23,6 +37,10 @@ pub fn run() {
             commands::merge_abort_cmd,
             commands::merge_continue_cmd,
             commands::pull,
+            commands::rebase_interactive_start,
+            commands::rebase_reply,
+            commands::rebase_continue_cmd,
+            commands::rebase_abort_cmd,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
