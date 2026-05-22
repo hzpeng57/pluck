@@ -15,4 +15,6 @@ export const ops = {
     invoke<RepoSnapshot>("branch_create", { id, name, from }),
   branchDelete: (id: string, name: string, force: boolean) =>
     invoke<RepoSnapshot>("branch_delete", { id, name, force }),
+  commit: (id: string, files: string[], message: string, skipHooks: boolean) =>
+    invoke<RepoSnapshot>("commit", { id, files, message, skipHooks }),
 };

@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from "vue";
 import { useRepoStateStore } from "../stores/repoState";
+import { ops } from "../api/tauri";
+import { useReposStore } from "../stores/repos";
 
 const state = useRepoStateStore();
+const repos = useReposStore();
 const selected = reactive<Record<string, boolean>>({});
 const message = ref("");
 const skipHooks = ref(false);
@@ -12,6 +15,14 @@ const checkedFiles = computed(() => files.value.filter(f => selected[f.path]).ma
 
 function toggleAll(on: boolean) {
   for (const f of files.value) selected[f.path] = on;
+}
+
+async function doCommit() {
+  if (!repos.activeId) return;
+  try {
+    state.snapshot = await ops.commit(repos.activeId, checkedFiles.value, message.value, skipHooks.value);
+    message.value = ""; for (const f of files.value) selected[f.path] = false;
+  } catch (e: any) { state.lastError = e?.data?.friendly ?? String(e); }
 }
 </script>
 
@@ -38,7 +49,8 @@ function toggleAll(on: boolean) {
       </label>
       <div class="flex gap-2">
         <button class="px-3 py-1 rounded bg-blue-600 text-white disabled:opacity-40"
-                :disabled="checkedFiles.length === 0 || !message.trim()">Commit</button>
+                :disabled="checkedFiles.length === 0 || !message.trim()"
+                @click="doCommit">Commit</button>
         <button class="px-3 py-1 rounded border" disabled>Commit & Push</button>
       </div>
     </div>

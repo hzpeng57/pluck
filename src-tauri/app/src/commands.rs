@@ -1,6 +1,7 @@
 use crate::error::{GitError, GitResult};
 use crate::git::ops::branch::{create_branch, delete_branch};
 use crate::git::ops::checkout::checkout_branch;
+use crate::git::ops::commit::commit_files;
 use crate::git::snapshot::RepoSnapshot;
 use crate::state::{refresh_session, AppState};
 use serde::Serialize;
@@ -100,5 +101,13 @@ pub async fn branch_delete(
         .ok_or_else(|| GitError::parse("unknown repo id"))?;
     let path = { sess.lock().await.path.clone() };
     delete_branch(&path, &name, force).await?;
+    refresh_session(&sess).await
+}
+
+#[tauri::command]
+pub async fn commit(id: String, files: Vec<String>, message: String, skip_hooks: bool, state: State<'_, AppState>) -> GitResult<RepoSnapshot> {
+    let sess = state.get(&id).await.ok_or_else(|| GitError::parse("unknown repo id"))?;
+    let path = { sess.lock().await.path.clone() };
+    commit_files(&path, &files, &message, skip_hooks).await?;
     refresh_session(&sess).await
 }
