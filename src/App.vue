@@ -10,6 +10,7 @@ import CommitPanel from "./components/CommitPanel.vue";
 import LogPanel from "./components/LogPanel.vue";
 import InProgressBanner from "./components/InProgressBanner.vue";
 import ToastTray from "./components/ToastTray.vue";
+import RebaseTodoDialog from "./components/RebaseTodoDialog.vue";
 
 const repos = useReposStore();
 const state = useRepoStateStore();
@@ -31,5 +32,6 @@ window.addEventListener("focus", () => { if (repos.activeId) state.refresh(repos
       <StatusBar />
     </div>
     <ToastTray />
+    <RebaseTodoDialog />
   </div>
 </template>
