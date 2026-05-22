@@ -11,4 +11,8 @@ export const api = {
 export const ops = {
   branchCheckout: (id: string, name: string) =>
     invoke<RepoSnapshot>("branch_checkout", { id, name }),
+  branchCreate: (id: string, name: string, from: string | null) =>
+    invoke<RepoSnapshot>("branch_create", { id, name, from }),
+  branchDelete: (id: string, name: string, force: boolean) =>
+    invoke<RepoSnapshot>("branch_delete", { id, name, force }),
 };

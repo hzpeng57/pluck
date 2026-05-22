@@ -1,4 +1,5 @@
 use crate::error::{GitError, GitResult};
+use crate::git::ops::branch::{create_branch, delete_branch};
 use crate::git::ops::checkout::checkout_branch;
 use crate::git::snapshot::RepoSnapshot;
 use crate::state::{refresh_session, AppState};
@@ -67,5 +68,37 @@ pub async fn branch_checkout(
         .ok_or_else(|| GitError::parse("unknown repo id"))?;
     let path = { sess.lock().await.path.clone() };
     checkout_branch(&path, &name).await?;
+    refresh_session(&sess).await
+}
+
+#[tauri::command]
+pub async fn branch_create(
+    id: String,
+    name: String,
+    from: Option<String>,
+    state: State<'_, AppState>,
+) -> GitResult<RepoSnapshot> {
+    let sess = state
+        .get(&id)
+        .await
+        .ok_or_else(|| GitError::parse("unknown repo id"))?;
+    let path = { sess.lock().await.path.clone() };
+    create_branch(&path, &name, from.as_deref()).await?;
+    refresh_session(&sess).await
+}
+
+#[tauri::command]
+pub async fn branch_delete(
+    id: String,
+    name: String,
+    force: bool,
+    state: State<'_, AppState>,
+) -> GitResult<RepoSnapshot> {
+    let sess = state
+        .get(&id)
+        .await
+        .ok_or_else(|| GitError::parse("unknown repo id"))?;
+    let path = { sess.lock().await.path.clone() };
+    delete_branch(&path, &name, force).await?;
     refresh_session(&sess).await
 }

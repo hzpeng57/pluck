@@ -33,6 +33,29 @@ async function checkout() {
   }
 }
 
+async function newFromHere() {
+  if (!menu.value || !repos.activeId) return;
+  const name = prompt("New branch name:")?.trim();
+  if (!name) { menu.value = null; return; }
+  const id = repos.activeId; const from = menu.value.branch.name;
+  menu.value = null;
+  try { state.snapshot = await ops.branchCreate(id, name, from); }
+  catch (e: any) { state.lastError = e?.data?.friendly ?? String(e); }
+}
+async function del() {
+  if (!menu.value || !repos.activeId) return;
+  const id = repos.activeId; const name = menu.value.branch.name;
+  menu.value = null;
+  if (!confirm(`Delete branch ${name}?`)) return;
+  try { state.snapshot = await ops.branchDelete(id, name, false); }
+  catch (e: any) {
+    if (confirm(`${e?.data?.friendly ?? e}\n\nForce delete?`)) {
+      try { state.snapshot = await ops.branchDelete(id, name, true); }
+      catch (e2: any) { state.lastError = e2?.data?.friendly ?? String(e2); }
+    }
+  }
+}
+
 window.addEventListener("click", () => (menu.value = null));
 </script>
 
@@ -65,6 +88,10 @@ window.addEventListener("click", () => (menu.value = null));
          class="fixed z-50 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded shadow text-sm min-w-40">
       <button class="block w-full text-left px-3 py-1 hover:bg-neutral-100 dark:hover:bg-neutral-700"
               @click="checkout" :disabled="menu.branch.isCurrent">Checkout</button>
+      <button class="block w-full text-left px-3 py-1 hover:bg-neutral-100 dark:hover:bg-neutral-700"
+              @click="newFromHere">New branch from here…</button>
+      <button class="block w-full text-left px-3 py-1 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-red-600"
+              @click="del" :disabled="menu.branch.isCurrent">Delete</button>
     </div>
   </div>
 </template>
