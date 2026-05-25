@@ -3,7 +3,18 @@ fn main() {
     let workspace = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .expect("app crate must live in workspace");
-    let src = workspace.join(format!("target/{profile}/taptap-git-bridge"));
+    let target = std::env::var("TARGET").ok();
+    let src = match target {
+        Some(t) => {
+            let with_target = workspace.join(format!("target/{t}/{profile}/taptap-git-bridge"));
+            if with_target.exists() {
+                with_target
+            } else {
+                workspace.join(format!("target/{profile}/taptap-git-bridge"))
+            }
+        }
+        None => workspace.join(format!("target/{profile}/taptap-git-bridge")),
+    };
     let dst_dir = workspace.join("binaries");
     let _ = std::fs::create_dir_all(&dst_dir);
     let dst = dst_dir.join("taptap-git-bridge");

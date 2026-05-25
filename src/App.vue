@@ -17,6 +17,8 @@ import ToastTray from "./components/ToastTray.vue";
 import RebaseTodoDialog from "./components/RebaseTodoDialog.vue";
 import CommitMessageDialog from "./components/CommitMessageDialog.vue";
 import ResetDialog from "./components/ResetDialog.vue";
+import UpdateBanner from "./components/UpdateBanner.vue";
+import { checkForUpdates } from "./lib/updater";
 
 const repos = useReposStore();
 const state = useRepoStateStore();
@@ -97,6 +99,7 @@ async function onKey(e: KeyboardEvent) {
 onMounted(() => {
   window.addEventListener("focus", onFocus);
   window.addEventListener("keydown", onKey);
+  setTimeout(() => { checkForUpdates(false); }, 5000);
 });
 onBeforeUnmount(() => {
   window.removeEventListener("focus", onFocus);
@@ -108,6 +111,7 @@ onBeforeUnmount(() => {
   <div class="flex h-full" style="background: var(--bg); color: var(--fg)">
     <RepoSwitcher />
     <div class="flex-1 flex flex-col min-w-0">
+      <UpdateBanner />
       <TitleBar />
       <InProgressBanner v-if="state.snapshot?.inProgress" />
       <div class="flex-1 grid grid-rows-[1fr_1fr] p-2 overflow-hidden gap-y-2"

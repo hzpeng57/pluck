@@ -31,6 +31,15 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "resources": ["../binaries/taptap-git-bridge"]
+    "resources": ["../binaries/taptap-git-bridge"],
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/hzpeng57/pluck/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDJBQjlGNDgyODg0QTI5MEMKUldRTUtVcUlndlM1S3MzblIrRzVCYjh1WXg5bk9ha09RblBXdjlSbksyQXJBTEM1K3o0MDlLWkQK"
+    }
   }
 }
