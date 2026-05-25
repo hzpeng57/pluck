@@ -79,12 +79,16 @@ async function onKey(e: KeyboardEvent) {
     (document.querySelector("textarea") as HTMLTextAreaElement | null)?.focus();
   } else if (isMeta(e) && e.shiftKey && e.key.toLowerCase() === "k") {
     e.preventDefault();
-    try { state.snapshot = await invoke<RepoSnapshot>("push_branch", { id: repos.activeId, forceWithLease: false }); }
-    catch (err: any) { state.pushToast("error", err?.data?.friendly ?? String(err)); }
+    try {
+      state.snapshot = await invoke<RepoSnapshot>("push_branch", { id: repos.activeId, forceWithLease: false });
+      state.pushToast("info", "Push successful");
+    } catch (err: any) { state.pushToast("error", err?.data?.friendly ?? String(err)); }
   } else if (isMeta(e) && e.key.toLowerCase() === "t") {
     e.preventDefault();
-    try { state.snapshot = await invoke<RepoSnapshot>("fetch", { id: repos.activeId }); }
-    catch (err: any) { state.pushToast("error", err?.data?.friendly ?? String(err)); }
+    try {
+      state.snapshot = await invoke<RepoSnapshot>("fetch", { id: repos.activeId });
+      state.pushToast("info", "Fetch successful");
+    } catch (err: any) { state.pushToast("error", err?.data?.friendly ?? String(err)); }
   } else if (isMeta(e) && e.key.toLowerCase() === "r") {
     e.preventDefault();
     state.refresh(repos.activeId);

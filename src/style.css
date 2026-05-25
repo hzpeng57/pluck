@@ -57,7 +57,14 @@ input, textarea, select, .gl-selectable {
 *::-webkit-scrollbar-thumb { background: var(--border); border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
 *::-webkit-scrollbar-thumb:hover { background: var(--fg-3); background-clip: padding-box; border: 2px solid transparent; }
 
-button { outline: none; }
+button { outline: none; cursor: pointer; }
+button[disabled] { cursor: default; }
+a, label, summary, select,
+input[type="checkbox"], input[type="radio"], input[type="submit"], input[type="button"], input[type="reset"] {
+  cursor: pointer;
+}
+a[disabled], select[disabled],
+input[type="checkbox"][disabled], input[type="radio"][disabled] { cursor: default; }
 button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
   box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent-ring);
   border-radius: 6px;
@@ -149,6 +156,29 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .gl-menu-item.is-danger { color: var(--danger); }
 .gl-menu-item[disabled] { opacity: 0.4; pointer-events: none; }
 .gl-menu-sep { height: 1px; background: var(--border); margin: 4px 0; }
+
+.gl-icon-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px;
+  border-radius: 5px;
+  color: var(--fg-3);
+  background: transparent;
+  border: none;
+  transition: background 120ms ease, color 120ms ease;
+}
+.gl-icon-btn:hover { background: var(--hover); color: var(--fg); }
+.gl-icon-btn:active { background: var(--accent-soft); color: var(--accent-2); }
+
+.gl-spinner {
+  display: inline-block;
+  width: 12px; height: 12px;
+  border: 1.5px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: gl-spin 0.7s linear infinite;
+  opacity: 0.85;
+}
+@keyframes gl-spin { to { transform: rotate(360deg); } }
 
 .gl-splitter > .gl-splitter-line {
   width: 1px; height: 100%;
