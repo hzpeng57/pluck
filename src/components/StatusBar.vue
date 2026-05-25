@@ -2,11 +2,14 @@
 import { computed } from "vue";
 import { useRepoStateStore } from "../stores/repoState";
 import { version } from "../../package.json";
+import { updaterState, checkForUpdates } from "../lib/updater";
 const state = useRepoStateStore();
 const counts = computed(() => {
   const s = state.snapshot; if (!s) return { dirty: 0, ahead: 0, behind: 0 };
   return { dirty: s.files.length, ahead: s.remoteStatus.ahead, behind: s.remoteStatus.behind };
 });
+const checking = computed(() => updaterState.value.kind === "checking");
+function onCheckUpdate() { if (!checking.value) checkForUpdates(true); }
 </script>
 <template>
   <footer class="flex items-center gap-4 px-4 h-7 shrink-0 text-[11px]"
@@ -28,6 +31,11 @@ const counts = computed(() => {
       <span class="w-1.5 h-1.5 rounded-full animate-pulse" style="background: var(--accent)" />
       refreshing…
     </span>
-    <span class="gl-mono opacity-60">pluck v{{ version }}</span>
+    <button class="gl-mono opacity-60 hover:opacity-100 transition-opacity"
+            :title="checking ? 'Checking for updates…' : 'Click to check for updates'"
+            :disabled="checking"
+            @click="onCheckUpdate">
+      pluck v{{ version }}{{ checking ? ' · checking…' : '' }}
+    </button>
   </footer>
 </template>

@@ -96,14 +96,18 @@ async function onKey(e: KeyboardEvent) {
     state.refresh(repos.activeId);
   }
 }
+const UPDATE_RECHECK_MS = 6 * 60 * 60 * 1000;
+let updateTimer: number | null = null;
 onMounted(() => {
   window.addEventListener("focus", onFocus);
   window.addEventListener("keydown", onKey);
-  setTimeout(() => { checkForUpdates(false); }, 5000);
+  checkForUpdates(false);
+  updateTimer = window.setInterval(() => { checkForUpdates(false); }, UPDATE_RECHECK_MS);
 });
 onBeforeUnmount(() => {
   window.removeEventListener("focus", onFocus);
   window.removeEventListener("keydown", onKey);
+  if (updateTimer !== null) { window.clearInterval(updateTimer); updateTimer = null; }
 });
 </script>
 
