@@ -51,15 +51,21 @@ window.addEventListener("keydown", async (e) => {
 </script>
 
 <template>
-  <div class="flex h-full bg-neutral-50 dark:bg-neutral-950 text-sm">
-    <RepoSwitcher class="w-44 shrink-0 border-r border-neutral-200 dark:border-neutral-800" />
+  <div class="flex h-full" style="background: var(--bg); color: var(--fg)">
+    <RepoSwitcher />
     <div class="flex-1 flex flex-col min-w-0">
       <TitleBar />
       <InProgressBanner v-if="state.snapshot?.inProgress" />
-      <div class="flex-1 grid grid-cols-[260px_1fr] grid-rows-[1fr_1fr] gap-px bg-neutral-200 dark:bg-neutral-800 overflow-hidden">
-        <BranchesPanel class="row-span-2 bg-neutral-50 dark:bg-neutral-900 overflow-auto" />
-        <CommitPanel class="bg-neutral-50 dark:bg-neutral-900 overflow-auto" />
-        <LogPanel class="bg-neutral-50 dark:bg-neutral-900 overflow-auto" />
+      <div class="flex-1 grid grid-cols-[260px_1fr] grid-rows-[1fr_1fr] gap-2 p-2 overflow-hidden">
+        <div class="row-span-2 gl-surface rounded-lg overflow-auto" style="border: 1px solid var(--border)">
+          <BranchesPanel />
+        </div>
+        <div class="gl-surface rounded-lg overflow-auto" style="border: 1px solid var(--border)">
+          <CommitPanel />
+        </div>
+        <div class="gl-surface rounded-lg overflow-auto" style="border: 1px solid var(--border)">
+          <LogPanel />
+        </div>
       </div>
       <StatusBar />
     </div>

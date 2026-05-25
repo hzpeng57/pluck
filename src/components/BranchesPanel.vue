@@ -27,11 +27,8 @@ async function checkout() {
   const id = repos.activeId;
   const name = menu.value.branch.name;
   menu.value = null;
-  try {
-    state.snapshot = await ops.branchCheckout(id, name);
-  } catch (e: any) {
-    state.pushToast("error", e?.data?.friendly ?? String(e));
-  }
+  try { state.snapshot = await ops.branchCheckout(id, name); }
+  catch (e: any) { state.pushToast("error", e?.data?.friendly ?? String(e)); }
 }
 
 async function newFromHere() {
@@ -77,42 +74,55 @@ window.addEventListener("click", () => (menu.value = null));
 </script>
 
 <template>
-  <div class="flex flex-col text-sm">
-    <button class="text-left px-2 py-1 font-semibold flex items-center gap-1" @click="showLocal = !showLocal">
-      <span>{{ showLocal ? "▾" : "▸" }}</span> Local
+  <div class="flex flex-col p-2 gap-1">
+    <button class="flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors"
+            style="color: var(--fg-3)"
+            @click="showLocal = !showLocal"
+            @mouseover="(e: any) => (e.currentTarget.style.color = 'var(--fg)')"
+            @mouseleave="(e: any) => (e.currentTarget.style.color = 'var(--fg-3)')">
+      <span class="text-[10px] transition-transform" :style="{ transform: showLocal ? 'rotate(90deg)' : 'rotate(0)' }">▶</span>
+      <span class="gl-section-title">Local</span>
+      <span class="ml-auto gl-mono text-[10px]" style="color: var(--fg-3)">{{ state.snapshot?.branches.local.length ?? 0 }}</span>
     </button>
-    <ul v-if="showLocal" class="pl-2">
+    <ul v-if="showLocal" class="flex flex-col gap-0.5">
       <li v-for="b in state.snapshot?.branches.local ?? []" :key="b.name"
           @click="pickForLog(b)"
           @contextmenu.prevent="onContext($event, b)"
-          :class="['px-2 py-0.5 cursor-pointer rounded hover:bg-neutral-200 dark:hover:bg-neutral-800 flex items-center gap-1',
-                   b.name === state.selectedLogBranch ? 'bg-blue-100 dark:bg-blue-900/40' : '']">
-        <span :class="b.isCurrent ? 'text-emerald-600 font-semibold' : ''">{{ b.isCurrent ? "●" : " " }}</span>
-        <span class="truncate flex-1">{{ b.name }}</span>
-        <span class="opacity-60 text-xs" v-if="b.ahead || b.behind">↑{{ b.ahead }} ↓{{ b.behind }}</span>
+          class="gl-row"
+          :class="{ 'is-selected': b.name === state.selectedLogBranch }">
+        <span class="w-3 inline-flex justify-center"
+              :style="{ color: b.isCurrent ? 'var(--success)' : 'transparent' }">●</span>
+        <span class="truncate flex-1 text-[13px]"
+              :style="b.isCurrent ? 'font-weight: 600' : ''">{{ b.name }}</span>
+        <span v-if="b.ahead" class="gl-chip gl-chip-ahead">↑{{ b.ahead }}</span>
+        <span v-if="b.behind" class="gl-chip gl-chip-behind">↓{{ b.behind }}</span>
       </li>
     </ul>
-    <button class="text-left px-2 py-1 font-semibold flex items-center gap-1" @click="showRemote = !showRemote">
-      <span>{{ showRemote ? "▾" : "▸" }}</span> Remote
+
+    <button class="flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors mt-2"
+            style="color: var(--fg-3)"
+            @click="showRemote = !showRemote"
+            @mouseover="(e: any) => (e.currentTarget.style.color = 'var(--fg)')"
+            @mouseleave="(e: any) => (e.currentTarget.style.color = 'var(--fg-3)')">
+      <span class="text-[10px] transition-transform" :style="{ transform: showRemote ? 'rotate(90deg)' : 'rotate(0)' }">▶</span>
+      <span class="gl-section-title">Remote</span>
+      <span class="ml-auto gl-mono text-[10px]" style="color: var(--fg-3)">{{ state.snapshot?.branches.remote.length ?? 0 }}</span>
     </button>
-    <ul v-if="showRemote" class="pl-2">
+    <ul v-if="showRemote" class="flex flex-col gap-0.5">
       <li v-for="b in state.snapshot?.branches.remote ?? []" :key="b.name"
-          class="px-2 py-0.5 truncate opacity-90 hover:bg-neutral-200 dark:hover:bg-neutral-800 rounded">
-        {{ b.name }}
+          class="gl-row" style="cursor: default">
+        <span class="w-3 inline-flex justify-center" style="color: var(--fg-3)">⬡</span>
+        <span class="truncate flex-1 text-[13px]" style="color: var(--fg-2)">{{ b.name }}</span>
       </li>
     </ul>
-    <div v-if="menu" :style="{ top: menu.y + 'px', left: menu.x + 'px' }"
-         class="fixed z-50 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded shadow text-sm min-w-40">
-      <button class="block w-full text-left px-3 py-1 hover:bg-neutral-100 dark:hover:bg-neutral-700"
-              @click="checkout" :disabled="menu.branch.isCurrent">Checkout</button>
-      <button class="block w-full text-left px-3 py-1 hover:bg-neutral-100 dark:hover:bg-neutral-700"
-              @click="newFromHere">New branch from here…</button>
-      <button class="block w-full text-left px-3 py-1 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-red-600"
-              @click="del" :disabled="menu.branch.isCurrent">Delete</button>
-      <button class="block w-full text-left px-3 py-1 hover:bg-neutral-100 dark:hover:bg-neutral-700"
-              @click="mergeIntoCurrent" :disabled="menu.branch.isCurrent">Merge into current</button>
-      <button class="block w-full text-left px-3 py-1 hover:bg-neutral-100 dark:hover:bg-neutral-700"
-              @click="pullInto">Pull --rebase</button>
+
+    <div v-if="menu" :style="{ top: menu.y + 'px', left: menu.x + 'px' }" class="gl-menu">
+      <button class="gl-menu-item" @click="checkout" :disabled="menu.branch.isCurrent">Checkout</button>
+      <button class="gl-menu-item" @click="newFromHere">New branch from here…</button>
+      <button class="gl-menu-item" @click="mergeIntoCurrent" :disabled="menu.branch.isCurrent">Merge into current</button>
+      <button class="gl-menu-item" @click="pullInto">Pull --rebase</button>
+      <div class="my-1 h-px" style="background: var(--border)"></div>
+      <button class="gl-menu-item is-danger" @click="del" :disabled="menu.branch.isCurrent">Delete</button>
     </div>
   </div>
 </template>

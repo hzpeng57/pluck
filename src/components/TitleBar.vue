@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, onMounted, onBeforeUnmount } from "vue";
 import { useReposStore } from "../stores/repos";
 import { useRepoStateStore } from "../stores/repoState";
 import { invoke } from "@tauri-apps/api/core";
@@ -27,20 +27,42 @@ async function pull() {
   try { state.snapshot = await invoke<RepoSnapshot>("pull", { id: repos.activeId, targetBranch: b }); }
   catch (e: any) { state.pushToast("error", e?.data?.friendly ?? String(e)); }
 }
+
+const closeMenu = () => { showPushMenu.value = false; };
+onMounted(() => window.addEventListener("click", closeMenu));
+onBeforeUnmount(() => window.removeEventListener("click", closeMenu));
 </script>
+
 <template>
-  <div class="flex items-center px-3 py-1.5 border-b border-neutral-200 dark:border-neutral-800 gap-2">
-    <div class="font-semibold truncate">{{ repos.active?.name ?? "No repo" }}</div>
-    <div class="opacity-60 text-xs">{{ state.snapshot?.head.branch ?? "(no head)" }}</div>
+  <header class="flex items-center gap-3 h-12 px-4 shrink-0"
+          style="background: var(--bg); border-bottom: 1px solid var(--border-soft)">
+    <div class="flex items-center gap-2 min-w-0">
+      <div class="w-2 h-2 rounded-full" :style="{ background: state.snapshot ? 'var(--success)' : 'var(--fg-3)' }" />
+      <span class="font-semibold truncate" style="color: var(--fg)">{{ repos.active?.name ?? "No repository" }}</span>
+      <span style="color: var(--fg-3)">/</span>
+      <span class="gl-mono text-[12px] px-1.5 py-0.5 rounded"
+            :style="{ background: 'var(--accent-soft)', color: 'var(--accent-2)' }">
+        {{ state.snapshot?.head.branch ?? "no head" }}
+      </span>
+    </div>
     <div class="flex-1" />
-    <button class="px-2 py-0.5 rounded hover:bg-neutral-200 dark:hover:bg-neutral-800" @click="fetch">Fetch</button>
-    <div class="relative">
-      <button class="px-2 py-0.5 rounded hover:bg-neutral-200 dark:hover:bg-neutral-800" @click="showPushMenu = !showPushMenu">Push ▾</button>
-      <div v-if="showPushMenu" class="absolute right-0 mt-1 bg-white dark:bg-neutral-800 border rounded shadow z-50 min-w-48">
-        <button class="block w-full text-left px-3 py-1 hover:bg-neutral-100 dark:hover:bg-neutral-700" @click="push(false)">Push</button>
-        <button class="block w-full text-left px-3 py-1 hover:bg-neutral-100 dark:hover:bg-neutral-700" @click="push(true)">Push (force-with-lease)</button>
+    <div class="flex items-center gap-1.5">
+      <button class="gl-btn" @click="fetch" title="⌘T">
+        <span class="text-[14px] leading-none">↓</span> Fetch
+      </button>
+      <button class="gl-btn" @click="pull" title="Pull --rebase">
+        <span class="text-[14px] leading-none">⇣</span> Pull
+      </button>
+      <div class="relative">
+        <button class="gl-btn gl-btn-primary" @click.stop="showPushMenu = !showPushMenu" title="⌘⇧K">
+          <span class="text-[14px] leading-none">↑</span> Push
+          <span class="opacity-70 text-[10px] ml-0.5">▾</span>
+        </button>
+        <div v-if="showPushMenu" class="gl-menu" style="position: absolute; top: 32px; right: 0;">
+          <button class="gl-menu-item" @click="push(false)">Push</button>
+          <button class="gl-menu-item is-danger" @click="push(true)">Push (force-with-lease)</button>
+        </div>
       </div>
     </div>
-    <button class="px-2 py-0.5 rounded hover:bg-neutral-200 dark:hover:bg-neutral-800" @click="pull">Pull --rebase</button>
-  </div>
+  </header>
 </template>

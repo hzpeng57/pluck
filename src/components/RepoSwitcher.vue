@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from "vue";
+import { ref, onMounted, onBeforeUnmount, computed } from "vue";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useReposStore } from "../stores/repos";
 import { api } from "../api/tauri";
@@ -28,24 +28,53 @@ function removeCurrent() {
 const closeMenu = () => { menu.value = null; };
 onMounted(() => window.addEventListener("click", closeMenu));
 onBeforeUnmount(() => window.removeEventListener("click", closeMenu));
+
+function initial(name: string) {
+  return name.replace(/[^a-zA-Z0-9]/g, "").slice(0, 2).toUpperCase() || "·";
+}
+const palette = ["#6366F1", "#EC4899", "#10B981", "#F59E0B", "#06B6D4", "#8B5CF6", "#F43F5E", "#84CC16"];
+function color(id: string) {
+  let h = 0; for (const c of id) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return palette[h % palette.length];
+}
+const items = computed(() => repos.all);
 </script>
 
 <template>
-  <div class="flex flex-col p-2 gap-1">
-    <div class="text-xs uppercase opacity-50 px-1 pb-1">Repos</div>
+  <aside class="w-14 shrink-0 flex flex-col items-center py-3 gap-2"
+         style="background: var(--bg); border-right: 1px solid var(--border-soft)">
     <button
-      v-for="r in repos.all" :key="r.id"
+      v-for="r in items" :key="r.id"
       @click="repos.setActive(r.id)"
       @contextmenu.prevent="onContext($event, r)"
-      :class="['text-left px-2 py-1 rounded truncate',
-               r.id === repos.activeId ? 'bg-blue-100 dark:bg-blue-900/40' : 'hover:bg-neutral-200 dark:hover:bg-neutral-800']"
-    >{{ r.name }}</button>
-    <button class="text-left px-2 py-1 opacity-70 hover:opacity-100" @click="addRepo">+ Add…</button>
+      :title="r.name"
+      class="relative w-10 h-10 rounded-xl flex items-center justify-center text-[11px] font-semibold tracking-wide transition-all"
+      :class="r.id === repos.activeId ? 'scale-100' : 'scale-95 opacity-75 hover:opacity-100 hover:scale-100'"
+      :style="{
+        background: r.id === repos.activeId ? color(r.id) : 'var(--raised)',
+        color: r.id === repos.activeId ? '#fff' : 'var(--fg-2)',
+        border: '1px solid ' + (r.id === repos.activeId ? color(r.id) : 'var(--border)')
+      }"
+    >
+      <span
+        v-if="r.id === repos.activeId"
+        class="absolute -left-3 top-1.5 bottom-1.5 w-1 rounded-r-md"
+        :style="{ background: color(r.id) }"
+      />
+      {{ initial(r.name) }}
+    </button>
 
-    <div v-if="menu" :style="{ top: menu.y + 'px', left: menu.x + 'px' }"
-         class="fixed z-50 bg-white dark:bg-neutral-800 border rounded shadow text-sm min-w-44">
-      <button class="block w-full text-left px-3 py-1 hover:bg-neutral-100 dark:hover:bg-neutral-700"
-              @click="removeCurrent">Remove from list</button>
+    <button
+      class="w-10 h-10 rounded-xl flex items-center justify-center text-lg font-light transition-colors"
+      style="color: var(--fg-3); border: 1px dashed var(--border)"
+      @click="addRepo"
+      title="Add repository"
+      @mouseover="(e: any) => (e.currentTarget.style.color = 'var(--fg)')"
+      @mouseleave="(e: any) => (e.currentTarget.style.color = 'var(--fg-3)')"
+    >＋</button>
+
+    <div v-if="menu" :style="{ top: menu.y + 'px', left: menu.x + 'px' }" class="gl-menu">
+      <button class="gl-menu-item is-danger" @click="removeCurrent">Remove from list</button>
     </div>
-  </div>
+  </aside>
 </template>

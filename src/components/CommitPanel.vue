@@ -24,34 +24,70 @@ async function doCommit() {
     message.value = ""; for (const f of files.value) selected[f.path] = false;
   } catch (e: any) { state.pushToast("error", e?.data?.friendly ?? String(e)); }
 }
+
+const statusMeta: Record<string, { letter: string; color: string; bg: string }> = {
+  modified: { letter: "M", color: "#FBBF24", bg: "rgba(251, 191, 36, 0.14)" },
+  added: { letter: "A", color: "#34D399", bg: "rgba(52, 211, 153, 0.14)" },
+  deleted: { letter: "D", color: "#F87171", bg: "rgba(248, 113, 113, 0.14)" },
+  renamed: { letter: "R", color: "#60A5FA", bg: "rgba(96, 165, 250, 0.14)" },
+  untracked: { letter: "U", color: "#A78BFA", bg: "rgba(167, 139, 250, 0.14)" },
+  conflicted: { letter: "!", color: "#F87171", bg: "rgba(248, 113, 113, 0.2)" },
+};
+function statusOf(s: string) { return statusMeta[s] ?? { letter: s[0]?.toUpperCase() ?? "·", color: "var(--fg-2)", bg: "var(--hover)" }; }
 </script>
 
 <template>
   <div class="flex flex-col h-full">
-    <div class="px-2 py-1 text-xs uppercase opacity-50 flex items-center gap-2">
-      <span>Changes ({{ files.length }})</span>
-      <button class="opacity-70 hover:opacity-100" @click="toggleAll(true)">all</button>
-      <button class="opacity-70 hover:opacity-100" @click="toggleAll(false)">none</button>
+    <div class="flex items-center gap-2 px-3 pt-3 pb-2">
+      <span class="gl-section-title">Changes</span>
+      <span class="gl-chip">{{ files.length }}</span>
+      <div class="flex-1" />
+      <button class="text-[11px] transition-colors" style="color: var(--fg-3)"
+              @click="toggleAll(true)"
+              @mouseover="(e: any) => (e.currentTarget.style.color = 'var(--fg)')"
+              @mouseleave="(e: any) => (e.currentTarget.style.color = 'var(--fg-3)')">All</button>
+      <span style="color: var(--fg-3)">·</span>
+      <button class="text-[11px] transition-colors" style="color: var(--fg-3)"
+              @click="toggleAll(false)"
+              @mouseover="(e: any) => (e.currentTarget.style.color = 'var(--fg)')"
+              @mouseleave="(e: any) => (e.currentTarget.style.color = 'var(--fg-3)')">None</button>
     </div>
-    <ul class="flex-1 overflow-auto px-2">
-      <li v-for="f in files" :key="f.path" class="flex items-center gap-2 py-0.5 hover:bg-neutral-200 dark:hover:bg-neutral-800 rounded px-1">
-        <input type="checkbox" v-model="selected[f.path]" />
-        <span class="truncate flex-1">{{ f.path }}</span>
-        <span class="text-xs opacity-60">{{ f.status }}</span>
+    <ul class="flex-1 overflow-auto px-2 flex flex-col gap-0.5">
+      <li v-for="f in files" :key="f.path"
+          class="flex items-center gap-2 px-2 h-7 rounded-md cursor-pointer transition-colors"
+          @click="selected[f.path] = !selected[f.path]"
+          :style="selected[f.path] ? 'background: var(--accent-soft)' : ''"
+          @mouseover="(e: any) => { if (!selected[f.path]) e.currentTarget.style.background = 'var(--hover)' }"
+          @mouseleave="(e: any) => { if (!selected[f.path]) e.currentTarget.style.background = '' }">
+        <input type="checkbox" :checked="selected[f.path]" @click.stop
+               @change="selected[f.path] = !selected[f.path]"
+               class="w-3.5 h-3.5 rounded accent-indigo-500" />
+        <span class="inline-flex items-center justify-center w-5 h-5 rounded text-[10px] font-bold gl-mono"
+              :style="{ background: statusOf(f.status).bg, color: statusOf(f.status).color }">
+          {{ statusOf(f.status).letter }}
+        </span>
+        <span class="truncate flex-1 text-[12.5px] gl-mono" style="color: var(--fg-2)">{{ f.path }}</span>
       </li>
-      <li v-if="files.length === 0" class="opacity-50 py-2">Working tree clean</li>
+      <li v-if="files.length === 0"
+          class="flex flex-col items-center justify-center gap-1 py-8 text-center"
+          style="color: var(--fg-3)">
+        <span class="text-2xl">✓</span>
+        <span class="text-[12px]">Working tree clean</span>
+      </li>
     </ul>
-    <div class="p-2 border-t border-neutral-200 dark:border-neutral-800 flex flex-col gap-2">
-      <textarea v-model="message" rows="3" placeholder="Commit message..."
-                class="w-full px-2 py-1 rounded bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700"/>
-      <label class="flex items-center gap-2 text-xs">
-        <input type="checkbox" v-model="skipHooks" /> Skip hooks (-n)
-      </label>
-      <div class="flex gap-2">
-        <button class="px-3 py-1 rounded bg-blue-600 text-white disabled:opacity-40"
+    <div class="p-3 flex flex-col gap-2" style="border-top: 1px solid var(--border-soft)">
+      <textarea v-model="message" rows="3" placeholder="Commit message…  (⌘K to focus)"
+                class="gl-input resize-none gl-mono text-[12.5px]" />
+      <div class="flex items-center justify-between gap-2">
+        <label class="flex items-center gap-1.5 text-[11.5px]" style="color: var(--fg-2)">
+          <input type="checkbox" v-model="skipHooks" class="w-3.5 h-3.5 rounded accent-indigo-500" />
+          Skip hooks (-n)
+        </label>
+        <button class="gl-btn gl-btn-primary"
                 :disabled="checkedFiles.length === 0 || !message.trim()"
-                @click="doCommit">Commit</button>
-        <button class="px-3 py-1 rounded border" disabled>Commit & Push</button>
+                @click="doCommit">
+          Commit {{ checkedFiles.length ? `(${checkedFiles.length})` : "" }}
+        </button>
       </div>
     </div>
   </div>
