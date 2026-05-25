@@ -1,21 +1,59 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { useRepoStateStore } from "../stores/repoState";
 import { useReposStore } from "../stores/repos";
+import { useBranchPrefsStore } from "../stores/branchPrefs";
 import type { Branch, RepoSnapshot } from "../types/git";
 import { ops } from "../api/tauri";
 import { invoke } from "@tauri-apps/api/core";
+import { buildTree, type TreeEntry } from "../lib/branchTree";
 
 const state = useRepoStateStore();
 const repos = useReposStore();
+const prefs = useBranchPrefsStore();
+
+const showPinned = ref(true);
 const showLocal = ref(true);
 const showRemote = ref(true);
 
 const menu = ref<{ x: number; y: number; branch: Branch } | null>(null);
 
+const repoId = computed(() => repos.activeId ?? "");
+const allLocal = computed<Branch[]>(() => state.snapshot?.branches.local ?? []);
+const allRemote = computed<Branch[]>(() => state.snapshot?.branches.remote ?? []);
+
+const pinnedBranches = computed<Branch[]>(() => {
+  const set = new Set(prefs.pinned(repoId.value));
+  return [...allLocal.value, ...allRemote.value].filter(b => set.has(b.name));
+});
+const unpinnedLocal = computed<Branch[]>(() => {
+  const set = new Set(prefs.pinned(repoId.value));
+  return allLocal.value.filter(b => !set.has(b.name));
+});
+const unpinnedRemote = computed<Branch[]>(() => {
+  const set = new Set(prefs.pinned(repoId.value));
+  return allRemote.value.filter(b => !set.has(b.name));
+});
+
+const localTree = computed<TreeEntry[]>(() =>
+  buildTree(unpinnedLocal.value, p => prefs.isCollapsed(repoId.value, "local:" + p))
+);
+const remoteTree = computed<TreeEntry[]>(() =>
+  buildTree(unpinnedRemote.value, p => prefs.isCollapsed(repoId.value, "remote:" + p))
+);
+
 function pickForLog(b: Branch) {
   if (!repos.activeId) return;
   state.setLogBranch(repos.activeId, b.name);
+}
+function togglePin(e: MouseEvent, b: Branch) {
+  e.stopPropagation();
+  if (!repos.activeId) return;
+  prefs.togglePin(repos.activeId, b.name);
+}
+function toggleFolder(scope: "local" | "remote", prefix: string) {
+  if (!repos.activeId) return;
+  prefs.toggleCollapse(repos.activeId, `${scope}:${prefix}`);
 }
 
 function onContext(e: MouseEvent, b: Branch) {
@@ -24,26 +62,21 @@ function onContext(e: MouseEvent, b: Branch) {
 
 async function checkout() {
   if (!menu.value || !repos.activeId) return;
-  const id = repos.activeId;
-  const name = menu.value.branch.name;
-  menu.value = null;
+  const id = repos.activeId, name = menu.value.branch.name; menu.value = null;
   try { state.snapshot = await ops.branchCheckout(id, name); }
   catch (e: any) { state.pushToast("error", e?.data?.friendly ?? String(e)); }
 }
-
 async function newFromHere() {
   if (!menu.value || !repos.activeId) return;
   const name = prompt("New branch name:")?.trim();
   if (!name) { menu.value = null; return; }
-  const id = repos.activeId; const from = menu.value.branch.name;
-  menu.value = null;
+  const id = repos.activeId, from = menu.value.branch.name; menu.value = null;
   try { state.snapshot = await ops.branchCreate(id, name, from); }
   catch (e: any) { state.pushToast("error", e?.data?.friendly ?? String(e)); }
 }
 async function del() {
   if (!menu.value || !repos.activeId) return;
-  const id = repos.activeId; const name = menu.value.branch.name;
-  menu.value = null;
+  const id = repos.activeId, name = menu.value.branch.name; menu.value = null;
   if (!confirm(`Delete branch ${name}?`)) return;
   try { state.snapshot = await ops.branchDelete(id, name, false); }
   catch (e: any) {
@@ -53,21 +86,22 @@ async function del() {
     }
   }
 }
-
 async function mergeIntoCurrent() {
   if (!menu.value || !repos.activeId) return;
-  const id = repos.activeId; const name = menu.value.branch.name;
-  menu.value = null;
+  const id = repos.activeId, name = menu.value.branch.name; menu.value = null;
   try { state.snapshot = await ops.merge(id, name); }
   catch (e: any) { state.pushToast("error", e?.data?.friendly ?? String(e)); }
 }
-
 async function pullInto() {
   if (!menu.value || !repos.activeId) return;
-  const id = repos.activeId; const name = menu.value.branch.name;
-  menu.value = null;
+  const id = repos.activeId, name = menu.value.branch.name; menu.value = null;
   try { state.snapshot = await invoke<RepoSnapshot>("pull", { id, targetBranch: name }); }
   catch (e: any) { state.pushToast("error", e?.data?.friendly ?? String(e)); }
+}
+function toggleMenuPin() {
+  if (!menu.value || !repos.activeId) return;
+  prefs.togglePin(repos.activeId, menu.value.branch.name);
+  menu.value = null;
 }
 
 window.addEventListener("click", () => (menu.value = null));
@@ -75,48 +109,132 @@ window.addEventListener("click", () => (menu.value = null));
 
 <template>
   <div class="flex flex-col p-2 gap-1">
-    <button class="flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors"
+    <!-- Pinned -->
+    <template v-if="pinnedBranches.length">
+      <button class="flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors"
+              style="color: var(--fg-3)"
+              @click="showPinned = !showPinned"
+              @mouseover="(e: any) => (e.currentTarget.style.color = 'var(--fg)')"
+              @mouseleave="(e: any) => (e.currentTarget.style.color = 'var(--fg-3)')">
+        <span class="text-[10px] transition-transform"
+              :style="{ transform: showPinned ? 'rotate(90deg)' : 'rotate(0)' }">▶</span>
+        <span class="gl-section-title">Pinned</span>
+        <span class="ml-auto gl-mono text-[10px]" style="color: var(--fg-3)">{{ pinnedBranches.length }}</span>
+      </button>
+      <ul v-if="showPinned" class="flex flex-col gap-0.5">
+        <li v-for="b in pinnedBranches" :key="'pin:' + b.name"
+            @click="pickForLog(b)"
+            @contextmenu.prevent="onContext($event, b)"
+            class="gl-row group"
+            :class="{ 'is-selected': b.name === state.selectedLogBranch }">
+          <span class="w-3 inline-flex justify-center"
+                :style="{ color: b.isCurrent ? 'var(--success)' : 'transparent' }">●</span>
+          <button @click="togglePin($event, b)" title="Unpin"
+                  class="text-[11px] transition-colors"
+                  style="color: var(--warning)">★</button>
+          <span class="truncate flex-1 text-[13px]"
+                :style="b.isCurrent ? 'font-weight: 600' : ''">{{ b.name }}</span>
+          <span v-if="b.ahead" class="gl-chip gl-chip-ahead">↑{{ b.ahead }}</span>
+          <span v-if="b.behind" class="gl-chip gl-chip-behind">↓{{ b.behind }}</span>
+        </li>
+      </ul>
+    </template>
+
+    <!-- Local -->
+    <button class="flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors mt-1"
             style="color: var(--fg-3)"
             @click="showLocal = !showLocal"
             @mouseover="(e: any) => (e.currentTarget.style.color = 'var(--fg)')"
             @mouseleave="(e: any) => (e.currentTarget.style.color = 'var(--fg-3)')">
-      <span class="text-[10px] transition-transform" :style="{ transform: showLocal ? 'rotate(90deg)' : 'rotate(0)' }">▶</span>
+      <span class="text-[10px] transition-transform"
+            :style="{ transform: showLocal ? 'rotate(90deg)' : 'rotate(0)' }">▶</span>
       <span class="gl-section-title">Local</span>
-      <span class="ml-auto gl-mono text-[10px]" style="color: var(--fg-3)">{{ state.snapshot?.branches.local.length ?? 0 }}</span>
+      <span class="ml-auto gl-mono text-[10px]" style="color: var(--fg-3)">{{ unpinnedLocal.length }}</span>
     </button>
     <ul v-if="showLocal" class="flex flex-col gap-0.5">
-      <li v-for="b in state.snapshot?.branches.local ?? []" :key="b.name"
-          @click="pickForLog(b)"
-          @contextmenu.prevent="onContext($event, b)"
-          class="gl-row"
-          :class="{ 'is-selected': b.name === state.selectedLogBranch }">
-        <span class="w-3 inline-flex justify-center"
-              :style="{ color: b.isCurrent ? 'var(--success)' : 'transparent' }">●</span>
-        <span class="truncate flex-1 text-[13px]"
-              :style="b.isCurrent ? 'font-weight: 600' : ''">{{ b.name }}</span>
-        <span v-if="b.ahead" class="gl-chip gl-chip-ahead">↑{{ b.ahead }}</span>
-        <span v-if="b.behind" class="gl-chip gl-chip-behind">↓{{ b.behind }}</span>
-      </li>
+      <template v-for="entry in localTree" :key="'l:' + (entry.kind === 'folder' ? entry.prefix : entry.branch.name)">
+        <!-- folder -->
+        <li v-if="entry.kind === 'folder'"
+            @click="toggleFolder('local', entry.prefix)"
+            @contextmenu.prevent="entry.selfBranch && onContext($event, entry.selfBranch)"
+            class="gl-row group">
+          <span :style="{ paddingLeft: (entry.depth * 12) + 'px' }" class="inline-flex" />
+          <span class="text-[10px] w-3 inline-flex justify-center transition-transform"
+                style="color: var(--fg-3)"
+                :style="{ transform: entry.collapsed ? 'rotate(0)' : 'rotate(90deg)' }">▶</span>
+          <span class="text-[12px]" style="color: var(--accent-2)">▦</span>
+          <span class="truncate flex-1 text-[13px]"
+                :style="entry.selfBranch?.isCurrent ? 'font-weight: 600; color: var(--fg)' : 'color: var(--fg)'">
+            {{ entry.label }}<span v-if="entry.selfBranch" class="gl-mono text-[10px] ml-1"
+                                   style="color: var(--fg-3)">·branch</span>
+          </span>
+          <span class="gl-chip">{{ entry.childCount }}</span>
+          <span v-if="entry.collapsed && entry.ahead" class="gl-chip gl-chip-ahead">↑{{ entry.ahead }}</span>
+          <span v-if="entry.collapsed && entry.behind" class="gl-chip gl-chip-behind">↓{{ entry.behind }}</span>
+        </li>
+        <!-- branch leaf -->
+        <li v-else
+            @click="pickForLog(entry.branch)"
+            @contextmenu.prevent="onContext($event, entry.branch)"
+            class="gl-row group"
+            :class="{ 'is-selected': entry.branch.name === state.selectedLogBranch }">
+          <span :style="{ paddingLeft: (entry.depth * 12) + 'px' }" class="inline-flex" />
+          <span class="w-3 inline-flex justify-center"
+                :style="{ color: entry.branch.isCurrent ? 'var(--success)' : 'transparent' }">●</span>
+          <button @click="togglePin($event, entry.branch)" title="Pin"
+                  class="text-[11px] opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity"
+                  style="color: var(--fg-3)">☆</button>
+          <span class="truncate flex-1 text-[13px]"
+                :style="entry.branch.isCurrent ? 'font-weight: 600' : ''">{{ entry.displayLabel }}</span>
+          <span v-if="entry.branch.ahead" class="gl-chip gl-chip-ahead">↑{{ entry.branch.ahead }}</span>
+          <span v-if="entry.branch.behind" class="gl-chip gl-chip-behind">↓{{ entry.branch.behind }}</span>
+        </li>
+      </template>
     </ul>
 
+    <!-- Remote -->
     <button class="flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors mt-2"
             style="color: var(--fg-3)"
             @click="showRemote = !showRemote"
             @mouseover="(e: any) => (e.currentTarget.style.color = 'var(--fg)')"
             @mouseleave="(e: any) => (e.currentTarget.style.color = 'var(--fg-3)')">
-      <span class="text-[10px] transition-transform" :style="{ transform: showRemote ? 'rotate(90deg)' : 'rotate(0)' }">▶</span>
+      <span class="text-[10px] transition-transform"
+            :style="{ transform: showRemote ? 'rotate(90deg)' : 'rotate(0)' }">▶</span>
       <span class="gl-section-title">Remote</span>
-      <span class="ml-auto gl-mono text-[10px]" style="color: var(--fg-3)">{{ state.snapshot?.branches.remote.length ?? 0 }}</span>
+      <span class="ml-auto gl-mono text-[10px]" style="color: var(--fg-3)">{{ unpinnedRemote.length }}</span>
     </button>
     <ul v-if="showRemote" class="flex flex-col gap-0.5">
-      <li v-for="b in state.snapshot?.branches.remote ?? []" :key="b.name"
-          class="gl-row" style="cursor: default">
-        <span class="w-3 inline-flex justify-center" style="color: var(--fg-3)">⬡</span>
-        <span class="truncate flex-1 text-[13px]" style="color: var(--fg-2)">{{ b.name }}</span>
-      </li>
+      <template v-for="entry in remoteTree" :key="'r:' + (entry.kind === 'folder' ? entry.prefix : entry.branch.name)">
+        <li v-if="entry.kind === 'folder'"
+            @click="toggleFolder('remote', entry.prefix)"
+            class="gl-row group" style="cursor: pointer">
+          <span :style="{ paddingLeft: (entry.depth * 12) + 'px' }" class="inline-flex" />
+          <span class="text-[10px] w-3 inline-flex justify-center transition-transform"
+                style="color: var(--fg-3)"
+                :style="{ transform: entry.collapsed ? 'rotate(0)' : 'rotate(90deg)' }">▶</span>
+          <span class="text-[12px]" style="color: var(--fg-3)">▦</span>
+          <span class="truncate flex-1 text-[13px]" style="color: var(--fg-2)">{{ entry.label }}</span>
+          <span class="gl-chip">{{ entry.childCount }}</span>
+        </li>
+        <li v-else
+            @contextmenu.prevent="onContext($event, entry.branch)"
+            class="gl-row group" style="cursor: default">
+          <span :style="{ paddingLeft: (entry.depth * 12) + 'px' }" class="inline-flex" />
+          <span class="w-3 inline-flex justify-center" style="color: var(--fg-3)">⬡</span>
+          <button @click="togglePin($event, entry.branch)" title="Pin"
+                  class="text-[11px] opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity"
+                  style="color: var(--fg-3)">☆</button>
+          <span class="truncate flex-1 text-[13px]" style="color: var(--fg-2)">{{ entry.displayLabel }}</span>
+        </li>
+      </template>
     </ul>
 
+    <!-- Context menu -->
     <div v-if="menu" :style="{ top: menu.y + 'px', left: menu.x + 'px' }" class="gl-menu">
+      <button class="gl-menu-item" @click="toggleMenuPin">
+        {{ repoId && prefs.isPinned(repoId, menu.branch.name) ? "★ Unpin" : "☆ Pin to top" }}
+      </button>
+      <div class="my-1 h-px" style="background: var(--border)"></div>
       <button class="gl-menu-item" @click="checkout" :disabled="menu.branch.isCurrent">Checkout</button>
       <button class="gl-menu-item" @click="newFromHere">New branch from here…</button>
       <button class="gl-menu-item" @click="mergeIntoCurrent" :disabled="menu.branch.isCurrent">Merge into current</button>
