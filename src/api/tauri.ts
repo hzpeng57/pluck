@@ -8,6 +8,16 @@ export const api = {
     invoke<RepoSnapshot>("repo_refresh", { id, logBranch: logBranch ?? null }),
   commitDetail: (id: string, hash: string) =>
     invoke<CommitDetail>("commit_detail", { id, hash }),
+  cherryPick: (id: string, hashes: string[]) =>
+    invoke<RepoSnapshot>("cherry_pick_cmd", { id, hashes }),
+  revert: (id: string, hashes: string[]) =>
+    invoke<RepoSnapshot>("revert_cmd", { id, hashes }),
+  resetTo: (id: string, hash: string, mode: "soft" | "mixed" | "hard" | "keep") =>
+    invoke<RepoSnapshot>("reset_to_commit", { id, hash, mode }),
+  amendHeadMessage: (id: string, message: string) =>
+    invoke<RepoSnapshot>("amend_head_message", { id, message }),
+  rewordAncestor: (id: string, hash: string, message: string) =>
+    invoke<RepoSnapshot>("reword_ancestor", { id, hash, message }),
 };
 
 export const ops = {

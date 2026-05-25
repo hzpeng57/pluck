@@ -15,6 +15,8 @@ import LogPanel from "./components/LogPanel.vue";
 import InProgressBanner from "./components/InProgressBanner.vue";
 import ToastTray from "./components/ToastTray.vue";
 import RebaseTodoDialog from "./components/RebaseTodoDialog.vue";
+import CommitMessageDialog from "./components/CommitMessageDialog.vue";
+import ResetDialog from "./components/ResetDialog.vue";
 
 const repos = useReposStore();
 const state = useRepoStateStore();
@@ -128,5 +130,7 @@ onBeforeUnmount(() => {
     </div>
     <ToastTray />
     <RebaseTodoDialog />
+    <CommitMessageDialog />
+    <ResetDialog />
   </div>
 </template>

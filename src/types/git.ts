@@ -15,7 +15,9 @@ export interface RemoteStatus { upstream: string | null; ahead: number; behind: 
 export type GitOp =
   | { type: "merging"; from: string }
   | { type: "rebasing"; onto: string; head: string }
-  | { type: "cherryPicking" };
+  | { type: "cherryPicking" }
+  | { type: "reverting" };
+export type ResetMode = "soft" | "mixed" | "hard" | "keep";
 export interface RepoSnapshot {
   head: HeadInfo; files: WorkingFile[]; branches: BranchList; log: Commit[];
   remoteStatus: RemoteStatus; inProgress: GitOp | null;

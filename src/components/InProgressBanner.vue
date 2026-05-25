@@ -34,6 +34,11 @@ async function call(cmd: string) {
     </span>
     <span v-if="op.type === 'cherryPicking'" class="text-[12.5px]">
       <span style="color: var(--warning)" class="font-semibold">Cherry-picking</span>
+      <span style="color: var(--fg-3)"> — resolve conflicts then continue</span>
+    </span>
+    <span v-if="op.type === 'reverting'" class="text-[12.5px]">
+      <span style="color: var(--warning)" class="font-semibold">Reverting</span>
+      <span style="color: var(--fg-3)"> — resolve conflicts then continue</span>
     </span>
     <div class="flex-1" />
     <template v-if="op.type === 'merging'">
@@ -43,6 +48,14 @@ async function call(cmd: string) {
     <template v-else-if="op.type === 'rebasing'">
       <button class="gl-btn gl-btn-ghost" @click="call('rebase_abort_cmd')">Abort</button>
       <button class="gl-btn gl-btn-primary" @click="call('rebase_continue_cmd')">Continue</button>
+    </template>
+    <template v-else-if="op.type === 'cherryPicking'">
+      <button class="gl-btn gl-btn-ghost" @click="call('cherry_pick_abort_cmd')">Abort</button>
+      <button class="gl-btn gl-btn-primary" @click="call('cherry_pick_continue_cmd')">Continue</button>
+    </template>
+    <template v-else-if="op.type === 'reverting'">
+      <button class="gl-btn gl-btn-ghost" @click="call('revert_abort_cmd')">Abort</button>
+      <button class="gl-btn gl-btn-primary" @click="call('revert_continue_cmd')">Continue</button>
     </template>
   </div>
 </template>
