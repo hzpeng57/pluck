@@ -1,6 +1,6 @@
 use std::process::Command;
 use tempfile::tempdir;
-use git_lite_app_lib::git::ops::checkout::checkout_branch;
+use pluck_app_lib::git::ops::checkout::checkout_branch;
 
 fn git(p: &std::path::Path, args: &[&str]) {
     Command::new("git").current_dir(p).args(args).status().unwrap();

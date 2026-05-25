@@ -1,6 +1,6 @@
 use std::process::Command;
 use tempfile::tempdir;
-use git_lite_app_lib::git::snapshot::build_snapshot;
+use pluck_app_lib::git::snapshot::build_snapshot;
 
 fn git(dir: &std::path::Path, args: &[&str]) {
     let st = Command::new("git").current_dir(dir).args(args).status().unwrap();

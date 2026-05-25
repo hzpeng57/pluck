@@ -27,6 +27,6 @@ const counts = computed(() => {
       <span class="w-1.5 h-1.5 rounded-full animate-pulse" style="background: var(--accent)" />
       refreshing…
     </span>
-    <span class="gl-mono opacity-60">git-lite</span>
+    <span class="gl-mono opacity-60">pluck</span>
   </footer>
 </template>

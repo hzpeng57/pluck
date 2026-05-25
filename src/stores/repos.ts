@@ -2,7 +2,7 @@ import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import type { RepoMeta } from "../types/git";
 
-const LS_KEY = "git-lite:repos";
+const LS_KEY = "pluck:repos";
 
 export const useReposStore = defineStore("repos", () => {
   const all = ref<RepoMeta[]>(loadFromLS());

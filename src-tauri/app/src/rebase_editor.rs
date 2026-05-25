@@ -29,7 +29,7 @@ pub struct RebaseBridge {
 }
 
 pub fn socket_path() -> PathBuf {
-    std::env::temp_dir().join(format!("git-lite-bridge-{}.sock", std::process::id()))
+    std::env::temp_dir().join(format!("pluck-bridge-{}.sock", std::process::id()))
 }
 
 struct SocketGuard {

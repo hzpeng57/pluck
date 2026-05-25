@@ -21,7 +21,7 @@ import ResetDialog from "./components/ResetDialog.vue";
 const repos = useReposStore();
 const state = useRepoStateStore();
 
-const SIDE_KEY = "git-lite:sideWidth";
+const SIDE_KEY = "pluck:sideWidth";
 const MIN_W = 180, MAX_W = 600;
 const sideWidth = ref<number>(loadWidth());
 function loadWidth(): number {

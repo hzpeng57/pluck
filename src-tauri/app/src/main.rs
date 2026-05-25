@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    git_lite_app_lib::run()
+    pluck_app_lib::run()
 }

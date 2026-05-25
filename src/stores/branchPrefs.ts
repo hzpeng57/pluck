@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 import { ref, watch } from "vue";
 
-const LS_KEY = "git-lite:branchPrefs";
+const LS_KEY = "pluck:branchPrefs";
 
 interface Prefs { pinned: string[]; collapsed: string[] }
 type AllPrefs = Record<string, Prefs>;
