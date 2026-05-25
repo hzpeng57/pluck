@@ -10,6 +10,7 @@ import TitleBar from "./components/TitleBar.vue";
 import StatusBar from "./components/StatusBar.vue";
 import BranchesPanel from "./components/BranchesPanel.vue";
 import CommitPanel from "./components/CommitPanel.vue";
+import CommitDetailPanel from "./components/CommitDetailPanel.vue";
 import LogPanel from "./components/LogPanel.vue";
 import InProgressBanner from "./components/InProgressBanner.vue";
 import ToastTray from "./components/ToastTray.vue";
@@ -62,6 +63,14 @@ watch(() => repos.activeId, async id => {
 function onFocus() { if (repos.activeId) state.refresh(repos.activeId); }
 function isMeta(e: KeyboardEvent) { return e.metaKey || e.ctrlKey; }
 async function onKey(e: KeyboardEvent) {
+  if (e.key === "Escape" && state.selectedCommit) {
+    const tag = (document.activeElement as HTMLElement | null)?.tagName;
+    if (tag !== "INPUT" && tag !== "TEXTAREA") {
+      e.preventDefault();
+      state.clearSelectedCommit();
+      return;
+    }
+  }
   if (!repos.activeId) return;
   if (isMeta(e) && e.key.toLowerCase() === "k" && !e.shiftKey) {
     e.preventDefault();
@@ -108,7 +117,8 @@ onBeforeUnmount(() => {
           <div class="gl-splitter-line" />
         </div>
         <div class="gl-surface rounded-lg overflow-auto" style="border: 1px solid var(--border)">
-          <CommitPanel />
+          <CommitDetailPanel v-if="state.selectedCommit" />
+          <CommitPanel v-else />
         </div>
         <div class="gl-surface rounded-lg overflow-auto" style="border: 1px solid var(--border)">
           <LogPanel />

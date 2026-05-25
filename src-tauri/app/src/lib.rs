@@ -43,6 +43,7 @@ pub fn run() {
             commands::rebase_reply,
             commands::rebase_continue_cmd,
             commands::rebase_abort_cmd,
+            commands::commit_detail,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

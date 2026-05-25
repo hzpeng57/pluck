@@ -6,3 +6,4 @@ pub mod merge;
 pub mod pull;
 pub mod push;
 pub mod rebase;
+pub mod show;

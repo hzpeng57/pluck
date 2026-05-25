@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
 import { api } from "../api/tauri";
-import type { RepoSnapshot } from "../types/git";
+import type { RepoSnapshot, CommitDetail } from "../types/git";
 
 interface Toast { id: number; level: "error" | "info"; msg: string }
 
@@ -10,7 +10,17 @@ export const useRepoStateStore = defineStore("repoState", () => {
   const loading = ref(false);
   const toasts = ref<Toast[]>([]);
   const selectedLogBranch = ref<string | null>(null);
+  const selectedCommit = ref<CommitDetail | null>(null);
+  const loadingCommit = ref(false);
   let nextId = 1;
+
+  async function selectCommit(repoId: string, hash: string) {
+    loadingCommit.value = true;
+    try { selectedCommit.value = await api.commitDetail(repoId, hash); }
+    catch (e: any) { pushToast("error", formatErr(e)); }
+    finally { loadingCommit.value = false; }
+  }
+  function clearSelectedCommit() { selectedCommit.value = null; }
 
   function pushToast(level: "error" | "info", msg: string) {
     const id = nextId++;
@@ -32,7 +42,10 @@ export const useRepoStateStore = defineStore("repoState", () => {
   }
   function setLogBranch(id: string, branch: string) { selectedLogBranch.value = branch; refresh(id); }
 
-  return { snapshot, loading, toasts, selectedLogBranch, open, refresh, setLogBranch, pushToast };
+  return {
+    snapshot, loading, toasts, selectedLogBranch, selectedCommit, loadingCommit,
+    open, refresh, setLogBranch, pushToast, selectCommit, clearSelectedCommit,
+  };
 });
 
 function formatErr(e: any): string {

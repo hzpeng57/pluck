@@ -152,6 +152,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .gl-splitter:hover > .gl-splitter-line { background: var(--accent); width: 2px; }
 .gl-splitter:active > .gl-splitter-line { background: var(--accent-2); width: 2px; }
 
+.gl-row-active { background: var(--accent-soft) !important; }
+
 .gl-mono { font-family: var(--mono); }
 .gl-section-title {
   font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em;

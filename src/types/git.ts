@@ -21,3 +21,9 @@ export interface RepoSnapshot {
   remoteStatus: RemoteStatus; inProgress: GitOp | null;
 }
 export interface RepoMeta { id: string; path: string; name: string }
+export type ChangedFileStatus = "added" | "modified" | "deleted" | "renamed" | "copied" | "typechange";
+export interface ChangedFile { status: ChangedFileStatus; path: string; oldPath: string | null }
+export interface CommitDetail {
+  hash: string; short: string; author: string; email: string; dateUnix: number;
+  subject: string; body: string; parents: string[]; refs: string[]; files: ChangedFile[];
+}

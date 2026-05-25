@@ -7,6 +7,7 @@ use crate::git::ops::merge::{merge_abort, merge_continue, merge_into_current};
 use crate::git::ops::pull::pull_rebase;
 use crate::git::ops::push::push;
 use crate::git::ops::rebase::{rebase_abort, rebase_continue, rebase_interactive};
+use crate::git::ops::show::{commit_show, CommitDetail};
 use crate::git::snapshot::RepoSnapshot;
 use crate::rebase_editor::{deliver_reply, socket_path, EditReply, RebaseBridge};
 use crate::state::{refresh_session, AppState};
@@ -217,6 +218,20 @@ pub async fn rebase_abort_cmd(
     let path = { sess.lock().await.path.clone() };
     rebase_abort(&path).await?;
     refresh_session(&sess).await
+}
+
+#[tauri::command]
+pub async fn commit_detail(
+    id: String,
+    hash: String,
+    state: State<'_, AppState>,
+) -> GitResult<CommitDetail> {
+    let sess = state
+        .get(&id)
+        .await
+        .ok_or_else(|| GitError::parse("unknown repo id"))?;
+    let path = { sess.lock().await.path.clone() };
+    commit_show(&path, &hash).await
 }
 
 fn current_bridge_path() -> GitResult<PathBuf> {

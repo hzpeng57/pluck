@@ -45,10 +45,13 @@ function authorColor(name: string) {
     </div>
     <ul class="flex-1 overflow-auto px-2 flex flex-col gap-0.5">
       <li v-for="c in log" :key="c.hash"
+          @click="repos.activeId && state.selectCommit(repos.activeId, c.hash)"
           @contextmenu.prevent="onContext($event, c)"
-          class="flex items-center gap-2.5 px-2 h-8 rounded-md cursor-default transition-colors"
-          @mouseover="(e: any) => (e.currentTarget.style.background = 'var(--hover)')"
-          @mouseleave="(e: any) => (e.currentTarget.style.background = '')">
+          :title="c.subject"
+          class="flex items-center gap-2.5 px-2 h-8 rounded-md cursor-pointer transition-colors"
+          :class="{ 'gl-row-active': state.selectedCommit?.hash === c.hash }"
+          @mouseover="(e: any) => { if (state.selectedCommit?.hash !== c.hash) e.currentTarget.style.background = 'var(--hover)' }"
+          @mouseleave="(e: any) => { if (state.selectedCommit?.hash !== c.hash) e.currentTarget.style.background = '' }">
         <span class="gl-mono text-[10.5px] px-1.5 py-0.5 rounded shrink-0"
               style="background: var(--hover); color: var(--fg-3)">{{ c.short }}</span>
         <span class="inline-flex items-center justify-center w-5 h-5 rounded-full text-[9px] font-semibold shrink-0"
