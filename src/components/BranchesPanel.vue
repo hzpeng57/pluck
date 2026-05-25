@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import { useRepoStateStore } from "../stores/repoState";
 import { useReposStore } from "../stores/repos";
 import { useBranchPrefsStore } from "../stores/branchPrefs";
@@ -44,15 +44,23 @@ const unpinnedRemote = computed<Branch[]>(() => {
   return allRemote.value.filter(b => !set.has(b.name) && matches(b));
 });
 
-// During search, force every folder open so matches are visible.
-const localTree = computed<TreeEntry[]>(() =>
-  buildTree(unpinnedLocal.value,
-    isSearching.value ? () => false : p => prefs.isCollapsed(repoId.value, "local:" + p))
-);
-const remoteTree = computed<TreeEntry[]>(() =>
-  buildTree(unpinnedRemote.value,
-    isSearching.value ? () => false : p => prefs.isCollapsed(repoId.value, "remote:" + p))
-);
+// During search the persisted collapse state is bypassed (default open),
+// but the user can still toggle individual folders via a local override
+// that lives only for the duration of the search.
+const searchCollapsed = ref<Set<string>>(new Set());
+watch(isSearching, v => { if (!v) searchCollapsed.value = new Set(); });
+
+function collapseLookup(scope: "local" | "remote") {
+  return (p: string) => {
+    const key = `${scope}:${p}`;
+    return isSearching.value
+      ? searchCollapsed.value.has(key)
+      : prefs.isCollapsed(repoId.value, key);
+  };
+}
+
+const localTree = computed<TreeEntry[]>(() => buildTree(unpinnedLocal.value, collapseLookup("local")));
+const remoteTree = computed<TreeEntry[]>(() => buildTree(unpinnedRemote.value, collapseLookup("remote")));
 
 const totalMatches = computed(() =>
   pinnedBranches.value.length + unpinnedLocal.value.length + unpinnedRemote.value.length
@@ -82,7 +90,14 @@ function togglePin(e: MouseEvent, b: Branch) {
 }
 function toggleFolder(scope: "local" | "remote", prefix: string) {
   if (!repos.activeId) return;
-  prefs.toggleCollapse(repos.activeId, `${scope}:${prefix}`);
+  const key = `${scope}:${prefix}`;
+  if (isSearching.value) {
+    const next = new Set(searchCollapsed.value);
+    if (next.has(key)) next.delete(key); else next.add(key);
+    searchCollapsed.value = next;
+  } else {
+    prefs.toggleCollapse(repos.activeId, key);
+  }
 }
 
 function onContext(e: MouseEvent, b: Branch) {
@@ -185,6 +200,7 @@ window.addEventListener("click", () => (menu.value = null));
         <li v-for="b in pinnedBranches" :key="'pin:' + b.name"
             @click="pickForLog(b)"
             @contextmenu.prevent="onContext($event, b)"
+            :title="b.name"
             class="gl-row group"
             :class="{ 'is-selected': b.name === state.selectedLogBranch }">
           <span class="w-3 inline-flex justify-center"
@@ -217,6 +233,7 @@ window.addEventListener("click", () => (menu.value = null));
         <li v-if="entry.kind === 'folder'"
             @click="toggleFolder('local', entry.prefix)"
             @contextmenu.prevent="entry.selfBranch && onContext($event, entry.selfBranch)"
+            :title="entry.prefix"
             class="gl-row group">
           <span :style="{ paddingLeft: (entry.depth * 12) + 'px' }" class="inline-flex" />
           <span class="text-[10px] w-3 inline-flex justify-center transition-transform"
@@ -236,6 +253,7 @@ window.addEventListener("click", () => (menu.value = null));
         <li v-else
             @click="pickForLog(entry.branch)"
             @contextmenu.prevent="onContext($event, entry.branch)"
+            :title="entry.branch.name"
             class="gl-row group"
             :class="{ 'is-selected': entry.branch.name === state.selectedLogBranch }">
           <span :style="{ paddingLeft: (entry.depth * 12) + 'px' }" class="inline-flex" />
@@ -267,6 +285,7 @@ window.addEventListener("click", () => (menu.value = null));
       <template v-for="entry in remoteTree" :key="'r:' + (entry.kind === 'folder' ? entry.prefix : entry.branch.name)">
         <li v-if="entry.kind === 'folder'"
             @click="toggleFolder('remote', entry.prefix)"
+            :title="entry.prefix"
             class="gl-row group" style="cursor: pointer">
           <span :style="{ paddingLeft: (entry.depth * 12) + 'px' }" class="inline-flex" />
           <span class="text-[10px] w-3 inline-flex justify-center transition-transform"
@@ -278,6 +297,7 @@ window.addEventListener("click", () => (menu.value = null));
         </li>
         <li v-else
             @contextmenu.prevent="onContext($event, entry.branch)"
+            :title="entry.branch.name"
             class="gl-row group" style="cursor: default">
           <span :style="{ paddingLeft: (entry.depth * 12) + 'px' }" class="inline-flex" />
           <span class="w-3 inline-flex justify-center" style="color: var(--fg-3)">⬡</span>

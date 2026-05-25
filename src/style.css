@@ -43,6 +43,13 @@ body {
   background: var(--bg);
   color: var(--fg);
   -webkit-font-smoothing: antialiased;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
+}
+input, textarea, select, .gl-selectable {
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 *::-webkit-scrollbar { width: 10px; height: 10px; }
@@ -136,6 +143,14 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .gl-menu-item:hover { background: var(--hover); }
 .gl-menu-item.is-danger { color: var(--danger); }
 .gl-menu-item[disabled] { opacity: 0.4; pointer-events: none; }
+
+.gl-splitter > .gl-splitter-line {
+  width: 1px; height: 100%;
+  background: transparent;
+  transition: background 120ms ease, width 120ms ease;
+}
+.gl-splitter:hover > .gl-splitter-line { background: var(--accent); width: 2px; }
+.gl-splitter:active > .gl-splitter-line { background: var(--accent-2); width: 2px; }
 
 .gl-mono { font-family: var(--mono); }
 .gl-section-title {
