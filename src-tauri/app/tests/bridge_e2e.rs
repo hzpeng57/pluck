@@ -10,10 +10,10 @@ async fn bridge_relays_todo_to_socket() {
     let bridge_path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .unwrap() // src-tauri/
-        .join("target/debug/taptap-git-bridge");
+        .join("target/debug/pluck-git-bridge");
     assert!(
         bridge_path.exists(),
-        "build bridge first: cargo build -p taptap-git-bridge ({})",
+        "build bridge first: cargo build -p pluck-git-bridge ({})",
         bridge_path.display()
     );
 
@@ -40,7 +40,7 @@ async fn bridge_relays_todo_to_socket() {
 
     let mut child = tokio::process::Command::new(&bridge_path)
         .arg(todo.to_str().unwrap())
-        .env("TTGIT_SOCK", sock.to_str().unwrap())
+        .env("PLUCK_GIT_SOCK", sock.to_str().unwrap())
         .spawn()
         .unwrap();
 

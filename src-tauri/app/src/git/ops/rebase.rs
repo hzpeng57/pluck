@@ -13,7 +13,7 @@ pub async fn rebase_interactive(
         .current_dir(repo)
         .env("GIT_SEQUENCE_EDITOR", bridge_bin)
         .env("GIT_EDITOR", bridge_bin)
-        .env("TTGIT_SOCK", sock)
+        .env("PLUCK_GIT_SOCK", sock)
         .args(["rebase", "-i", &format!("{from_commit}^")])
         .output()
         .await

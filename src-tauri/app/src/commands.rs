@@ -347,18 +347,18 @@ pub async fn reword_ancestor(
 fn current_bridge_path() -> GitResult<PathBuf> {
     let exe = std::env::current_exe().map_err(|e| GitError::parse(e.to_string()))?;
     if let Some(parent) = exe.parent() {
-        let bundled = parent.join("../Resources/binaries/taptap-git-bridge");
+        let bundled = parent.join("../Resources/binaries/pluck-git-bridge");
         if bundled.exists() {
             return Ok(bundled);
         }
-        let sibling = parent.join("taptap-git-bridge");
+        let sibling = parent.join("pluck-git-bridge");
         if sibling.exists() {
             return Ok(sibling);
         }
     }
     let dev = std::env::current_dir()
         .unwrap_or_default()
-        .join("src-tauri/target/debug/taptap-git-bridge");
+        .join("src-tauri/target/debug/pluck-git-bridge");
     if dev.exists() {
         return Ok(dev);
     }

@@ -22,7 +22,7 @@ struct EditReply {
 }
 
 fn main() -> ExitCode {
-    let sock_path = match env::var("TTGIT_SOCK") { Ok(s) => s, Err(_) => return ExitCode::from(0) };
+    let sock_path = match env::var("PLUCK_GIT_SOCK") { Ok(s) => s, Err(_) => return ExitCode::from(0) };
     let argv1 = match env::args().nth(1) { Some(a) => a, None => return ExitCode::from(0) };
     let file = PathBuf::from(&argv1);
     let kind = if argv1.ends_with("git-rebase-todo") { "sequence" } else { "commitMsg" };

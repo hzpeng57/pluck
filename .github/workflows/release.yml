@@ -48,7 +48,7 @@ jobs:
 
       - name: Build git-bridge binary
         working-directory: src-tauri
-        run: cargo build --release --target ${{ matrix.target }} -p taptap-git-bridge
+        run: cargo build --release --target ${{ matrix.target }} -p pluck-git-bridge
 
       - name: Build & release
         uses: tauri-apps/tauri-action@v0

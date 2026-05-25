@@ -6,18 +6,18 @@ fn main() {
     let target = std::env::var("TARGET").ok();
     let src = match target {
         Some(t) => {
-            let with_target = workspace.join(format!("target/{t}/{profile}/taptap-git-bridge"));
+            let with_target = workspace.join(format!("target/{t}/{profile}/pluck-git-bridge"));
             if with_target.exists() {
                 with_target
             } else {
-                workspace.join(format!("target/{profile}/taptap-git-bridge"))
+                workspace.join(format!("target/{profile}/pluck-git-bridge"))
             }
         }
-        None => workspace.join(format!("target/{profile}/taptap-git-bridge")),
+        None => workspace.join(format!("target/{profile}/pluck-git-bridge")),
     };
     let dst_dir = workspace.join("binaries");
     let _ = std::fs::create_dir_all(&dst_dir);
-    let dst = dst_dir.join("taptap-git-bridge");
+    let dst = dst_dir.join("pluck-git-bridge");
     if src.exists() {
         let _ = std::fs::copy(&src, &dst);
     } else if !dst.exists() {

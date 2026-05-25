@@ -31,7 +31,7 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "resources": ["../binaries/taptap-git-bridge"],
+    "resources": ["../binaries/pluck-git-bridge"],
     "createUpdaterArtifacts": true
   },
   "plugins": {
