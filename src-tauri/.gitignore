@@ -9,3 +9,7 @@
 
 # Bundled bridge binary (copied by app/build.rs)
 binaries/taptap-git-bridge
+
+# tauri icon auto-generates mobile assets; we ship desktop only
+app/icons/ios/
+app/icons/android/
