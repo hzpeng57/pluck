@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import { useRepoStateStore } from "../stores/repoState";
 import { useReposStore } from "../stores/repos";
 import { useBranchPrefsStore } from "../stores/branchPrefs";
@@ -15,6 +15,8 @@ const prefs = useBranchPrefsStore();
 const showPinned = ref(true);
 const showLocal = ref(true);
 const showRemote = ref(true);
+const search = ref("");
+const searchInput = ref<HTMLInputElement | null>(null);
 
 const menu = ref<{ x: number; y: number; branch: Branch } | null>(null);
 
@@ -22,25 +24,52 @@ const repoId = computed(() => repos.activeId ?? "");
 const allLocal = computed<Branch[]>(() => state.snapshot?.branches.local ?? []);
 const allRemote = computed<Branch[]>(() => state.snapshot?.branches.remote ?? []);
 
+const query = computed(() => search.value.trim().toLowerCase());
+const isSearching = computed(() => query.value.length > 0);
+function matches(b: Branch): boolean {
+  if (!isSearching.value) return true;
+  return b.name.toLowerCase().includes(query.value);
+}
+
 const pinnedBranches = computed<Branch[]>(() => {
   const set = new Set(prefs.pinned(repoId.value));
-  return [...allLocal.value, ...allRemote.value].filter(b => set.has(b.name));
+  return [...allLocal.value, ...allRemote.value].filter(b => set.has(b.name) && matches(b));
 });
 const unpinnedLocal = computed<Branch[]>(() => {
   const set = new Set(prefs.pinned(repoId.value));
-  return allLocal.value.filter(b => !set.has(b.name));
+  return allLocal.value.filter(b => !set.has(b.name) && matches(b));
 });
 const unpinnedRemote = computed<Branch[]>(() => {
   const set = new Set(prefs.pinned(repoId.value));
-  return allRemote.value.filter(b => !set.has(b.name));
+  return allRemote.value.filter(b => !set.has(b.name) && matches(b));
 });
 
+// During search, force every folder open so matches are visible.
 const localTree = computed<TreeEntry[]>(() =>
-  buildTree(unpinnedLocal.value, p => prefs.isCollapsed(repoId.value, "local:" + p))
+  buildTree(unpinnedLocal.value,
+    isSearching.value ? () => false : p => prefs.isCollapsed(repoId.value, "local:" + p))
 );
 const remoteTree = computed<TreeEntry[]>(() =>
-  buildTree(unpinnedRemote.value, p => prefs.isCollapsed(repoId.value, "remote:" + p))
+  buildTree(unpinnedRemote.value,
+    isSearching.value ? () => false : p => prefs.isCollapsed(repoId.value, "remote:" + p))
 );
+
+const totalMatches = computed(() =>
+  pinnedBranches.value.length + unpinnedLocal.value.length + unpinnedRemote.value.length
+);
+
+function onKeydown(e: KeyboardEvent) {
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "f" && !e.shiftKey) {
+    e.preventDefault();
+    searchInput.value?.focus();
+    searchInput.value?.select();
+  } else if (e.key === "Escape" && document.activeElement === searchInput.value) {
+    search.value = "";
+    searchInput.value?.blur();
+  }
+}
+onMounted(() => window.addEventListener("keydown", onKeydown));
+onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
 
 function pickForLog(b: Branch) {
   if (!repos.activeId) return;
@@ -109,6 +138,37 @@ window.addEventListener("click", () => (menu.value = null));
 
 <template>
   <div class="flex flex-col p-2 gap-1">
+    <!-- Search -->
+    <div class="sticky top-0 z-10 pb-1 -mx-2 px-2 pt-0"
+         style="background: var(--panel)">
+      <div class="relative">
+        <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-[12px] pointer-events-none"
+              style="color: var(--fg-3)">⌕</span>
+        <input ref="searchInput" v-model="search" type="text"
+               placeholder="Search branches  ⌘F"
+               class="gl-input pl-7 pr-7 py-1.5 text-[12.5px] h-8"
+               style="border-radius: 6px" />
+        <button v-if="search" @click="search = ''"
+                class="absolute right-2 top-1/2 -translate-y-1/2 text-[12px] transition-colors"
+                style="color: var(--fg-3)"
+                @mouseover="(e: any) => (e.currentTarget.style.color = 'var(--fg)')"
+                @mouseleave="(e: any) => (e.currentTarget.style.color = 'var(--fg-3)')"
+                title="Clear (Esc)">✕</button>
+      </div>
+      <div v-if="isSearching" class="text-[10.5px] mt-1 px-0.5"
+           style="color: var(--fg-3)">
+        {{ totalMatches }} match{{ totalMatches === 1 ? "" : "es" }}
+      </div>
+    </div>
+
+    <!-- No matches -->
+    <div v-if="isSearching && totalMatches === 0"
+         class="flex flex-col items-center justify-center py-6 gap-1 text-center"
+         style="color: var(--fg-3)">
+      <span class="text-2xl">∅</span>
+      <span class="text-[12px]">No branch matches "{{ search }}"</span>
+    </div>
+
     <!-- Pinned -->
     <template v-if="pinnedBranches.length">
       <button class="flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors"
