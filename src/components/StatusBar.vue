@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useRepoStateStore } from "../stores/repoState";
+import { version } from "../../package.json";
 const state = useRepoStateStore();
 const counts = computed(() => {
   const s = state.snapshot; if (!s) return { dirty: 0, ahead: 0, behind: 0 };
@@ -27,6 +28,6 @@ const counts = computed(() => {
       <span class="w-1.5 h-1.5 rounded-full animate-pulse" style="background: var(--accent)" />
       refreshing…
     </span>
-    <span class="gl-mono opacity-60">pluck</span>
+    <span class="gl-mono opacity-60">pluck v{{ version }}</span>
   </footer>
 </template>
