@@ -3,6 +3,7 @@ import { watch } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { useReposStore } from "./stores/repos";
 import { useRepoStateStore } from "./stores/repoState";
+import { api } from "./api/tauri";
 import type { RepoSnapshot } from "./types/git";
 import RepoSwitcher from "./components/RepoSwitcher.vue";
 import TitleBar from "./components/TitleBar.vue";
@@ -16,7 +17,15 @@ import RebaseTodoDialog from "./components/RebaseTodoDialog.vue";
 
 const repos = useReposStore();
 const state = useRepoStateStore();
-watch(() => repos.activeId, id => { if (id) state.open(id); }, { immediate: true });
+watch(() => repos.activeId, async id => {
+  if (!id) return;
+  const meta = repos.all.find(r => r.id === id);
+  if (meta) {
+    try { await api.repoAdd(meta.path); }
+    catch (e: any) { state.pushToast("error", e?.data?.friendly ?? String(e)); return; }
+  }
+  state.open(id);
+}, { immediate: true });
 window.addEventListener("focus", () => { if (repos.activeId) state.refresh(repos.activeId); });
 
 function isMeta(e: KeyboardEvent) { return e.metaKey || e.ctrlKey; }
