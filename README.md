@@ -6,6 +6,10 @@
 
 <p align="center">A native, keyboard-friendly git client for macOS — built with Tauri 2 + Vue 3.</p>
 
+<p align="center">
+  <strong>English</strong> · <a href="README.zh-CN.md">简体中文</a>
+</p>
+
 ---
 
 ## Status
@@ -28,7 +32,11 @@ Personal-use alpha. macOS arm64 (Apple Silicon) only for now; Intel Mac and Wind
 
 ## Updates
 
-Pluck ships with an in-app updater. On launch it checks GitHub Releases and shows a banner when a new version is available — one click downloads, verifies the ed25519 signature, and restarts into the new build.
+Pluck ships with an in-app updater:
+
+- Checks GitHub Releases once at launch, then re-checks every 6 hours;
+- Click the `pluck v0.x.y` label in the bottom-right status bar to check on demand;
+- When a new version is available, a banner appears at the top of the window — one click downloads, verifies the ed25519 signature, and restarts into the new build.
 
 ## Run from source
 
