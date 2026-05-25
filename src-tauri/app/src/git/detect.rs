@@ -8,6 +8,7 @@ pub enum GitOp {
     Merging { from: String },
     Rebasing { onto: String, head: String },
     CherryPicking,
+    Reverting,
 }
 
 pub async fn detect_in_progress(repo: &Path) -> Option<GitOp> {
@@ -24,6 +25,9 @@ pub async fn detect_in_progress(repo: &Path) -> Option<GitOp> {
     }
     if gd.join("CHERRY_PICK_HEAD").exists() {
         return Some(GitOp::CherryPicking);
+    }
+    if gd.join("REVERT_HEAD").exists() {
+        return Some(GitOp::Reverting);
     }
     None
 }

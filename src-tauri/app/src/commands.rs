@@ -1,12 +1,16 @@
 use crate::error::{GitError, GitResult};
 use crate::git::ops::branch::{create_branch, delete_branch};
 use crate::git::ops::checkout::checkout_branch;
+use crate::git::ops::cherry_pick::{cherry_pick, cherry_pick_abort, cherry_pick_continue};
 use crate::git::ops::commit::commit_files;
 use crate::git::ops::fetch::fetch_all;
 use crate::git::ops::merge::{merge_abort, merge_continue, merge_into_current};
 use crate::git::ops::pull::{pull_into_rebase, pull_rebase};
 use crate::git::ops::push::push;
 use crate::git::ops::rebase::{rebase_abort, rebase_continue, rebase_interactive};
+use crate::git::ops::reset::{reset_to, ResetMode};
+use crate::git::ops::revert::{revert, revert_abort, revert_continue};
+use crate::git::ops::reword::{amend_message, reword_commit};
 use crate::git::ops::show::{commit_show, CommitDetail};
 use crate::git::snapshot::RepoSnapshot;
 use crate::rebase_editor::{deliver_reply, socket_path, EditReply, RebaseBridge};
@@ -244,6 +248,100 @@ pub async fn commit_detail(
         .ok_or_else(|| GitError::parse("unknown repo id"))?;
     let path = { sess.lock().await.path.clone() };
     commit_show(&path, &hash).await
+}
+
+#[tauri::command]
+pub async fn cherry_pick_cmd(
+    id: String,
+    hashes: Vec<String>,
+    state: State<'_, AppState>,
+) -> GitResult<RepoSnapshot> {
+    let sess = state.get(&id).await.ok_or_else(|| GitError::parse("unknown repo id"))?;
+    let path = { sess.lock().await.path.clone() };
+    cherry_pick(&path, &hashes).await?;
+    refresh_session(&sess).await
+}
+
+#[tauri::command]
+pub async fn cherry_pick_continue_cmd(id: String, state: State<'_, AppState>) -> GitResult<RepoSnapshot> {
+    let sess = state.get(&id).await.ok_or_else(|| GitError::parse("unknown repo id"))?;
+    let path = { sess.lock().await.path.clone() };
+    cherry_pick_continue(&path).await?;
+    refresh_session(&sess).await
+}
+
+#[tauri::command]
+pub async fn cherry_pick_abort_cmd(id: String, state: State<'_, AppState>) -> GitResult<RepoSnapshot> {
+    let sess = state.get(&id).await.ok_or_else(|| GitError::parse("unknown repo id"))?;
+    let path = { sess.lock().await.path.clone() };
+    cherry_pick_abort(&path).await?;
+    refresh_session(&sess).await
+}
+
+#[tauri::command]
+pub async fn revert_cmd(
+    id: String,
+    hashes: Vec<String>,
+    state: State<'_, AppState>,
+) -> GitResult<RepoSnapshot> {
+    let sess = state.get(&id).await.ok_or_else(|| GitError::parse("unknown repo id"))?;
+    let path = { sess.lock().await.path.clone() };
+    revert(&path, &hashes).await?;
+    refresh_session(&sess).await
+}
+
+#[tauri::command]
+pub async fn revert_continue_cmd(id: String, state: State<'_, AppState>) -> GitResult<RepoSnapshot> {
+    let sess = state.get(&id).await.ok_or_else(|| GitError::parse("unknown repo id"))?;
+    let path = { sess.lock().await.path.clone() };
+    revert_continue(&path).await?;
+    refresh_session(&sess).await
+}
+
+#[tauri::command]
+pub async fn revert_abort_cmd(id: String, state: State<'_, AppState>) -> GitResult<RepoSnapshot> {
+    let sess = state.get(&id).await.ok_or_else(|| GitError::parse("unknown repo id"))?;
+    let path = { sess.lock().await.path.clone() };
+    revert_abort(&path).await?;
+    refresh_session(&sess).await
+}
+
+#[tauri::command]
+pub async fn reset_to_commit(
+    id: String,
+    hash: String,
+    mode: ResetMode,
+    state: State<'_, AppState>,
+) -> GitResult<RepoSnapshot> {
+    let sess = state.get(&id).await.ok_or_else(|| GitError::parse("unknown repo id"))?;
+    let path = { sess.lock().await.path.clone() };
+    reset_to(&path, &hash, mode).await?;
+    refresh_session(&sess).await
+}
+
+#[tauri::command]
+pub async fn amend_head_message(
+    id: String,
+    message: String,
+    state: State<'_, AppState>,
+) -> GitResult<RepoSnapshot> {
+    let sess = state.get(&id).await.ok_or_else(|| GitError::parse("unknown repo id"))?;
+    let path = { sess.lock().await.path.clone() };
+    amend_message(&path, &message).await?;
+    refresh_session(&sess).await
+}
+
+#[tauri::command]
+pub async fn reword_ancestor(
+    id: String,
+    hash: String,
+    message: String,
+    state: State<'_, AppState>,
+) -> GitResult<RepoSnapshot> {
+    let sess = state.get(&id).await.ok_or_else(|| GitError::parse("unknown repo id"))?;
+    let path = { sess.lock().await.path.clone() };
+    reword_commit(&path, &hash, &message).await?;
+    refresh_session(&sess).await
 }
 
 fn current_bridge_path() -> GitResult<PathBuf> {
