@@ -14,6 +14,11 @@ const menu = ref<{ x: number; y: number; commit: Commit } | null>(null);
 function onContext(e: MouseEvent, c: Commit) { menu.value = { x: e.clientX, y: e.clientY, commit: c }; }
 window.addEventListener("click", () => menu.value = null);
 
+function onCommitClick(c: Commit) {
+  if (!repos.activeId) return;
+  state.selectCommit(repos.activeId, c.hash);
+}
+
 async function interactiveRebase() {
   if (!menu.value || !repos.activeId) return;
   const id = repos.activeId; const from = menu.value.commit.hash;
@@ -45,7 +50,7 @@ function authorColor(name: string) {
     </div>
     <ul class="flex-1 overflow-auto px-2 flex flex-col gap-0.5">
       <li v-for="c in log" :key="c.hash"
-          @click="repos.activeId && state.selectCommit(repos.activeId, c.hash)"
+          @click="onCommitClick(c)"
           @contextmenu.prevent="onContext($event, c)"
           :title="c.subject"
           class="flex items-center gap-2.5 px-2 h-8 rounded-md cursor-pointer transition-colors"

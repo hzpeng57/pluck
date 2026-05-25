@@ -37,7 +37,13 @@ function formatAbsolute(unix: number): string {
 </script>
 
 <template>
-  <div v-if="detail" class="flex flex-col h-full">
+  <div class="flex flex-col h-full">
+    <div v-if="!detail" class="flex flex-col items-center justify-center h-full gap-2"
+         style="color: var(--fg-3)">
+      <span class="text-2xl">…</span>
+      <span class="text-[12px]">Loading commit detail…</span>
+    </div>
+    <template v-else>
     <!-- Top bar: SHA + close -->
     <div class="flex items-center gap-2 px-3 pt-3 pb-2">
       <span class="gl-section-title">Commit</span>
@@ -122,5 +128,6 @@ function formatAbsolute(unix: number): string {
               class="gl-mono gl-selectable" style="color: var(--fg-2)">{{ p.slice(0, 7) }}</span>
       </div>
     </div>
+    </template>
   </div>
 </template>
