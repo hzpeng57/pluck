@@ -4,7 +4,7 @@
 
 <h1 align="center">Pluck</h1>
 
-<p align="center">一个原生的、键盘友好的 macOS git 客户端 —— 基于 Tauri 2 + Vue 3 构建。</p>
+<p align="center">一个轻量的 macOS git 客户端，参考 JetBrains 系列 IDE 的 git 体验。</p>
 
 <p align="center">
   <a href="README.md">English</a> · <strong>简体中文</strong>
