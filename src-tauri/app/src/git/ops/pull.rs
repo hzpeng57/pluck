@@ -2,6 +2,35 @@ use crate::error::{GitError, GitResult};
 use crate::git::cmd::run_git;
 use std::path::Path;
 
+/// WebStorm "Pull into <current> using rebase" semantics:
+/// fetch `source` if it's a remote-tracking branch, then rebase current HEAD onto it.
+/// Conflicts leave rebase state in place — caller refreshes snapshot and the
+/// in-progress banner takes over.
+pub async fn pull_into_rebase(repo: &Path, source: &str) -> GitResult<()> {
+    if let Some((remote, branch)) = source.split_once('/') {
+        let remotes = run_git(repo, &["remote"]).await?;
+        let remote_exists = remotes.stdout.lines().any(|l| l.trim() == remote);
+        if remote_exists {
+            run_git(repo, &["fetch", remote, branch]).await?;
+        }
+    }
+    let output = tokio::process::Command::new("git")
+        .current_dir(repo)
+        .args(["rebase", source])
+        .output()
+        .await
+        .map_err(|e| GitError::spawn(e.to_string()))?;
+    if output.status.success() {
+        return Ok(());
+    }
+    // Conflicts → leave state for InProgressBanner, do not toast as failure.
+    if repo.join(".git/rebase-merge").exists() || repo.join(".git/rebase-apply").exists() {
+        return Ok(());
+    }
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    Err(GitError::from_stderr(output.status.code().unwrap_or(-1), &stderr))
+}
+
 pub async fn pull_rebase(repo: &Path, target_branch: &str) -> GitResult<()> {
     let head = run_git(repo, &["symbolic-ref", "--short", "HEAD"]).await?;
     let current = head.stdout.trim().to_string();

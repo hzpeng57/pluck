@@ -136,12 +136,13 @@ async function mergeIntoCurrent() {
   try { state.snapshot = await ops.merge(id, name); }
   catch (e: any) { state.pushToast("error", e?.data?.friendly ?? String(e)); }
 }
-async function pullInto() {
+async function pullIntoCurrentRebase() {
   if (!menu.value || !repos.activeId) return;
-  const id = repos.activeId, name = menu.value.branch.name; menu.value = null;
-  try { state.snapshot = await invoke<RepoSnapshot>("pull", { id, targetBranch: name }); }
+  const id = repos.activeId, source = menu.value.branch.name; menu.value = null;
+  try { state.snapshot = await invoke<RepoSnapshot>("pull_into_current_rebase", { id, source }); }
   catch (e: any) { state.pushToast("error", e?.data?.friendly ?? String(e)); }
 }
+const currentBranchName = computed(() => state.snapshot?.head.branch ?? null);
 function toggleMenuPin() {
   if (!menu.value || !repos.activeId) return;
   prefs.togglePin(repos.activeId, menu.value.branch.name);
@@ -318,7 +319,11 @@ window.addEventListener("click", () => (menu.value = null));
       <button class="gl-menu-item" @click="checkout" :disabled="menu.branch.isCurrent">Checkout</button>
       <button class="gl-menu-item" @click="newFromHere">New branch from here…</button>
       <button class="gl-menu-item" @click="mergeIntoCurrent" :disabled="menu.branch.isCurrent">Merge into current</button>
-      <button class="gl-menu-item" @click="pullInto">Pull --rebase</button>
+      <button class="gl-menu-item"
+              @click="pullIntoCurrentRebase"
+              :disabled="menu.branch.isCurrent || !currentBranchName">
+        Pull into "{{ currentBranchName ?? "current" }}" using rebase
+      </button>
       <div class="my-1 h-px" style="background: var(--border)"></div>
       <button class="gl-menu-item is-danger" @click="del" :disabled="menu.branch.isCurrent">Delete</button>
     </div>

@@ -39,6 +39,7 @@ pub fn run() {
             commands::merge_abort_cmd,
             commands::merge_continue_cmd,
             commands::pull,
+            commands::pull_into_current_rebase,
             commands::rebase_interactive_start,
             commands::rebase_reply,
             commands::rebase_continue_cmd,

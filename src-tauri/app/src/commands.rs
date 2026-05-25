@@ -4,7 +4,7 @@ use crate::git::ops::checkout::checkout_branch;
 use crate::git::ops::commit::commit_files;
 use crate::git::ops::fetch::fetch_all;
 use crate::git::ops::merge::{merge_abort, merge_continue, merge_into_current};
-use crate::git::ops::pull::pull_rebase;
+use crate::git::ops::pull::{pull_into_rebase, pull_rebase};
 use crate::git::ops::push::push;
 use crate::git::ops::rebase::{rebase_abort, rebase_continue, rebase_interactive};
 use crate::git::ops::show::{commit_show, CommitDetail};
@@ -165,6 +165,18 @@ pub async fn pull(id: String, target_branch: String, state: State<'_, AppState>)
     let sess = state.get(&id).await.ok_or_else(|| GitError::parse("unknown repo id"))?;
     let path = { sess.lock().await.path.clone() };
     pull_rebase(&path, &target_branch).await?;
+    refresh_session(&sess).await
+}
+
+#[tauri::command]
+pub async fn pull_into_current_rebase(
+    id: String,
+    source: String,
+    state: State<'_, AppState>,
+) -> GitResult<RepoSnapshot> {
+    let sess = state.get(&id).await.ok_or_else(|| GitError::parse("unknown repo id"))?;
+    let path = { sess.lock().await.path.clone() };
+    pull_into_rebase(&path, &source).await?;
     refresh_session(&sess).await
 }
 
