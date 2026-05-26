@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { RepoMeta, RepoSnapshot, CommitDetail } from "../types/git";
+import type { RepoMeta, RepoSnapshot, CommitDetail, DeletePrecheck } from "../types/git";
 
 export const api = {
   repoAdd: (path: string) => invoke<RepoMeta>("repo_add", { path }),
@@ -27,6 +27,8 @@ export const ops = {
     invoke<RepoSnapshot>("branch_create", { id, name, from }),
   branchDelete: (id: string, name: string, force: boolean) =>
     invoke<RepoSnapshot>("branch_delete", { id, name, force }),
+  branchDeletePrecheck: (id: string, name: string) =>
+    invoke<DeletePrecheck>("branch_delete_precheck", { id, name }),
   commit: (id: string, files: string[], message: string, skipHooks: boolean) =>
     invoke<RepoSnapshot>("commit", { id, files, message, skipHooks }),
   merge: (id: string, branch: string) => invoke<RepoSnapshot>("merge", { id, branch }),

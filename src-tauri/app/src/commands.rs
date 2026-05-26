@@ -1,5 +1,5 @@
 use crate::error::{GitError, GitResult};
-use crate::git::ops::branch::{create_branch, delete_branch};
+use crate::git::ops::branch::{create_branch, delete_branch, delete_precheck, DeletePrecheck};
 use crate::git::ops::checkout::checkout_branch;
 use crate::git::ops::cherry_pick::{cherry_pick, cherry_pick_abort, cherry_pick_continue};
 use crate::git::ops::commit::commit_files;
@@ -112,8 +112,25 @@ pub async fn branch_delete(
         .await
         .ok_or_else(|| GitError::parse("unknown repo id"))?;
     let path = { sess.lock().await.path.clone() };
-    delete_branch(&path, &name, force).await?;
-    refresh_session(&sess).await
+    let res = delete_branch(&path, &name, force).await;
+    // 不论成败都刷新一次：失败时也让 UI 拿到真实快照，避免 stale 状态
+    let snapshot = refresh_session(&sess).await;
+    res?;
+    snapshot
+}
+
+#[tauri::command]
+pub async fn branch_delete_precheck(
+    id: String,
+    name: String,
+    state: State<'_, AppState>,
+) -> GitResult<DeletePrecheck> {
+    let sess = state
+        .get(&id)
+        .await
+        .ok_or_else(|| GitError::parse("unknown repo id"))?;
+    let path = { sess.lock().await.path.clone() };
+    delete_precheck(&path, &name).await
 }
 
 #[tauri::command]

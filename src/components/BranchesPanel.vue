@@ -110,25 +110,15 @@ async function checkout() {
   try { state.snapshot = await ops.branchCheckout(id, name); }
   catch (e: any) { state.pushToast("error", e?.data?.friendly ?? String(e)); }
 }
-async function newFromHere() {
+function newFromHere() {
   if (!menu.value || !repos.activeId) return;
-  const name = prompt("New branch name:")?.trim();
-  if (!name) { menu.value = null; return; }
-  const id = repos.activeId, from = menu.value.branch.name; menu.value = null;
-  try { state.snapshot = await ops.branchCreate(id, name, from); }
-  catch (e: any) { state.pushToast("error", e?.data?.friendly ?? String(e)); }
+  const from = menu.value.branch.name; menu.value = null;
+  state.openBranchCreateDialog(from);
 }
-async function del() {
+function del() {
   if (!menu.value || !repos.activeId) return;
-  const id = repos.activeId, name = menu.value.branch.name; menu.value = null;
-  if (!confirm(`Delete branch ${name}?`)) return;
-  try { state.snapshot = await ops.branchDelete(id, name, false); }
-  catch (e: any) {
-    if (confirm(`${e?.data?.friendly ?? e}\n\nForce delete?`)) {
-      try { state.snapshot = await ops.branchDelete(id, name, true); }
-      catch (e2: any) { state.pushToast("error", e2?.data?.friendly ?? String(e2)); }
-    }
-  }
+  const name = menu.value.branch.name; menu.value = null;
+  state.openBranchDeleteDialog(name);
 }
 async function mergeIntoCurrent() {
   if (!menu.value || !repos.activeId) return;

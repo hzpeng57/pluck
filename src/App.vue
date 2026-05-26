@@ -17,6 +17,8 @@ import ToastTray from "./components/ToastTray.vue";
 import RebaseTodoDialog from "./components/RebaseTodoDialog.vue";
 import CommitMessageDialog from "./components/CommitMessageDialog.vue";
 import ResetDialog from "./components/ResetDialog.vue";
+import BranchCreateDialog from "./components/BranchCreateDialog.vue";
+import BranchDeleteDialog from "./components/BranchDeleteDialog.vue";
 import UpdateBanner from "./components/UpdateBanner.vue";
 import { checkForUpdates } from "./lib/updater";
 
@@ -144,5 +146,7 @@ onBeforeUnmount(() => {
     <RebaseTodoDialog />
     <CommitMessageDialog />
     <ResetDialog />
+    <BranchCreateDialog />
+    <BranchDeleteDialog />
   </div>
 </template>

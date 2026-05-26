@@ -17,6 +17,8 @@ export const useRepoStateStore = defineStore("repoState", () => {
   const selectionCount = computed(() => selectedHashes.value.size);
   const editMessageDialog = ref<{ hash: string; initial: string; mode: "amend" | "reword" } | null>(null);
   const resetDialog = ref<{ hash: string; short: string; subject: string } | null>(null);
+  const branchCreateDialog = ref<{ from: string } | null>(null);
+  const branchDeleteDialog = ref<{ name: string } | null>(null);
   let nextId = 1;
 
   function openEditMessageDialog(hash: string, initial: string, mode: "amend" | "reword") {
@@ -27,6 +29,10 @@ export const useRepoStateStore = defineStore("repoState", () => {
     resetDialog.value = { hash, short, subject };
   }
   function closeResetDialog() { resetDialog.value = null; }
+  function openBranchCreateDialog(from: string) { branchCreateDialog.value = { from }; }
+  function closeBranchCreateDialog() { branchCreateDialog.value = null; }
+  function openBranchDeleteDialog(name: string) { branchDeleteDialog.value = { name }; }
+  function closeBranchDeleteDialog() { branchDeleteDialog.value = null; }
 
   function setSingleSelection(repoId: string, hash: string) {
     selectedHashes.value = new Set([hash]);
@@ -91,10 +97,12 @@ export const useRepoStateStore = defineStore("repoState", () => {
   return {
     snapshot, loading, toasts, selectedLogBranch, selectedCommit, loadingCommit,
     selectedHashes, anchorHash, selectionCount,
-    editMessageDialog, resetDialog,
+    editMessageDialog, resetDialog, branchCreateDialog, branchDeleteDialog,
     open, refresh, setLogBranch, pushToast, selectCommit, clearSelectedCommit,
     setSingleSelection, toggleSelection, selectRange, clearSelection,
     openEditMessageDialog, closeEditMessageDialog, openResetDialog, closeResetDialog,
+    openBranchCreateDialog, closeBranchCreateDialog,
+    openBranchDeleteDialog, closeBranchDeleteDialog,
   };
 });
 

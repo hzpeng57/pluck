@@ -29,3 +29,10 @@ export interface CommitDetail {
   hash: string; short: string; author: string; email: string; dateUnix: number;
   subject: string; body: string; parents: string[]; refs: string[]; files: ChangedFile[];
 }
+export interface DeletePrecheck {
+  exists: boolean;
+  isCurrent: boolean;
+  isMerged: boolean;
+  upstream: string | null;
+  aheadOfHead: number;
+}
