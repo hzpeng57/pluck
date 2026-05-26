@@ -66,3 +66,7 @@ pnpm tauri build
 - Vue 3 + Pinia + Vite
 - TailwindCSS 4
 - TypeScript
+
+## 给 AI Agent
+
+如果你是接手这个 repo 的 AI 编码 agent，先读 [AGENTS.md](AGENTS.md)：目录拓扑、架构红线、常用命令、发版流程都在里面。

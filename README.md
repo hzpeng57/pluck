@@ -66,3 +66,7 @@ pnpm tauri build
 - Vue 3 + Pinia + Vite
 - TailwindCSS 4
 - TypeScript
+
+## For AI agents
+
+If you're an AI coding agent picking up work in this repo, read [AGENTS.md](AGENTS.md) first — it covers the directory layout, architectural red lines, common commands, and the release flow.
