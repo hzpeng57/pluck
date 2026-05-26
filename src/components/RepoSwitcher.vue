@@ -32,7 +32,10 @@ onBeforeUnmount(() => window.removeEventListener("click", closeMenu));
 function initial(name: string) {
   return name.replace(/[^a-zA-Z0-9]/g, "").slice(0, 2).toUpperCase() || "·";
 }
-const palette = ["#6366F1", "#EC4899", "#10B981", "#F59E0B", "#06B6D4", "#8B5CF6", "#F43F5E", "#84CC16"];
+const palette = [
+  "var(--graph-1)", "var(--graph-2)", "var(--graph-3)", "var(--graph-4)",
+  "var(--graph-5)", "var(--graph-6)", "var(--graph-7)", "var(--graph-8)",
+];
 function color(id: string) {
   let h = 0; for (const c of id) h = (h * 31 + c.charCodeAt(0)) >>> 0;
   return palette[h % palette.length];
@@ -48,11 +51,11 @@ const items = computed(() => repos.all);
       @click="repos.setActive(r.id)"
       @contextmenu.prevent="onContext($event, r)"
       :title="r.name"
-      class="relative w-10 h-10 rounded-xl flex items-center justify-center text-[11px] font-semibold tracking-wide transition-all"
+      class="relative w-10 h-10 rounded-xl flex items-center justify-center text-[12px] font-semibold tracking-wide transition-all"
       :class="r.id === repos.activeId ? 'scale-100' : 'scale-95 opacity-75 hover:opacity-100 hover:scale-100'"
       :style="{
         background: r.id === repos.activeId ? color(r.id) : 'var(--raised)',
-        color: r.id === repos.activeId ? '#fff' : 'var(--fg-2)',
+        color: r.id === repos.activeId ? 'var(--on-graph)' : 'var(--fg-2)',
         border: '1px solid ' + (r.id === repos.activeId ? color(r.id) : 'var(--border)')
       }"
     >

@@ -1,7 +1,9 @@
 import { defineStore } from "pinia";
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { api } from "../api/tauri";
 import type { RepoSnapshot, CommitDetail, Commit } from "../types/git";
+
+const LOG_PAGE_SIZE = 200;
 
 interface Toast { id: number; level: "error" | "info"; msg: string }
 
@@ -19,7 +21,16 @@ export const useRepoStateStore = defineStore("repoState", () => {
   const resetDialog = ref<{ hash: string; short: string; subject: string } | null>(null);
   const branchCreateDialog = ref<{ from: string } | null>(null);
   const branchDeleteDialog = ref<{ name: string } | null>(null);
+  const logEnd = ref(false);
+  const logLoadingMore = ref(false);
   let nextId = 1;
+
+  // 每次 snapshot 整体替换（首次 open / refresh / 任何 mutation 后回流），
+  // 重置 log 分页游标。追加 (snapshot.log = [...]) 不会触发 ref 变化。
+  watch(snapshot, () => {
+    logEnd.value = false;
+    logLoadingMore.value = false;
+  });
 
   function openEditMessageDialog(hash: string, initial: string, mode: "amend" | "reword") {
     editMessageDialog.value = { hash, initial, mode };
@@ -94,15 +105,35 @@ export const useRepoStateStore = defineStore("repoState", () => {
   }
   function setLogBranch(id: string, branch: string) { selectedLogBranch.value = branch; refresh(id); }
 
+  async function loadMoreLog(id: string) {
+    if (logLoadingMore.value || logEnd.value || !snapshot.value) return;
+    logLoadingMore.value = true;
+    try {
+      const branch = selectedLogBranch.value;
+      const skip = snapshot.value.log.length;
+      const next = await api.logPage(id, branch, skip, LOG_PAGE_SIZE);
+      if (next.length === 0) { logEnd.value = true; return; }
+      // 追加而不是替换 snapshot，避免 watcher 重置游标
+      snapshot.value.log = [...snapshot.value.log, ...next];
+      if (next.length < LOG_PAGE_SIZE) logEnd.value = true;
+    } catch (e: any) {
+      pushToast("error", formatErr(e));
+    } finally {
+      logLoadingMore.value = false;
+    }
+  }
+
   return {
     snapshot, loading, toasts, selectedLogBranch, selectedCommit, loadingCommit,
     selectedHashes, anchorHash, selectionCount,
     editMessageDialog, resetDialog, branchCreateDialog, branchDeleteDialog,
+    logEnd, logLoadingMore,
     open, refresh, setLogBranch, pushToast, selectCommit, clearSelectedCommit,
     setSingleSelection, toggleSelection, selectRange, clearSelection,
     openEditMessageDialog, closeEditMessageDialog, openResetDialog, closeResetDialog,
     openBranchCreateDialog, closeBranchCreateDialog,
     openBranchDeleteDialog, closeBranchDeleteDialog,
+    loadMoreLog,
   };
 });
 

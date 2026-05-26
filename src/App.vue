@@ -56,6 +56,44 @@ function startDrag(e: MouseEvent) {
   e.preventDefault();
 }
 
+// 右列上下分割：上半 commit/detail，下半 log。
+// 用 ratio 持久化而不是 px：窗口 resize 时按比例还原，避免重启后比例失真。
+const TOP_KEY = "pluck:rightTopRatio";
+const MIN_RATIO = 0.15, MAX_RATIO = 0.85;
+const rightTopRatio = ref<number>(loadRatio());
+function loadRatio(): number {
+  const n = Number(localStorage.getItem(TOP_KEY));
+  return Number.isFinite(n) && n >= MIN_RATIO && n <= MAX_RATIO ? n : 0.5;
+}
+watch(rightTopRatio, v => localStorage.setItem(TOP_KEY, String(v)));
+const rightCol = ref<HTMLElement | null>(null);
+const rightRows = computed(() => `${(rightTopRatio.value * 100).toFixed(3)}% 6px 1fr`);
+
+let dragStartY = 0; let dragStartRatio = 0; let dragColHeight = 0;
+function onDragMoveV(e: MouseEvent) {
+  if (!dragColHeight) return;
+  const dyRatio = (e.clientY - dragStartY) / dragColHeight;
+  const next = dragStartRatio + dyRatio;
+  rightTopRatio.value = Math.max(MIN_RATIO, Math.min(MAX_RATIO, next));
+}
+function onDragEndV() {
+  document.removeEventListener("mousemove", onDragMoveV);
+  document.removeEventListener("mouseup", onDragEndV);
+  document.body.style.cursor = "";
+  document.body.style.userSelect = "";
+}
+function startDragV(e: MouseEvent) {
+  dragColHeight = rightCol.value?.clientHeight ?? 0;
+  if (!dragColHeight) return;
+  dragStartY = e.clientY;
+  dragStartRatio = rightTopRatio.value;
+  document.addEventListener("mousemove", onDragMoveV);
+  document.addEventListener("mouseup", onDragEndV);
+  document.body.style.cursor = "row-resize";
+  document.body.style.userSelect = "none";
+  e.preventDefault();
+}
+
 watch(() => repos.activeId, async id => {
   if (!id) return;
   const meta = repos.all.find(r => r.id === id);
@@ -120,24 +158,33 @@ onBeforeUnmount(() => {
       <UpdateBanner />
       <TitleBar />
       <InProgressBanner v-if="state.snapshot?.inProgress" />
-      <div class="flex-1 grid grid-rows-[1fr_1fr] p-2 overflow-hidden gap-y-2"
+      <div class="flex-1 grid p-3 overflow-hidden"
            :style="{ gridTemplateColumns: gridCols }">
-        <div class="row-span-2 gl-surface rounded-lg overflow-auto"
+        <div class="gl-surface rounded-lg overflow-auto"
              style="border: 1px solid var(--border)">
           <BranchesPanel />
         </div>
-        <div class="row-span-2 cursor-col-resize gl-splitter flex justify-center"
+        <div class="cursor-col-resize gl-splitter flex justify-center"
              @mousedown="startDrag"
              @dblclick="sideWidth = 260"
              title="Drag to resize · double-click to reset">
           <div class="gl-splitter-line" />
         </div>
-        <div class="gl-surface rounded-lg overflow-auto" style="border: 1px solid var(--border)">
-          <CommitDetailPanel v-if="state.selectedCommit" />
-          <CommitPanel v-else />
-        </div>
-        <div class="gl-surface rounded-lg overflow-auto" style="border: 1px solid var(--border)">
-          <LogPanel />
+        <div ref="rightCol" class="grid min-h-0 min-w-0"
+             :style="{ gridTemplateRows: rightRows }">
+          <div class="gl-surface rounded-lg overflow-auto min-h-0" style="border: 1px solid var(--border)">
+            <CommitDetailPanel v-if="state.selectedCommit" />
+            <CommitPanel v-else />
+          </div>
+          <div class="cursor-row-resize gl-splitter gl-splitter--h flex items-center"
+               @mousedown="startDragV"
+               @dblclick="rightTopRatio = 0.5"
+               title="Drag to resize · double-click to reset">
+            <div class="gl-splitter-line" />
+          </div>
+          <div class="gl-surface rounded-lg overflow-auto min-h-0" style="border: 1px solid var(--border)">
+            <LogPanel />
+          </div>
         </div>
       </div>
       <StatusBar />

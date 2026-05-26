@@ -67,7 +67,7 @@ onBeforeUnmount(() => window.removeEventListener("click", closeMenu));
       <div class="w-2 h-2 rounded-full" :style="{ background: state.snapshot ? 'var(--success)' : 'var(--fg-3)' }" />
       <span class="font-semibold truncate" style="color: var(--fg)">{{ repos.active?.name ?? "No repository" }}</span>
       <span style="color: var(--fg-3)">/</span>
-      <span class="gl-mono text-[12px] px-1.5 py-0.5 rounded"
+      <span class="gl-mono text-[13px] px-1.5 py-0.5 rounded"
             :style="{ background: 'var(--accent-soft)', color: 'var(--accent-2)' }">
         {{ state.snapshot?.head.branch ?? "no head" }}
       </span>
@@ -90,21 +90,21 @@ onBeforeUnmount(() => window.removeEventListener("click", closeMenu));
     <div class="flex items-center gap-1.5">
       <button class="gl-btn" @click="fetch" :disabled="fetching" title="⌘T">
         <span v-if="fetching" class="gl-spinner" />
-        <span v-else class="text-[14px] leading-none">↓</span>
+        <span v-else class="text-[14.5px] leading-none">↓</span>
         {{ fetching ? "Fetching…" : "Fetch" }}
       </button>
       <button class="gl-btn" @click="pull" :disabled="pulling" title="Pull --rebase">
         <span v-if="pulling" class="gl-spinner" />
-        <span v-else class="text-[14px] leading-none">⇣</span>
+        <span v-else class="text-[14.5px] leading-none">⇣</span>
         {{ pulling ? "Pulling…" : "Pull" }}
       </button>
       <div class="relative">
         <button class="gl-btn gl-btn-primary" @click.stop="showPushMenu = !showPushMenu"
                 :disabled="pushing" title="⌘⇧K">
           <span v-if="pushing" class="gl-spinner" />
-          <span v-else class="text-[14px] leading-none">↑</span>
+          <span v-else class="text-[14.5px] leading-none">↑</span>
           {{ pushing ? "Pushing…" : "Push" }}
-          <span v-if="!pushing" class="opacity-70 text-[10px] ml-0.5">▾</span>
+          <span v-if="!pushing" class="opacity-70 text-[11px] ml-0.5">▾</span>
         </button>
         <div v-if="showPushMenu" class="gl-menu" style="position: absolute; top: 32px; right: 0;">
           <button class="gl-menu-item" @click="push(false)">Push</button>

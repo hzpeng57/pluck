@@ -2,44 +2,109 @@
 
 :root {
   color-scheme: dark;
-  --bg: #0B0D10;
-  --panel: #12151A;
-  --raised: #181C22;
-  --hover: #1E232B;
-  --border: #242932;
-  --border-soft: #1B1F26;
-  --fg: #E6E8EC;
-  --fg-2: #9BA3AF;
-  --fg-3: #5C6573;
-  --accent: #6366F1;
-  --accent-2: #818CF8;
-  --accent-soft: rgba(99, 102, 241, 0.14);
-  --accent-ring: rgba(99, 102, 241, 0.35);
-  --success: #34D399;
-  --warning: #FBBF24;
-  --danger: #F87171;
-  --info: #60A5FA;
+  /* === Pluck Default — espresso + brass === */
+
+  /* Surfaces */
+  --bg: #1A1410;
+  --panel: #221B17;
+  --raised: #2B231E;
+  --hover: #342C26;
+  --border: #3D342E;
+  --border-soft: #2F2722;
+
+  /* Foreground */
+  --fg: #F2EBE0;
+  --fg-2: #B8AC9C;
+  --fg-3: #807463;
+
+  /* Accent */
+  --accent: #D4A056;
+  --accent-2: #E8B870;
+  --accent-soft: rgba(212, 160, 86, 0.14);
+  --accent-ring: rgba(212, 160, 86, 0.40);
+
+  /* Semantic */
+  --success: #6FBF8E;
+  --success-soft: rgba(111, 191, 142, 0.14);
+  --warning: #E8B048;
+  --warning-soft: rgba(232, 176, 72, 0.16);
+  --warning-soft-weak: rgba(232, 176, 72, 0.08);
+  --warning-ring: rgba(232, 176, 72, 0.25);
+  --danger: #DC6363;
+  --danger-soft: rgba(220, 99, 99, 0.16);
+  --danger-soft-strong: rgba(220, 99, 99, 0.22);
+  --danger-soft-weak: rgba(220, 99, 99, 0.10);
+  --danger-ring: rgba(220, 99, 99, 0.34);
+  --info: #6FA8C7;
+  --info-soft: rgba(111, 168, 199, 0.16);
+
+  /* "On" colors — text/icon laid over a filled accent/danger */
+  --on-accent: #1A1410;
+  --on-danger: #1A1410;
+  --on-graph: #FFFFFF;
+
+  /* File status (role-based, reuse semantic tokens) */
+  --status-modified: var(--warning);
+  --status-modified-bg: var(--warning-soft);
+  --status-added: var(--success);
+  --status-added-bg: var(--success-soft);
+  --status-deleted: var(--danger);
+  --status-deleted-bg: var(--danger-soft);
+  --status-renamed: var(--info);
+  --status-renamed-bg: var(--info-soft);
+  --status-untracked: #B58CC9;
+  --status-untracked-bg: rgba(181, 140, 201, 0.16);
+  --status-copied: #B58CC9;
+  --status-copied-bg: rgba(181, 140, 201, 0.16);
+  --status-typechange: #D08AB5;
+  --status-typechange-bg: rgba(208, 138, 181, 0.16);
+  --status-conflicted: var(--danger);
+  --status-conflicted-bg: var(--danger-soft-strong);
+
+  /* Graph palette — deterministic colors for authors/repo avatars */
+  --graph-1: #D4A056;
+  --graph-2: #C97064;
+  --graph-3: #6FBF8E;
+  --graph-4: #E8B048;
+  --graph-5: #B58463;
+  --graph-6: #9C7AB5;
+  --graph-7: #6FA8C7;
+  --graph-8: #D49B6A;
+
+  /* Overlays */
+  --overlay: rgba(26, 20, 16, 0.78);
+  --shadow-elev: 0 24px 64px rgba(0, 0, 0, 0.6);
+  --shadow-menu: 0 8px 24px rgba(0, 0, 0, 0.35), 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+  --shadow-toast: 0 10px 32px rgba(0, 0, 0, 0.45), 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+  --shadow-btn-inset: 0 1px 0 rgba(255, 255, 255, 0.12) inset, 0 1px 2px rgba(0, 0, 0, 0.25);
+
   --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
 }
 
 @media (prefers-color-scheme: light) {
   :root {
     color-scheme: light;
-    --bg: #F7F8FA;
-    --panel: #FFFFFF;
-    --raised: #FFFFFF;
-    --hover: #F1F2F5;
-    --border: #E5E7EB;
-    --border-soft: #EEF0F3;
-    --fg: #0F172A;
-    --fg-2: #4B5563;
-    --fg-3: #94A3B8;
+    /* Light mode tracks the warm palette but with parchment paper feel */
+    --bg: #F7F2EA;
+    --panel: #FFFBF3;
+    --raised: #FFFBF3;
+    --hover: #EDE6D7;
+    --border: #DDD3BF;
+    --border-soft: #E8DFCC;
+    --fg: #2A211A;
+    --fg-2: #6B5E4D;
+    --fg-3: #9C8F7A;
+    --overlay: rgba(247, 242, 234, 0.78);
+    --shadow-elev: 0 24px 64px rgba(74, 56, 36, 0.18);
+    --shadow-menu: 0 8px 24px rgba(74, 56, 36, 0.12), 0 1px 0 rgba(255, 255, 255, 0.6) inset;
   }
 }
 
 html, body, #app { height: 100%; margin: 0; }
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Inter", "SF Pro Text", system-ui, sans-serif;
+  font-size: 13.5px;
+  line-height: 1.5;
   background: var(--bg);
   color: var(--fg);
   -webkit-font-smoothing: antialiased;
@@ -70,18 +135,19 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   border-radius: 6px;
 }
 
+@layer components {
 .gl-surface { background: var(--panel); }
 .gl-raised { background: var(--raised); border: 1px solid var(--border); }
 .gl-divider { background: var(--border-soft); }
 
 .gl-btn {
   display: inline-flex; align-items: center; gap: 6px;
-  height: 28px; padding: 0 10px;
+  height: 30px; padding: 0 12px;
   border-radius: 6px;
   color: var(--fg);
   background: transparent;
   border: 1px solid transparent;
-  font-size: 12.5px; font-weight: 500;
+  font-size: 13px; font-weight: 500;
   transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
 }
 .gl-btn:hover { background: var(--hover); }
@@ -89,34 +155,36 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 
 .gl-btn-ghost { border-color: var(--border); }
 .gl-btn-primary {
-  background: var(--accent); color: white; border-color: var(--accent);
-  box-shadow: 0 1px 0 rgba(255,255,255,0.08) inset, 0 1px 2px rgba(0,0,0,0.25);
+  background: var(--accent); color: var(--on-accent); border-color: var(--accent);
+  font-weight: 600;
+  box-shadow: var(--shadow-btn-inset);
 }
 .gl-btn-primary:hover { background: var(--accent-2); border-color: var(--accent-2); }
 .gl-btn-danger {
-  background: var(--danger); color: white; border-color: var(--danger);
-  box-shadow: 0 1px 0 rgba(255,255,255,0.08) inset, 0 1px 2px rgba(0,0,0,0.25);
+  background: var(--danger); color: var(--on-danger); border-color: var(--danger);
+  font-weight: 600;
+  box-shadow: var(--shadow-btn-inset);
 }
-.gl-btn-danger:hover { filter: brightness(1.1); }
+.gl-btn-danger:hover { filter: brightness(1.08); }
 
 .gl-chip {
   display: inline-flex; align-items: center; gap: 3px;
-  height: 18px; padding: 0 6px;
+  height: 20px; padding: 0 7px;
   border-radius: 999px;
-  font-family: var(--mono); font-size: 10.5px;
+  font-family: var(--mono); font-size: 11px;
   background: var(--hover); color: var(--fg-2);
 }
-.gl-chip-ahead { background: rgba(52, 211, 153, 0.12); color: var(--success); }
-.gl-chip-behind { background: rgba(248, 113, 113, 0.14); color: var(--danger); }
+.gl-chip-ahead { background: var(--success-soft); color: var(--success); }
+.gl-chip-behind { background: var(--danger-soft); color: var(--danger); }
 
 .gl-input {
   width: 100%;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 8px 10px;
+  padding: 9px 12px;
   color: var(--fg);
-  font-size: 13px;
+  font-size: 13.5px;
   transition: border-color 120ms ease;
 }
 .gl-input:hover { border-color: var(--fg-3); }
@@ -124,7 +192,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 
 .gl-row {
   display: flex; align-items: center; gap: 8px;
-  height: 28px; padding: 0 8px;
+  height: 32px; padding: 0 10px;
   border-radius: 6px;
   cursor: pointer;
   color: var(--fg);
@@ -144,13 +212,13 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   background: var(--raised);
   border: 1px solid var(--border);
   border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.35), 0 1px 0 rgba(255,255,255,0.04) inset;
+  box-shadow: var(--shadow-menu);
   padding: 4px;
 }
 .gl-menu-item {
   display: block; width: 100%; text-align: left;
-  padding: 6px 10px; border-radius: 5px;
-  font-size: 13px; color: var(--fg);
+  padding: 8px 12px; border-radius: 5px;
+  font-size: 13.5px; color: var(--fg);
 }
 .gl-menu-item:hover { background: var(--hover); }
 .gl-menu-item.is-danger { color: var(--danger); }
@@ -159,7 +227,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 
 .gl-icon-btn {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 22px; height: 22px;
+  width: 26px; height: 26px;
   border-radius: 5px;
   color: var(--fg-3);
   background: transparent;
@@ -183,15 +251,33 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .gl-splitter > .gl-splitter-line {
   width: 1px; height: 100%;
   background: transparent;
-  transition: background 120ms ease, width 120ms ease;
+  transition: background 120ms ease, width 120ms ease, height 120ms ease;
 }
 .gl-splitter:hover > .gl-splitter-line { background: var(--accent); width: 2px; }
 .gl-splitter:active > .gl-splitter-line { background: var(--accent-2); width: 2px; }
 
+.gl-splitter--h > .gl-splitter-line { width: 100%; height: 1px; }
+.gl-splitter--h:hover > .gl-splitter-line { height: 2px; width: 100%; }
+.gl-splitter--h:active > .gl-splitter-line { height: 2px; width: 100%; }
+
 .gl-row-active { background: var(--accent-soft) !important; }
+
+.gl-checkbox { accent-color: var(--accent); }
+
+.gl-overlay {
+  position: fixed; inset: 0;
+  background: var(--overlay);
+  backdrop-filter: blur(4px);
+}
+.gl-dialog {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-elev);
+}
 
 .gl-mono { font-family: var(--mono); }
 .gl-section-title {
-  font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em;
+  font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em;
   color: var(--fg-3); font-weight: 600;
+}
 }

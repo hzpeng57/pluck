@@ -4,7 +4,7 @@ import { updaterState, checkForUpdates, downloadAndInstall, restart, dismiss } f
 
 const visible = computed(() => {
   const k = updaterState.value.kind;
-  return k === "available" || k === "downloading" || k === "ready" || k === "error" || k === "uptodate";
+  return k === "available" || k === "downloading" || k === "ready" || k === "error";
 });
 
 const label = computed(() => {
@@ -13,7 +13,6 @@ const label = computed(() => {
     case "available": return `Pluck ${s.version} is available`;
     case "downloading": return `Downloading… ${Math.round(s.percent * 100)}%`;
     case "ready": return `Pluck ${s.version} ready — restart to apply`;
-    case "uptodate": return "You are on the latest version";
     case "error": return `Update check failed: ${s.message}`;
     default: return "";
   }
@@ -38,10 +37,10 @@ const primaryLabel = computed(() => {
 </script>
 
 <template>
-  <div v-if="visible" class="px-3 py-2 flex items-center gap-3 text-[12.5px]"
+  <div v-if="visible" class="px-3 py-2 flex items-center gap-3 text-[13px]"
        :style="{
-         background: updaterState.kind === 'error' ? 'rgba(248,113,113,0.12)' : 'var(--raised)',
-         borderBottom: '1px solid ' + (updaterState.kind === 'error' ? 'rgba(248,113,113,0.4)' : 'var(--border)'),
+         background: updaterState.kind === 'error' ? 'var(--danger-soft-weak)' : 'var(--raised)',
+         borderBottom: '1px solid ' + (updaterState.kind === 'error' ? 'var(--danger-ring)' : 'var(--border)'),
          color: 'var(--fg)'
        }">
     <span class="w-1.5 h-1.5 rounded-full shrink-0"

@@ -9,10 +9,16 @@ const counts = computed(() => {
   return { dirty: s.files.length, ahead: s.remoteStatus.ahead, behind: s.remoteStatus.behind };
 });
 const checking = computed(() => updaterState.value.kind === "checking");
-function onCheckUpdate() { if (!checking.value) checkForUpdates(true); }
+async function onCheckUpdate() {
+  if (checking.value) return;
+  await checkForUpdates(true);
+  if (updaterState.value.kind === "uptodate") {
+    state.pushToast("info", `You are on the latest version (v${version})`);
+  }
+}
 </script>
 <template>
-  <footer class="flex items-center gap-4 px-4 h-7 shrink-0 text-[11px]"
+  <footer class="flex items-center gap-4 px-4 h-7 shrink-0 text-[12px]"
           style="background: var(--bg); border-top: 1px solid var(--border-soft); color: var(--fg-3)">
     <span class="flex items-center gap-1">
       <span class="w-1 h-1 rounded-full" :style="{ background: counts.dirty ? 'var(--warning)' : 'var(--fg-3)' }" />

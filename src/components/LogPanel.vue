@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { useRepoStateStore } from "../stores/repoState";
 import { useReposStore } from "../stores/repos";
@@ -9,8 +9,77 @@ import type { Commit, RepoSnapshot } from "../types/git";
 
 const state = useRepoStateStore();
 const repos = useReposStore();
-const log = computed(() => state.snapshot?.log ?? []);
+const allLog = computed(() => state.snapshot?.log ?? []);
 const headBranch = computed(() => state.snapshot?.head.branch ?? null);
+
+// 搜索走服务端 `git log --grep` 一次扫全 history（带 hash 前缀单点解析）；
+// 浏览态走分页 allLog + 无限滚动。两条路径互不干扰。
+const SEARCH_LIMIT = 500;
+const SEARCH_DEBOUNCE_MS = 300;
+
+const query = ref("");
+const author = ref("");
+const hasQuery = computed(() => query.value.trim().length > 0);
+const hasAuthor = computed(() => author.value.trim().length > 0);
+const hasFilter = computed(() => hasQuery.value || hasAuthor.value);
+
+// 当前 git 用户：从 snapshot.me 拿。空字符串表示 git config 未设。
+const me = computed(() => state.snapshot?.me ?? null);
+const canPickMe = computed(() => !!me.value?.name);
+const isMeSelected = computed(() =>
+  !!me.value?.name && author.value.trim() === me.value.name
+);
+function pickMe() {
+  if (me.value?.name) author.value = me.value.name;
+}
+const searchResults = ref<Commit[] | null>(null);
+const searching = ref(false);
+const searchError = ref<string | null>(null);
+let searchSeq = 0;
+let searchTimer: number | null = null;
+
+async function runSearch(q: string, a: string, seq: number) {
+  if (!repos.activeId) return;
+  searching.value = true;
+  searchError.value = null;
+  try {
+    const res = await api.logSearch(repos.activeId, state.selectedLogBranch, q, a, SEARCH_LIMIT);
+    if (seq !== searchSeq) return; // stale
+    searchResults.value = res;
+  } catch (e: any) {
+    if (seq !== searchSeq) return;
+    searchError.value = e?.data?.friendly ?? String(e);
+    searchResults.value = [];
+  } finally {
+    if (seq === searchSeq) searching.value = false;
+  }
+}
+
+watch([query, author], ([q, a]) => {
+  const tq = q.trim();
+  const ta = a.trim();
+  searchSeq++;
+  if (searchTimer !== null) { clearTimeout(searchTimer); searchTimer = null; }
+  if (!tq && !ta) {
+    searchResults.value = null;
+    searching.value = false;
+    searchError.value = null;
+    return;
+  }
+  // 进入 debounce 窗口立刻置为 searching，避免 0~300ms 内闪 "No match"
+  searching.value = true;
+  searchError.value = null;
+  const seq = searchSeq;
+  searchTimer = window.setTimeout(() => { void runSearch(tq, ta, seq); }, SEARCH_DEBOUNCE_MS);
+});
+
+const log = computed<Commit[]>(() => {
+  if (hasFilter.value) return searchResults.value ?? [];
+  return allLog.value;
+});
+const searchHitCap = computed(() =>
+  hasFilter.value && (searchResults.value?.length ?? 0) >= SEARCH_LIMIT
+);
 const onCurrentBranchLog = computed(() =>
   headBranch.value !== null && state.selectedLogBranch === headBranch.value
 );
@@ -115,10 +184,31 @@ async function interactiveRebase() {
 function authorInitial(name: string) {
   return name.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join("").toUpperCase() || "·";
 }
+const graphPalette = [
+  "var(--graph-1)", "var(--graph-2)", "var(--graph-3)", "var(--graph-4)",
+  "var(--graph-5)", "var(--graph-6)", "var(--graph-7)", "var(--graph-8)",
+];
 function authorColor(name: string) {
   let h = 0; for (const c of name) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-  const palette = ["#6366F1", "#EC4899", "#10B981", "#F59E0B", "#06B6D4", "#8B5CF6", "#F43F5E", "#84CC16"];
-  return palette[h % palette.length];
+  return graphPalette[h % graphPalette.length];
+}
+
+// === infinite scroll ===
+// 用 scroll 事件而不是 IntersectionObserver：nested scroll container 上
+// observer 的 root 边界判断、refresh 后元素复用都踩过坑，scroll 事件简单可控。
+const scrollRoot = ref<HTMLElement | null>(null);
+let scrollRaf = 0;
+function onScroll() {
+  if (hasFilter.value) return; // 搜索/筛选态结果是一次性 grep，不分页
+  if (scrollRaf) return;
+  scrollRaf = requestAnimationFrame(() => {
+    scrollRaf = 0;
+    const el = scrollRoot.value;
+    if (!el || !repos.activeId) return;
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 200) {
+      void state.loadMoreLog(repos.activeId);
+    }
+  });
 }
 </script>
 
@@ -126,7 +216,7 @@ function authorColor(name: string) {
   <div class="flex flex-col h-full">
     <div class="flex items-center gap-2 px-3 pt-3 pb-2">
       <span class="gl-section-title">History</span>
-      <span class="gl-mono text-[11px] px-1.5 py-0.5 rounded"
+      <span class="gl-mono text-[12px] px-1.5 py-0.5 rounded"
             style="background: var(--accent-soft); color: var(--accent-2)">
         {{ state.selectedLogBranch ?? "—" }}
       </span>
@@ -134,9 +224,48 @@ function authorColor(name: string) {
       <span v-if="selectedCount > 1" class="gl-chip" style="background: var(--accent-soft); color: var(--accent-2)">
         {{ selectedCount }} selected
       </span>
-      <span class="gl-chip">{{ log.length }}</span>
     </div>
-    <ul class="flex-1 overflow-auto px-2 flex flex-col gap-0.5">
+    <div class="px-3 pb-2 flex items-center gap-2">
+      <div class="relative flex-[3] min-w-0">
+        <svg class="absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none"
+             width="14" height="14" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+             style="color: var(--fg-3)">
+          <circle cx="11" cy="11" r="7" />
+          <path d="m20 20-3.5-3.5" />
+        </svg>
+        <input v-model="query" type="text" placeholder="Search hash or message…"
+               class="gl-input w-full pl-8 pr-6" />
+        <button v-if="hasQuery"
+                @click="query = ''"
+                class="absolute right-2 top-1/2 -translate-y-1/2 text-[14px] leading-none px-1"
+                style="color: var(--fg-3)"
+                title="Clear">×</button>
+      </div>
+      <div class="relative flex-[2] min-w-0">
+        <svg class="absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none"
+             width="14" height="14" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+             style="color: var(--fg-3)">
+          <circle cx="12" cy="8" r="4" />
+          <path d="M4 21a8 8 0 0 1 16 0" />
+        </svg>
+        <input v-model="author" type="text" placeholder="Author…"
+               class="gl-input w-full pl-8" :class="canPickMe ? 'pr-14' : 'pr-6'" />
+        <button v-if="canPickMe && !isMeSelected"
+                @click="pickMe"
+                class="absolute top-1/2 -translate-y-1/2 text-[10px] leading-none px-1.5 py-0.5 rounded gl-mono"
+                :class="hasAuthor ? 'right-6' : 'right-2'"
+                style="background: var(--accent-soft); color: var(--accent-2)"
+                :title="`Filter by me (${me?.name})`">me</button>
+        <button v-if="hasAuthor"
+                @click="author = ''"
+                class="absolute right-2 top-1/2 -translate-y-1/2 text-[14px] leading-none px-1"
+                style="color: var(--fg-3)"
+                title="Clear">×</button>
+      </div>
+    </div>
+    <ul ref="scrollRoot" @scroll.passive="onScroll" class="flex-1 overflow-auto px-2 flex flex-col gap-0.5">
       <li v-for="c in log" :key="c.hash"
           @click="onCommitClick($event, c)"
           @contextmenu.prevent="onContext($event, c)"
@@ -145,19 +274,53 @@ function authorColor(name: string) {
           :class="{ 'gl-row-active': isSelected(c.hash) }"
           @mouseover="(e: any) => { if (!isSelected(c.hash)) e.currentTarget.style.background = 'var(--hover)' }"
           @mouseleave="(e: any) => { if (!isSelected(c.hash)) e.currentTarget.style.background = '' }">
-        <span class="gl-mono text-[10.5px] px-1.5 py-0.5 rounded shrink-0"
+        <span class="gl-mono text-[11px] px-1.5 py-0.5 rounded shrink-0"
               style="background: var(--hover); color: var(--fg-3)">{{ c.short }}</span>
-        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full text-[9px] font-semibold shrink-0"
-              :style="{ background: authorColor(c.author), color: '#fff' }"
+        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-semibold shrink-0"
+              :style="{ background: authorColor(c.author), color: 'var(--on-graph)' }"
               :title="c.author">{{ authorInitial(c.author) }}</span>
-        <span class="flex-1 truncate text-[12.5px]" style="color: var(--fg)">{{ c.subject }}</span>
-        <span class="text-[11px] shrink-0" style="color: var(--fg-3)">{{ relativeTime(c.dateUnix) }}</span>
+        <span class="flex-1 truncate text-[13px]" style="color: var(--fg)">{{ c.subject }}</span>
+        <span class="text-[12px] shrink-0" style="color: var(--fg-3)">{{ relativeTime(c.dateUnix) }}</span>
       </li>
-      <li v-if="log.length === 0"
+      <li v-if="log.length === 0 && !hasQuery"
           class="flex flex-col items-center justify-center gap-1 py-8 text-center"
           style="color: var(--fg-3)">
         <span class="text-2xl">∅</span>
-        <span class="text-[12px]">No commits</span>
+        <span class="text-[13px]">No commits</span>
+      </li>
+      <li v-else-if="hasFilter && searching"
+          class="flex items-center justify-center gap-2 py-8"
+          style="color: var(--fg-3)">
+        <span class="gl-spinner" />
+        <span class="text-[12px]">Searching…</span>
+      </li>
+      <li v-else-if="hasFilter && searchError"
+          class="flex flex-col items-center justify-center gap-1 py-8 text-center"
+          style="color: var(--danger)">
+        <span class="text-[13px]">Search failed</span>
+        <span class="text-[12px]">{{ searchError }}</span>
+      </li>
+      <li v-else-if="hasFilter && log.length === 0"
+          class="flex flex-col items-center justify-center gap-1 py-8 text-center"
+          style="color: var(--fg-3)">
+        <span class="text-[13px]">No match</span>
+      </li>
+      <li v-else-if="hasFilter"
+          class="flex items-center justify-center py-3 text-[12px]"
+          style="color: var(--fg-3)">
+        <span v-if="searchHitCap">Showing first {{ log.length }} matches · refine filter for more</span>
+        <span v-else>{{ log.length }} match{{ log.length === 1 ? "" : "es" }}</span>
+      </li>
+      <li v-else-if="!state.logEnd"
+          class="flex items-center justify-center py-3 text-[12px]"
+          style="color: var(--fg-3)">
+        <span v-if="state.logLoadingMore" class="gl-spinner mr-2" />
+        <span>{{ state.logLoadingMore ? "Loading more…" : "Scroll for more" }}</span>
+      </li>
+      <li v-else-if="allLog.length >= 200"
+          class="flex items-center justify-center py-3 text-[12px]"
+          style="color: var(--fg-3)">
+        End of history · {{ allLog.length }} commits
       </li>
     </ul>
     <div v-if="menu" :style="{ top: menu.y + 'px', left: menu.x + 'px' }" class="gl-menu">

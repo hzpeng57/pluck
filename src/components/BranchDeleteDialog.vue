@@ -76,34 +76,34 @@ function onKey(e: KeyboardEvent) {
 <template>
   <div v-if="visible && dialog"
        class="fixed inset-0 flex items-center justify-center z-50"
-       style="background: rgba(11, 13, 16, 0.7); backdrop-filter: blur(4px)"
+       style="background: var(--overlay); backdrop-filter: blur(4px)"
        @keydown="onKey">
     <div class="rounded-xl w-[480px] flex flex-col overflow-hidden"
-         style="background: var(--panel); border: 1px solid var(--border); box-shadow: 0 24px 64px rgba(0,0,0,0.6)">
+         style="background: var(--panel); border: 1px solid var(--border); box-shadow: var(--shadow-elev)">
       <div class="flex items-center gap-2 px-4 h-12 shrink-0" style="border-bottom: 1px solid var(--border-soft)">
-        <span class="w-2 h-2 rounded-full" style="background: var(--danger, #ef4444)" />
-        <span class="font-semibold text-[13px]">Delete Branch</span>
-        <span class="gl-mono text-[11px] px-1.5 py-0.5 rounded ml-1"
+        <span class="w-2 h-2 rounded-full" style="background: var(--danger)" />
+        <span class="font-semibold text-[13.5px]">Delete Branch</span>
+        <span class="gl-mono text-[12px] px-1.5 py-0.5 rounded ml-1"
               style="background: var(--hover); color: var(--fg-2)">
           {{ dialog.name }}
         </span>
       </div>
 
-      <div class="p-4 text-[12.5px]" style="color: var(--fg-2)">
+      <div class="p-4 text-[13px]" style="color: var(--fg-2)">
         <div v-if="loading" style="color: var(--fg-3)">Checking branch status…</div>
 
         <template v-else-if="precheck">
           <!-- 当前分支 -->
           <div v-if="precheck.isCurrent"
                class="rounded px-3 py-2"
-               style="background: rgba(239,68,68,0.08); color: var(--danger, #ef4444); border: 1px solid rgba(239,68,68,0.3)">
+               style="background: var(--danger-soft-weak); color: var(--danger); border: 1px solid var(--danger-ring)">
             Cannot delete the branch currently checked out. Switch to another branch first.
           </div>
 
           <!-- 已完全合并 -->
           <div v-else-if="precheck.isMerged">
             <p>This branch is fully merged into HEAD. Safe to delete.</p>
-            <p v-if="precheck.upstream" class="mt-2 text-[11.5px]" style="color: var(--fg-3)">
+            <p v-if="precheck.upstream" class="mt-2 text-[12px]" style="color: var(--fg-3)">
               Tracks <span class="gl-mono">{{ precheck.upstream }}</span> — remote-tracking ref will be kept.
             </p>
           </div>
@@ -126,7 +126,7 @@ function onKey(e: KeyboardEvent) {
       </div>
 
       <div class="flex items-center gap-2 px-4 py-3 shrink-0" style="border-top: 1px solid var(--border-soft)">
-        <span class="text-[11px]" style="color: var(--fg-3)">
+        <span class="text-[12px]" style="color: var(--fg-3)">
           {{ canDelete ? "↩ Delete · Esc Cancel" : "Esc Cancel" }}
         </span>
         <div class="flex-1" />

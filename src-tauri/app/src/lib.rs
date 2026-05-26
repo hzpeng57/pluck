@@ -5,12 +5,14 @@ pub mod rebase_editor;
 pub mod state;
 
 use std::sync::Arc;
+#[cfg(target_os = "macos")]
+use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let bridge = Arc::new(rebase_editor::RebaseBridge::default());
     let bridge_for_setup = bridge.clone();
-    tauri::Builder::default()
+    let builder = tauri::Builder::default()
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
@@ -57,7 +59,29 @@ pub fn run() {
             commands::reset_to_commit,
             commands::amend_head_message,
             commands::reword_ancestor,
-        ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+            commands::log_page_cmd,
+            commands::log_search_cmd,
+        ]);
+
+    #[cfg(target_os = "macos")]
+    let builder = builder.on_window_event(|window, event| {
+        if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+            api.prevent_close();
+            let _ = window.hide();
+        }
+    });
+
+    let app = builder
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application");
+
+    app.run(|_app, _event| {
+        #[cfg(target_os = "macos")]
+        if let tauri::RunEvent::Reopen { .. } = _event {
+            if let Some(w) = _app.webview_windows().values().next() {
+                let _ = w.show();
+                let _ = w.set_focus();
+            }
+        }
+    });
 }

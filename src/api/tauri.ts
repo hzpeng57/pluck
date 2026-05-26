@@ -1,11 +1,15 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { RepoMeta, RepoSnapshot, CommitDetail, DeletePrecheck } from "../types/git";
+import type { RepoMeta, RepoSnapshot, CommitDetail, DeletePrecheck, Commit } from "../types/git";
 
 export const api = {
   repoAdd: (path: string) => invoke<RepoMeta>("repo_add", { path }),
   repoOpen: (id: string) => invoke<RepoSnapshot>("repo_open", { id }),
   repoRefresh: (id: string, logBranch?: string) =>
     invoke<RepoSnapshot>("repo_refresh", { id, logBranch: logBranch ?? null }),
+  logPage: (id: string, branch: string | null, skip: number, limit: number) =>
+    invoke<Commit[]>("log_page_cmd", { id, branch, skip, limit }),
+  logSearch: (id: string, branch: string | null, query: string, author: string, limit: number) =>
+    invoke<Commit[]>("log_search_cmd", { id, branch, query, author, limit }),
   commitDetail: (id: string, hash: string) =>
     invoke<CommitDetail>("commit_detail", { id, hash }),
   cherryPick: (id: string, hashes: string[]) =>

@@ -18,9 +18,10 @@ export type GitOp =
   | { type: "cherryPicking" }
   | { type: "reverting" };
 export type ResetMode = "soft" | "mixed" | "hard" | "keep";
+export interface GitIdentity { name: string; email: string }
 export interface RepoSnapshot {
   head: HeadInfo; files: WorkingFile[]; branches: BranchList; log: Commit[];
-  remoteStatus: RemoteStatus; inProgress: GitOp | null;
+  remoteStatus: RemoteStatus; inProgress: GitOp | null; me: GitIdentity;
 }
 export interface RepoMeta { id: string; path: string; name: string }
 export type ChangedFileStatus = "added" | "modified" | "deleted" | "renamed" | "copied" | "typechange";

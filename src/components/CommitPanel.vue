@@ -26,12 +26,12 @@ async function doCommit() {
 }
 
 const statusMeta: Record<string, { letter: string; color: string; bg: string }> = {
-  modified: { letter: "M", color: "#FBBF24", bg: "rgba(251, 191, 36, 0.14)" },
-  added: { letter: "A", color: "#34D399", bg: "rgba(52, 211, 153, 0.14)" },
-  deleted: { letter: "D", color: "#F87171", bg: "rgba(248, 113, 113, 0.14)" },
-  renamed: { letter: "R", color: "#60A5FA", bg: "rgba(96, 165, 250, 0.14)" },
-  untracked: { letter: "U", color: "#A78BFA", bg: "rgba(167, 139, 250, 0.14)" },
-  conflicted: { letter: "!", color: "#F87171", bg: "rgba(248, 113, 113, 0.2)" },
+  modified:   { letter: "M", color: "var(--status-modified)",   bg: "var(--status-modified-bg)" },
+  added:      { letter: "A", color: "var(--status-added)",      bg: "var(--status-added-bg)" },
+  deleted:    { letter: "D", color: "var(--status-deleted)",    bg: "var(--status-deleted-bg)" },
+  renamed:    { letter: "R", color: "var(--status-renamed)",    bg: "var(--status-renamed-bg)" },
+  untracked:  { letter: "U", color: "var(--status-untracked)",  bg: "var(--status-untracked-bg)" },
+  conflicted: { letter: "!", color: "var(--status-conflicted)", bg: "var(--status-conflicted-bg)" },
 };
 function statusOf(s: string) { return statusMeta[s] ?? { letter: s[0]?.toUpperCase() ?? "·", color: "var(--fg-2)", bg: "var(--hover)" }; }
 </script>
@@ -42,12 +42,12 @@ function statusOf(s: string) { return statusMeta[s] ?? { letter: s[0]?.toUpperCa
       <span class="gl-section-title">Changes</span>
       <span class="gl-chip">{{ files.length }}</span>
       <div class="flex-1" />
-      <button class="text-[11px] transition-colors" style="color: var(--fg-3)"
+      <button class="text-[12px] transition-colors" style="color: var(--fg-3)"
               @click="toggleAll(true)"
               @mouseover="(e: any) => (e.currentTarget.style.color = 'var(--fg)')"
               @mouseleave="(e: any) => (e.currentTarget.style.color = 'var(--fg-3)')">All</button>
       <span style="color: var(--fg-3)">·</span>
-      <button class="text-[11px] transition-colors" style="color: var(--fg-3)"
+      <button class="text-[12px] transition-colors" style="color: var(--fg-3)"
               @click="toggleAll(false)"
               @mouseover="(e: any) => (e.currentTarget.style.color = 'var(--fg)')"
               @mouseleave="(e: any) => (e.currentTarget.style.color = 'var(--fg-3)')">None</button>
@@ -61,26 +61,26 @@ function statusOf(s: string) { return statusMeta[s] ?? { letter: s[0]?.toUpperCa
           @mouseleave="(e: any) => { if (!selected[f.path]) e.currentTarget.style.background = '' }">
         <input type="checkbox" :checked="selected[f.path]" @click.stop
                @change="selected[f.path] = !selected[f.path]"
-               class="w-3.5 h-3.5 rounded accent-indigo-500" />
-        <span class="inline-flex items-center justify-center w-5 h-5 rounded text-[10px] font-bold gl-mono"
+               class="w-3.5 h-3.5 rounded gl-checkbox" />
+        <span class="inline-flex items-center justify-center w-5 h-5 rounded text-[11px] font-bold gl-mono"
               :style="{ background: statusOf(f.status).bg, color: statusOf(f.status).color }">
           {{ statusOf(f.status).letter }}
         </span>
-        <span class="truncate flex-1 text-[12.5px] gl-mono" style="color: var(--fg-2)">{{ f.path }}</span>
+        <span class="truncate flex-1 text-[13px] gl-mono" style="color: var(--fg-2)">{{ f.path }}</span>
       </li>
       <li v-if="files.length === 0"
           class="flex flex-col items-center justify-center gap-1 py-8 text-center"
           style="color: var(--fg-3)">
         <span class="text-2xl">✓</span>
-        <span class="text-[12px]">Working tree clean</span>
+        <span class="text-[13px]">Working tree clean</span>
       </li>
     </ul>
     <div class="p-3 flex flex-col gap-2" style="border-top: 1px solid var(--border-soft)">
       <textarea v-model="message" rows="3" placeholder="Commit message…  (⌘K to focus)"
-                class="gl-input resize-none gl-mono text-[12.5px]" />
+                class="gl-input resize-none gl-mono text-[13px]" />
       <div class="flex items-center justify-between gap-2">
-        <label class="flex items-center gap-1.5 text-[11.5px]" style="color: var(--fg-2)">
-          <input type="checkbox" v-model="skipHooks" class="w-3.5 h-3.5 rounded accent-indigo-500" />
+        <label class="flex items-center gap-1.5 text-[12px]" style="color: var(--fg-2)">
+          <input type="checkbox" v-model="skipHooks" class="w-3.5 h-3.5 rounded gl-checkbox" />
           Skip hooks (-n)
         </label>
         <button class="gl-btn gl-btn-primary"

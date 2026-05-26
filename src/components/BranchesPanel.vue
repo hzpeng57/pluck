@@ -148,20 +148,26 @@ window.addEventListener("click", () => (menu.value = null));
     <div class="sticky top-0 z-10 pb-1 -mx-2 px-2 pt-0"
          style="background: var(--panel)">
       <div class="relative">
-        <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-[12px] pointer-events-none"
-              style="color: var(--fg-3)">⌕</span>
+        <span class="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none inline-flex"
+              style="color: var(--fg-3)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="7" />
+            <path d="m20 20-3.5-3.5" />
+          </svg>
+        </span>
         <input ref="searchInput" v-model="search" type="text"
                placeholder="Search branches  ⌘F"
-               class="gl-input pl-7 pr-7 py-1.5 text-[12.5px] h-8"
+               class="gl-input pl-8 pr-7 py-1.5 text-[13px] h-8"
                style="border-radius: 6px" />
         <button v-if="search" @click="search = ''"
-                class="absolute right-2 top-1/2 -translate-y-1/2 text-[12px] transition-colors"
+                class="absolute right-2 top-1/2 -translate-y-1/2 text-[13px] transition-colors"
                 style="color: var(--fg-3)"
                 @mouseover="(e: any) => (e.currentTarget.style.color = 'var(--fg)')"
                 @mouseleave="(e: any) => (e.currentTarget.style.color = 'var(--fg-3)')"
                 title="Clear (Esc)">✕</button>
       </div>
-      <div v-if="isSearching" class="text-[10.5px] mt-1 px-0.5"
+      <div v-if="isSearching" class="text-[11px] mt-1 px-0.5"
            style="color: var(--fg-3)">
         {{ totalMatches }} match{{ totalMatches === 1 ? "" : "es" }}
       </div>
@@ -172,7 +178,7 @@ window.addEventListener("click", () => (menu.value = null));
          class="flex flex-col items-center justify-center py-6 gap-1 text-center"
          style="color: var(--fg-3)">
       <span class="text-2xl">∅</span>
-      <span class="text-[12px]">No branch matches "{{ search }}"</span>
+      <span class="text-[13px]">No branch matches "{{ search }}"</span>
     </div>
 
     <!-- Pinned -->
@@ -182,10 +188,10 @@ window.addEventListener("click", () => (menu.value = null));
               @click="showPinned = !showPinned"
               @mouseover="(e: any) => (e.currentTarget.style.color = 'var(--fg)')"
               @mouseleave="(e: any) => (e.currentTarget.style.color = 'var(--fg-3)')">
-        <span class="text-[10px] transition-transform"
+        <span class="text-[11px] transition-transform"
               :style="{ transform: showPinned ? 'rotate(90deg)' : 'rotate(0)' }">▶</span>
         <span class="gl-section-title">Pinned</span>
-        <span class="ml-auto gl-mono text-[10px]" style="color: var(--fg-3)">{{ pinnedBranches.length }}</span>
+        <span class="ml-auto gl-mono text-[11px]" style="color: var(--fg-3)">{{ pinnedBranches.length }}</span>
       </button>
       <ul v-if="showPinned" class="flex flex-col gap-0.5">
         <li v-for="b in pinnedBranches" :key="'pin:' + b.name"
@@ -197,9 +203,9 @@ window.addEventListener("click", () => (menu.value = null));
           <span class="w-3 inline-flex justify-center"
                 :style="{ color: b.isCurrent ? 'var(--success)' : 'transparent' }">●</span>
           <button @click="togglePin($event, b)" title="Unpin"
-                  class="text-[11px] transition-colors"
+                  class="text-[12px] transition-colors"
                   style="color: var(--warning)">★</button>
-          <span class="truncate flex-1 text-[13px]"
+          <span class="truncate flex-1 text-[13.5px]"
                 :style="b.isCurrent ? 'font-weight: 600' : ''">{{ b.name }}</span>
           <span v-if="b.ahead" class="gl-chip gl-chip-ahead">↑{{ b.ahead }}</span>
           <span v-if="b.behind" class="gl-chip gl-chip-behind">↓{{ b.behind }}</span>
@@ -213,10 +219,10 @@ window.addEventListener("click", () => (menu.value = null));
             @click="showLocal = !showLocal"
             @mouseover="(e: any) => (e.currentTarget.style.color = 'var(--fg)')"
             @mouseleave="(e: any) => (e.currentTarget.style.color = 'var(--fg-3)')">
-      <span class="text-[10px] transition-transform"
+      <span class="text-[11px] transition-transform"
             :style="{ transform: showLocal ? 'rotate(90deg)' : 'rotate(0)' }">▶</span>
       <span class="gl-section-title">Local</span>
-      <span class="ml-auto gl-mono text-[10px]" style="color: var(--fg-3)">{{ unpinnedLocal.length }}</span>
+      <span class="ml-auto gl-mono text-[11px]" style="color: var(--fg-3)">{{ unpinnedLocal.length }}</span>
     </button>
     <ul v-if="showLocal" class="flex flex-col gap-0.5">
       <template v-for="entry in localTree" :key="'l:' + (entry.kind === 'folder' ? entry.prefix : entry.branch.name)">
@@ -227,13 +233,13 @@ window.addEventListener("click", () => (menu.value = null));
             :title="entry.prefix"
             class="gl-row group">
           <span :style="{ paddingLeft: (entry.depth * 12) + 'px' }" class="inline-flex" />
-          <span class="text-[10px] w-3 inline-flex justify-center transition-transform"
+          <span class="text-[11px] w-3 inline-flex justify-center transition-transform"
                 style="color: var(--fg-3)"
                 :style="{ transform: entry.collapsed ? 'rotate(0)' : 'rotate(90deg)' }">▶</span>
-          <span class="text-[12px]" style="color: var(--accent-2)">▦</span>
-          <span class="truncate flex-1 text-[13px]"
+          <span class="text-[13px]" style="color: var(--accent-2)">▦</span>
+          <span class="truncate flex-1 text-[13.5px]"
                 :style="entry.selfBranch?.isCurrent ? 'font-weight: 600; color: var(--fg)' : 'color: var(--fg)'">
-            {{ entry.label }}<span v-if="entry.selfBranch" class="gl-mono text-[10px] ml-1"
+            {{ entry.label }}<span v-if="entry.selfBranch" class="gl-mono text-[11px] ml-1"
                                    style="color: var(--fg-3)">·branch</span>
           </span>
           <span class="gl-chip">{{ entry.childCount }}</span>
@@ -251,9 +257,9 @@ window.addEventListener("click", () => (menu.value = null));
           <span class="w-3 inline-flex justify-center"
                 :style="{ color: entry.branch.isCurrent ? 'var(--success)' : 'transparent' }">●</span>
           <button @click="togglePin($event, entry.branch)" title="Pin"
-                  class="text-[11px] opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity"
+                  class="text-[12px] opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity"
                   style="color: var(--fg-3)">☆</button>
-          <span class="truncate flex-1 text-[13px]"
+          <span class="truncate flex-1 text-[13.5px]"
                 :style="entry.branch.isCurrent ? 'font-weight: 600' : ''">{{ entry.displayLabel }}</span>
           <span v-if="entry.branch.ahead" class="gl-chip gl-chip-ahead">↑{{ entry.branch.ahead }}</span>
           <span v-if="entry.branch.behind" class="gl-chip gl-chip-behind">↓{{ entry.branch.behind }}</span>
@@ -267,10 +273,10 @@ window.addEventListener("click", () => (menu.value = null));
             @click="showRemote = !showRemote"
             @mouseover="(e: any) => (e.currentTarget.style.color = 'var(--fg)')"
             @mouseleave="(e: any) => (e.currentTarget.style.color = 'var(--fg-3)')">
-      <span class="text-[10px] transition-transform"
+      <span class="text-[11px] transition-transform"
             :style="{ transform: showRemote ? 'rotate(90deg)' : 'rotate(0)' }">▶</span>
       <span class="gl-section-title">Remote</span>
-      <span class="ml-auto gl-mono text-[10px]" style="color: var(--fg-3)">{{ unpinnedRemote.length }}</span>
+      <span class="ml-auto gl-mono text-[11px]" style="color: var(--fg-3)">{{ unpinnedRemote.length }}</span>
     </button>
     <ul v-if="showRemote" class="flex flex-col gap-0.5">
       <template v-for="entry in remoteTree" :key="'r:' + (entry.kind === 'folder' ? entry.prefix : entry.branch.name)">
@@ -279,11 +285,11 @@ window.addEventListener("click", () => (menu.value = null));
             :title="entry.prefix"
             class="gl-row group" style="cursor: pointer">
           <span :style="{ paddingLeft: (entry.depth * 12) + 'px' }" class="inline-flex" />
-          <span class="text-[10px] w-3 inline-flex justify-center transition-transform"
+          <span class="text-[11px] w-3 inline-flex justify-center transition-transform"
                 style="color: var(--fg-3)"
                 :style="{ transform: entry.collapsed ? 'rotate(0)' : 'rotate(90deg)' }">▶</span>
-          <span class="text-[12px]" style="color: var(--fg-3)">▦</span>
-          <span class="truncate flex-1 text-[13px]" style="color: var(--fg-2)">{{ entry.label }}</span>
+          <span class="text-[13px]" style="color: var(--fg-3)">▦</span>
+          <span class="truncate flex-1 text-[13.5px]" style="color: var(--fg-2)">{{ entry.label }}</span>
           <span class="gl-chip">{{ entry.childCount }}</span>
         </li>
         <li v-else
@@ -293,9 +299,9 @@ window.addEventListener("click", () => (menu.value = null));
           <span :style="{ paddingLeft: (entry.depth * 12) + 'px' }" class="inline-flex" />
           <span class="w-3 inline-flex justify-center" style="color: var(--fg-3)">⬡</span>
           <button @click="togglePin($event, entry.branch)" title="Pin"
-                  class="text-[11px] opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity"
+                  class="text-[12px] opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity"
                   style="color: var(--fg-3)">☆</button>
-          <span class="truncate flex-1 text-[13px]" style="color: var(--fg-2)">{{ entry.displayLabel }}</span>
+          <span class="truncate flex-1 text-[13.5px]" style="color: var(--fg-2)">{{ entry.displayLabel }}</span>
         </li>
       </template>
     </ul>

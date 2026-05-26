@@ -12,7 +12,8 @@ use crate::git::ops::reset::{reset_to, ResetMode};
 use crate::git::ops::revert::{revert, revert_abort, revert_continue};
 use crate::git::ops::reword::{amend_message, reword_commit};
 use crate::git::ops::show::{commit_show, CommitDetail};
-use crate::git::snapshot::RepoSnapshot;
+use crate::git::parse::Commit;
+use crate::git::snapshot::{log_page, log_search, RepoSnapshot};
 use crate::rebase_editor::{deliver_reply, socket_path, EditReply, RebaseBridge};
 use crate::state::{refresh_session, AppState};
 use serde::Serialize;
@@ -346,6 +347,41 @@ pub async fn amend_head_message(
     let path = { sess.lock().await.path.clone() };
     amend_message(&path, &message).await?;
     refresh_session(&sess).await
+}
+
+#[tauri::command]
+pub async fn log_page_cmd(
+    id: String,
+    branch: Option<String>,
+    skip: u32,
+    limit: u32,
+    state: State<'_, AppState>,
+) -> GitResult<Vec<Commit>> {
+    let sess = state
+        .get(&id)
+        .await
+        .ok_or_else(|| GitError::parse("unknown repo id"))?;
+    let path = { sess.lock().await.path.clone() };
+    let target = branch.as_deref().unwrap_or("HEAD");
+    log_page(&path, target, skip, limit).await
+}
+
+#[tauri::command]
+pub async fn log_search_cmd(
+    id: String,
+    branch: Option<String>,
+    query: String,
+    author: String,
+    limit: u32,
+    state: State<'_, AppState>,
+) -> GitResult<Vec<Commit>> {
+    let sess = state
+        .get(&id)
+        .await
+        .ok_or_else(|| GitError::parse("unknown repo id"))?;
+    let path = { sess.lock().await.path.clone() };
+    let target = branch.as_deref().unwrap_or("HEAD");
+    log_search(&path, target, &query, &author, limit).await
 }
 
 #[tauri::command]
