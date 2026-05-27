@@ -26,11 +26,15 @@ async function submit() {
   if (!repos.activeId || !dialog.value || submitting.value) return;
   const trimmed = name.value.trim();
   if (!trimmed) { state.pushToast("error", "Branch name cannot be empty"); return; }
+  const id = repos.activeId;
+  const from = dialog.value.from;
   submitting.value = true;
   try {
-    state.snapshot = await ops.branchCreate(repos.activeId, trimmed, dialog.value.from);
+    state.snapshot = await ops.branchCreate(id, trimmed, from);
     state.closeBranchCreateDialog();
+    state.pushToast("info", `Created branch "${trimmed}"`);
   } catch (e: any) {
+    state.closeBranchCreateDialog();
     state.pushToast("error", e?.data?.friendly ?? String(e));
   } finally { submitting.value = false; }
 }
