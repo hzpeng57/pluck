@@ -1,6 +1,6 @@
 use crate::error::{GitError, GitResult};
 use crate::git::cmd::run_git;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 pub async fn merge_into_current(repo: &Path, branch: &str) -> GitResult<()> {
     let output = tokio::process::Command::new("git")
@@ -20,11 +20,28 @@ pub async fn merge_into_current(repo: &Path, branch: &str) -> GitResult<()> {
 }
 
 pub fn merge_in_progress(repo: &Path) -> bool {
-    repo.join(".git/MERGE_HEAD").exists()
+    git_dir(repo).join("MERGE_HEAD").exists()
 }
 
 pub fn rebase_in_progress(repo: &Path) -> bool {
-    repo.join(".git/rebase-merge").exists() || repo.join(".git/rebase-apply").exists()
+    let git_dir = git_dir(repo);
+    git_dir.join("rebase-merge").exists() || git_dir.join("rebase-apply").exists()
+}
+
+fn git_dir(repo: &Path) -> PathBuf {
+    let dot_git = repo.join(".git");
+    let Ok(contents) = std::fs::read_to_string(&dot_git) else {
+        return dot_git;
+    };
+    let Some(path) = contents.trim().strip_prefix("gitdir:") else {
+        return dot_git;
+    };
+    let path = PathBuf::from(path.trim());
+    if path.is_absolute() {
+        path
+    } else {
+        repo.join(path)
+    }
 }
 
 pub async fn merge_abort(repo: &Path) -> GitResult<()> {
@@ -74,5 +91,23 @@ mod tests {
         merge_into_current(repo.path(), "feature").await.unwrap();
 
         assert!(repo.path().join(".git/MERGE_HEAD").exists());
+    }
+
+    #[test]
+    fn in_progress_detection_resolves_gitfile_worktrees() {
+        let repo = tempdir().unwrap();
+        let gitdir = repo.path().join("real-gitdir");
+        std::fs::create_dir(&gitdir).unwrap();
+        std::fs::write(
+            repo.path().join(".git"),
+            format!("gitdir: {}\n", gitdir.display()),
+        )
+        .unwrap();
+
+        std::fs::write(gitdir.join("MERGE_HEAD"), "").unwrap();
+        std::fs::create_dir(gitdir.join("rebase-merge")).unwrap();
+
+        assert!(merge_in_progress(repo.path()));
+        assert!(rebase_in_progress(repo.path()));
     }
 }
