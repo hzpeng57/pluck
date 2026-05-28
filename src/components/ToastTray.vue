@@ -3,7 +3,7 @@ import { useRepoStateStore } from "../stores/repoState";
 const state = useRepoStateStore();
 </script>
 <template>
-  <div class="fixed bottom-4 right-4 flex flex-col gap-2 z-50">
+  <div class="fixed bottom-4 right-4 flex flex-col gap-2 z-[60]">
     <transition-group name="toast">
       <div v-for="t in state.toasts" :key="t.id"
            class="flex items-start gap-2.5 px-3.5 py-2.5 rounded-lg shadow-2xl text-[13px] max-w-md"

@@ -312,7 +312,9 @@ window.addEventListener("click", () => (menu.value = null));
         {{ repoId && prefs.isPinned(repoId, menu.branch.name) ? "★ Unpin" : "☆ Pin to top" }}
       </button>
       <div class="my-1 h-px" style="background: var(--border)"></div>
-      <button class="gl-menu-item" @click="checkout" :disabled="menu.branch.isCurrent">Checkout</button>
+      <button class="gl-menu-item" @click="checkout" :disabled="menu.branch.isCurrent">
+        {{ menu.branch.kind === "remote" ? "Checkout as local branch" : "Checkout" }}
+      </button>
       <button class="gl-menu-item" @click="newFromHere">New branch from here…</button>
       <button class="gl-menu-item" @click="mergeIntoCurrent" :disabled="menu.branch.isCurrent">Merge into current</button>
       <button class="gl-menu-item"

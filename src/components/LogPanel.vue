@@ -174,7 +174,7 @@ function doReset() {
 }
 
 async function interactiveRebase() {
-  if (!menu.value || !repos.activeId) return;
+  if (!menu.value || !repos.activeId || !onCurrentBranchLog.value) return;
   const id = repos.activeId; const from = menu.value.commit.hash;
   menu.value = null;
   try { state.snapshot = await invoke<RepoSnapshot>("rebase_interactive_start", { id, fromCommit: from }); }
@@ -343,7 +343,12 @@ function onScroll() {
         Reset Current Branch to Here…
       </button>
       <div class="gl-menu-sep" />
-      <button class="gl-menu-item" @click="interactiveRebase">Interactively rebase from here…</button>
+      <button class="gl-menu-item"
+              :disabled="!onCurrentBranchLog"
+              :title="onCurrentBranchLog ? '' : 'Switch the log to the current branch first'"
+              @click="interactiveRebase">
+        Interactively rebase from here…
+      </button>
     </div>
   </div>
 </template>

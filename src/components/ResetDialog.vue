@@ -25,9 +25,12 @@ const MODES: { value: ResetMode; label: string; desc: string; danger?: boolean }
 async function submit() {
   if (!repos.activeId || !dialog.value || submitting.value) return;
   if (mode.value === "hard") {
-    const ok = window.confirm(
-      `Reset --hard to ${dialog.value.short} will discard ALL uncommitted changes in your working tree. Continue?`
-    );
+    const ok = await state.confirmAction({
+      title: "Confirm Hard Reset",
+      message: `Reset --hard to ${dialog.value.short} will discard all uncommitted changes in your working tree.`,
+      confirmLabel: "Reset --hard",
+      tone: "danger",
+    });
     if (!ok) return;
   }
   submitting.value = true;

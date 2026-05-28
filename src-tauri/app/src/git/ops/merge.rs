@@ -1,10 +1,30 @@
-use crate::error::GitResult;
+use crate::error::{GitError, GitResult};
 use crate::git::cmd::run_git;
 use std::path::Path;
 
 pub async fn merge_into_current(repo: &Path, branch: &str) -> GitResult<()> {
-    run_git(repo, &["merge", "--no-edit", branch]).await?;
-    Ok(())
+    let output = tokio::process::Command::new("git")
+        .current_dir(repo)
+        .args(["merge", "--no-edit", branch])
+        .output()
+        .await
+        .map_err(|e| GitError::spawn(e.to_string()))?;
+    if output.status.success() {
+        return Ok(());
+    }
+    if merge_in_progress(repo) {
+        return Ok(());
+    }
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    Err(GitError::from_stderr(output.status.code().unwrap_or(-1), &stderr))
+}
+
+pub fn merge_in_progress(repo: &Path) -> bool {
+    repo.join(".git/MERGE_HEAD").exists()
+}
+
+pub fn rebase_in_progress(repo: &Path) -> bool {
+    repo.join(".git/rebase-merge").exists() || repo.join(".git/rebase-apply").exists()
 }
 
 pub async fn merge_abort(repo: &Path) -> GitResult<()> {
@@ -15,4 +35,44 @@ pub async fn merge_abort(repo: &Path) -> GitResult<()> {
 pub async fn merge_continue(repo: &Path) -> GitResult<()> {
     run_git(repo, &["merge", "--continue"]).await?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::process::Command;
+    use tempfile::tempdir;
+
+    fn git(cwd: &Path, args: &[&str]) {
+        let output = Command::new("git").current_dir(cwd).args(args).output().unwrap();
+        assert!(
+            output.status.success(),
+            "git {:?} failed: {}",
+            args,
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
+    #[tokio::test]
+    async fn merge_conflict_leaves_in_progress_state_without_error() {
+        let repo = tempdir().unwrap();
+        git(repo.path(), &["init", "-b", "main"]);
+        git(repo.path(), &["config", "user.email", "t@t.t"]);
+        git(repo.path(), &["config", "user.name", "t"]);
+        std::fs::write(repo.path().join("file.txt"), "base\n").unwrap();
+        git(repo.path(), &["add", "file.txt"]);
+        git(repo.path(), &["commit", "-m", "init"]);
+
+        git(repo.path(), &["switch", "-c", "feature"]);
+        std::fs::write(repo.path().join("file.txt"), "feature\n").unwrap();
+        git(repo.path(), &["commit", "-am", "feature"]);
+
+        git(repo.path(), &["switch", "main"]);
+        std::fs::write(repo.path().join("file.txt"), "main\n").unwrap();
+        git(repo.path(), &["commit", "-am", "main"]);
+
+        merge_into_current(repo.path(), "feature").await.unwrap();
+
+        assert!(repo.path().join(".git/MERGE_HEAD").exists());
+    }
 }

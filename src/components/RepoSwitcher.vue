@@ -2,10 +2,12 @@
 import { ref, onMounted, onBeforeUnmount, computed } from "vue";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useReposStore } from "../stores/repos";
+import { useRepoStateStore } from "../stores/repoState";
 import { api } from "../api/tauri";
 import type { RepoMeta } from "../types/git";
 
 const repos = useReposStore();
+const state = useRepoStateStore();
 const menu = ref<{ x: number; y: number; repo: RepoMeta } | null>(null);
 
 async function addRepo() {
@@ -14,7 +16,7 @@ async function addRepo() {
   try {
     const meta = await api.repoAdd(dir);
     repos.add(meta);
-  } catch (e: any) { alert(e?.data?.friendly ?? String(e)); }
+  } catch (e: any) { state.pushToast("error", e?.data?.friendly ?? String(e)); }
 }
 
 function onContext(e: MouseEvent, r: RepoMeta) {

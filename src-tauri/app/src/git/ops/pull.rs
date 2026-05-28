@@ -1,5 +1,6 @@
 use crate::error::{GitError, GitResult};
 use crate::git::cmd::run_git;
+use crate::git::ops::merge::rebase_in_progress;
 use std::path::Path;
 
 /// WebStorm "Pull into <current> using rebase" semantics:
@@ -24,7 +25,7 @@ pub async fn pull_into_rebase(repo: &Path, source: &str) -> GitResult<()> {
         return Ok(());
     }
     // Conflicts → leave state for InProgressBanner, do not toast as failure.
-    if repo.join(".git/rebase-merge").exists() || repo.join(".git/rebase-apply").exists() {
+    if rebase_in_progress(repo) {
         return Ok(());
     }
     let stderr = String::from_utf8_lossy(&output.stderr);
@@ -35,8 +36,20 @@ pub async fn pull_rebase(repo: &Path, target_branch: &str) -> GitResult<()> {
     let head = run_git(repo, &["symbolic-ref", "--short", "HEAD"]).await?;
     let current = head.stdout.trim().to_string();
     if current == target_branch {
-        run_git(repo, &["pull", "--rebase"]).await?;
-        return Ok(());
+        let output = tokio::process::Command::new("git")
+            .current_dir(repo)
+            .args(["pull", "--rebase"])
+            .output()
+            .await
+            .map_err(|e| GitError::spawn(e.to_string()))?;
+        if output.status.success() || rebase_in_progress(repo) {
+            return Ok(());
+        }
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(GitError::from_stderr(
+            output.status.code().unwrap_or(-1),
+            &stderr,
+        ));
     }
     // Non-current target: fetch-only fast-forward via refspec.
     // Find upstream of target branch
@@ -47,4 +60,56 @@ pub async fn pull_rebase(repo: &Path, target_branch: &str) -> GitResult<()> {
     run_git(repo, &["fetch", remote, &format!("{target_branch}:{target_branch}")]).await
         .map_err(|e| GitError::parse(format!("Non-fast-forward — checkout {target_branch} first and pull manually. ({e})")))?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::process::Command;
+    use tempfile::tempdir;
+
+    fn git(cwd: &Path, args: &[&str]) {
+        let output = Command::new("git").current_dir(cwd).args(args).output().unwrap();
+        assert!(
+            output.status.success(),
+            "git {:?} failed: {}",
+            args,
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
+    #[tokio::test]
+    async fn pull_rebase_conflict_leaves_rebase_state_without_error() {
+        let tmp = tempdir().unwrap();
+        let remote = tmp.path().join("remote.git");
+        let seed = tmp.path().join("seed");
+        let work = tmp.path().join("work");
+
+        git(tmp.path(), &["init", "--bare", remote.to_str().unwrap()]);
+        std::fs::create_dir(&seed).unwrap();
+        git(&seed, &["init", "-b", "main"]);
+        git(&seed, &["config", "user.email", "t@t.t"]);
+        git(&seed, &["config", "user.name", "t"]);
+        std::fs::write(seed.join("file.txt"), "base\n").unwrap();
+        git(&seed, &["add", "file.txt"]);
+        git(&seed, &["commit", "-m", "init"]);
+        git(&seed, &["remote", "add", "origin", remote.to_str().unwrap()]);
+        git(&seed, &["push", "-u", "origin", "main"]);
+
+        git(tmp.path(), &["clone", remote.to_str().unwrap(), work.to_str().unwrap()]);
+        git(&work, &["config", "user.email", "t@t.t"]);
+        git(&work, &["config", "user.name", "t"]);
+        std::fs::write(work.join("file.txt"), "local\n").unwrap();
+        git(&work, &["commit", "-am", "local"]);
+
+        std::fs::write(seed.join("file.txt"), "remote\n").unwrap();
+        git(&seed, &["commit", "-am", "remote"]);
+        git(&seed, &["push", "origin", "main"]);
+
+        pull_rebase(&work, "main").await.unwrap();
+
+        assert!(
+            work.join(".git/rebase-merge").exists() || work.join(".git/rebase-apply").exists()
+        );
+    }
 }

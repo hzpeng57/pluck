@@ -19,6 +19,7 @@ import CommitMessageDialog from "./components/CommitMessageDialog.vue";
 import ResetDialog from "./components/ResetDialog.vue";
 import BranchCreateDialog from "./components/BranchCreateDialog.vue";
 import BranchDeleteDialog from "./components/BranchDeleteDialog.vue";
+import ConfirmDialog from "./components/ConfirmDialog.vue";
 import UpdateBanner from "./components/UpdateBanner.vue";
 import { checkForUpdates } from "./lib/updater";
 
@@ -195,5 +196,6 @@ onBeforeUnmount(() => {
     <ResetDialog />
     <BranchCreateDialog />
     <BranchDeleteDialog />
+    <ConfirmDialog />
   </div>
 </template>

@@ -26,7 +26,19 @@ async function copyBranch() {
 
 async function push(force: boolean) {
   if (!repos.activeId || pushing.value) return;
+  const branch = state.snapshot?.head.branch;
   showPushMenu.value = false;
+  if (force) {
+    if (!branch) return;
+    const ok = await state.confirmAction({
+      title: "Confirm Force Push",
+      message: `Force-with-lease can rewrite the remote branch origin/${branch}.`,
+      confirmLabel: "Force push",
+      tone: "danger",
+      confirmText: branch,
+    });
+    if (!ok) return;
+  }
   pushing.value = true;
   try {
     state.snapshot = await invoke<RepoSnapshot>("push_branch", { id: repos.activeId, forceWithLease: force });
@@ -49,8 +61,11 @@ async function pull() {
   const b = state.snapshot?.head.branch; if (!b || !repos.activeId || pulling.value) return;
   pulling.value = true;
   try {
-    state.snapshot = await invoke<RepoSnapshot>("pull", { id: repos.activeId, targetBranch: b });
-    state.pushToast("info", "Pull successful");
+    const snapshot = await invoke<RepoSnapshot>("pull", { id: repos.activeId, targetBranch: b });
+    state.snapshot = snapshot;
+    state.pushToast("info", snapshot.inProgress?.type === "rebasing"
+      ? "Pull paused for conflicts"
+      : "Pull successful");
   } catch (e: any) { state.pushToast("error", e?.data?.friendly ?? String(e)); }
   finally { pulling.value = false; }
 }

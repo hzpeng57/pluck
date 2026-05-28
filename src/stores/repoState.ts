@@ -6,6 +6,18 @@ import type { RepoSnapshot, CommitDetail, Commit } from "../types/git";
 const LOG_PAGE_SIZE = 200;
 
 interface Toast { id: number; level: "error" | "info"; msg: string }
+interface ConfirmOptions {
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  tone?: "warning" | "danger";
+  confirmText?: string;
+}
+interface ConfirmDialog extends ConfirmOptions {
+  id: number;
+  resolve: (ok: boolean) => void;
+}
 
 export const useRepoStateStore = defineStore("repoState", () => {
   const snapshot = ref<RepoSnapshot | null>(null);
@@ -21,6 +33,7 @@ export const useRepoStateStore = defineStore("repoState", () => {
   const resetDialog = ref<{ hash: string; short: string; subject: string } | null>(null);
   const branchCreateDialog = ref<{ from: string } | null>(null);
   const branchDeleteDialog = ref<{ name: string } | null>(null);
+  const confirmDialog = ref<ConfirmDialog | null>(null);
   const logEnd = ref(false);
   const logLoadingMore = ref(false);
   let nextId = 1;
@@ -44,6 +57,16 @@ export const useRepoStateStore = defineStore("repoState", () => {
   function closeBranchCreateDialog() { branchCreateDialog.value = null; }
   function openBranchDeleteDialog(name: string) { branchDeleteDialog.value = { name }; }
   function closeBranchDeleteDialog() { branchDeleteDialog.value = null; }
+  function confirmAction(options: ConfirmOptions): Promise<boolean> {
+    return new Promise(resolve => {
+      confirmDialog.value = { id: nextId++, tone: "warning", ...options, resolve };
+    });
+  }
+  function resolveConfirm(ok: boolean) {
+    const dialog = confirmDialog.value;
+    confirmDialog.value = null;
+    dialog?.resolve(ok);
+  }
 
   function setSingleSelection(repoId: string, hash: string) {
     selectedHashes.value = new Set([hash]);
@@ -127,12 +150,14 @@ export const useRepoStateStore = defineStore("repoState", () => {
     snapshot, loading, toasts, selectedLogBranch, selectedCommit, loadingCommit,
     selectedHashes, anchorHash, selectionCount,
     editMessageDialog, resetDialog, branchCreateDialog, branchDeleteDialog,
+    confirmDialog,
     logEnd, logLoadingMore,
     open, refresh, setLogBranch, pushToast, selectCommit, clearSelectedCommit,
     setSingleSelection, toggleSelection, selectRange, clearSelection,
     openEditMessageDialog, closeEditMessageDialog, openResetDialog, closeResetDialog,
     openBranchCreateDialog, closeBranchCreateDialog,
     openBranchDeleteDialog, closeBranchDeleteDialog,
+    confirmAction, resolveConfirm,
     loadMoreLog,
   };
 });
