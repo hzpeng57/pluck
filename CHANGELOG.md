@@ -2,6 +2,23 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 规范，版本号采用 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [0.1.4] - 2026-05-28
+
+### Added
+- 新增 App 内统一确认弹窗，用于 hard reset 与 force-with-lease push 等高风险操作。
+
+### Changed
+- 远程分支右键 checkout 改为创建本地 tracking branch，避免进入 detached HEAD。
+- 「Pull into "<current>" using rebase」和顶部 Pull 遇到冲突时保留 rebase 中态，由 InProgress banner 接管 continue/abort。
+- Merge 遇到冲突时保留 merge 中态并刷新快照，不再以普通失败 toast 中断流程。
+- 文件级 commit 改用 `git commit --only`，保留用户已 staged 但未勾选的文件。
+- 交互式 rebase 仅允许在当前分支 log 上触发，避免对非当前分支产生歧义操作。
+
+### Fixed
+- 新建分支成功或失败后自动关闭弹窗，并让 toast 不再被蒙层遮挡。
+- 修复 Git linked worktree 下 merge/rebase 中态检测漏判的问题。
+- Repo 移除等轻量提示改用 toast，继续移除原生浏览器弹窗。
+
 ## [0.1.3] - 2026-05-26
 
 ### Added
@@ -56,6 +73,7 @@
 - 快捷键：⌘K commit / ⌘⇧K push / ⌘T fetch / ⌘R refresh。
 - Toast tray 替代内联 lastError。
 
+[0.1.4]: https://github.com/hzpeng57/pluck/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/hzpeng57/pluck/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/hzpeng57/pluck/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/hzpeng57/pluck/compare/v0.1.0...v0.1.1
