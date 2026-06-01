@@ -2,6 +2,11 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 规范，版本号采用 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [0.1.5] - 2026-06-01
+
+### Fixed
+- 删除当前 History 选中的本地分支后，刷新自动回退到当前 HEAD，避免 `fatal: ambiguous argument` 报错。
+
 ## [0.1.4] - 2026-05-28
 
 ### Added
@@ -73,6 +78,7 @@
 - 快捷键：⌘K commit / ⌘⇧K push / ⌘T fetch / ⌘R refresh。
 - Toast tray 替代内联 lastError。
 
+[0.1.5]: https://github.com/hzpeng57/pluck/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/hzpeng57/pluck/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/hzpeng57/pluck/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/hzpeng57/pluck/compare/v0.1.1...v0.1.2
