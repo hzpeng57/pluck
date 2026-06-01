@@ -116,6 +116,14 @@ pub async fn log_search(
     Ok(results)
 }
 
+fn branch_list_contains(branches: &BranchList, name: &str) -> bool {
+    branches
+        .local
+        .iter()
+        .chain(branches.remote.iter())
+        .any(|b| b.name == name)
+}
+
 async fn read_identity(repo: &Path) -> GitIdentity {
     let name = run_git(repo, &["config", "user.name"])
         .await
@@ -143,6 +151,7 @@ pub async fn build_snapshot(repo: &Path, log_branch: Option<&str>) -> GitResult<
     let branches = split_branch_list(branches_flat);
 
     let log_target = log_branch
+        .filter(|name| branch_list_contains(&branches, name))
         .or(status.head.branch.as_deref())
         .unwrap_or("HEAD");
     let log = log_page(repo, log_target, 0, LOG_PAGE_SIZE).await?;

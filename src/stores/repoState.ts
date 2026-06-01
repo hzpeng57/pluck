@@ -43,6 +43,16 @@ export const useRepoStateStore = defineStore("repoState", () => {
   watch(snapshot, () => {
     logEnd.value = false;
     logLoadingMore.value = false;
+    const snap = snapshot.value;
+    if (!snap) {
+      selectedLogBranch.value = null;
+      return;
+    }
+    const selected = selectedLogBranch.value;
+    const branches = [...snap.branches.local, ...snap.branches.remote];
+    if (selected && !branches.some(b => b.name === selected)) {
+      selectedLogBranch.value = snap.head.branch;
+    }
   });
 
   function openEditMessageDialog(hash: string, initial: string, mode: "amend" | "reword") {
