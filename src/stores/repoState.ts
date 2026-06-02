@@ -37,6 +37,9 @@ export const useRepoStateStore = defineStore("repoState", () => {
   const logEnd = ref(false);
   const logLoadingMore = ref(false);
   let nextId = 1;
+  let activeRepoId: string | null = null;
+  let snapshotRequestId = 0;
+  let commitRequestId = 0;
 
   // 每次 snapshot 整体替换（首次 open / refresh / 任何 mutation 后回流），
   // 重置 log 分页游标。追加 (snapshot.log = [...]) 不会触发 ref 变化。
@@ -88,34 +91,67 @@ export const useRepoStateStore = defineStore("repoState", () => {
     if (next.has(hash)) next.delete(hash);
     else next.add(hash);
     selectedHashes.value = next;
-    if (next.size !== 1) { selectedCommit.value = null; }
+    if (next.size !== 1) { clearCommitDetail(); }
     else { const only = [...next][0]; if (anchorHash.value === null) anchorHash.value = only; }
   }
   function selectRange(log: Commit[], hash: string) {
-    if (!anchorHash.value) { selectedHashes.value = new Set([hash]); anchorHash.value = hash; selectedCommit.value = null; return; }
+    if (!anchorHash.value) { selectedHashes.value = new Set([hash]); anchorHash.value = hash; clearCommitDetail(); return; }
     const a = log.findIndex(c => c.hash === anchorHash.value);
     const b = log.findIndex(c => c.hash === hash);
-    if (a < 0 || b < 0) { selectedHashes.value = new Set([hash]); anchorHash.value = hash; selectedCommit.value = null; return; }
+    if (a < 0 || b < 0) { selectedHashes.value = new Set([hash]); anchorHash.value = hash; clearCommitDetail(); return; }
     const [lo, hi] = a < b ? [a, b] : [b, a];
     selectedHashes.value = new Set(log.slice(lo, hi + 1).map(c => c.hash));
-    selectedCommit.value = null;
+    clearCommitDetail();
   }
-  function clearSelection() {
+  function clearCommitDetail() {
+    commitRequestId++;
+    selectedCommit.value = null;
+    loadingCommit.value = false;
+  }
+  function clearSelectionState() {
     selectedHashes.value = new Set();
     anchorHash.value = null;
-    selectedCommit.value = null;
+    clearCommitDetail();
+  }
+
+  function clearSelection() {
+    clearSelectionState();
+  }
+
+  function clearRepoView() {
+    snapshot.value = null;
+    selectedLogBranch.value = null;
+    clearSelectionState();
+    editMessageDialog.value = null;
+    resetDialog.value = null;
+    branchCreateDialog.value = null;
+    branchDeleteDialog.value = null;
+    logEnd.value = false;
+    logLoadingMore.value = false;
+  }
+
+  function isCurrentSnapshotRequest(repoId: string, requestId: number) {
+    return activeRepoId === repoId && snapshotRequestId === requestId;
   }
 
   async function selectCommit(repoId: string, hash: string) {
+    if (activeRepoId !== repoId) return;
+    const requestId = ++commitRequestId;
     loadingCommit.value = true;
-    try { selectedCommit.value = await api.commitDetail(repoId, hash); }
-    catch (e: any) { pushToast("error", formatErr(e)); }
-    finally { loadingCommit.value = false; }
+    try {
+      const detail = await api.commitDetail(repoId, hash);
+      if (activeRepoId !== repoId || commitRequestId !== requestId) return;
+      selectedCommit.value = detail;
+    }
+    catch (e: any) {
+      if (activeRepoId === repoId && commitRequestId === requestId) pushToast("error", formatErr(e));
+    }
+    finally {
+      if (activeRepoId === repoId && commitRequestId === requestId) loadingCommit.value = false;
+    }
   }
   function clearSelectedCommit() {
-    selectedCommit.value = null;
-    selectedHashes.value = new Set();
-    anchorHash.value = null;
+    clearSelectionState();
   }
 
   function pushToast(level: "error" | "info", msg: string) {
@@ -125,34 +161,58 @@ export const useRepoStateStore = defineStore("repoState", () => {
   }
 
   async function open(id: string) {
+    activeRepoId = id;
+    const requestId = ++snapshotRequestId;
+    clearRepoView();
     loading.value = true;
-    try { snapshot.value = await api.repoOpen(id); selectedLogBranch.value = snapshot.value.head.branch; }
-    catch (e: any) { pushToast("error", formatErr(e)); }
-    finally { loading.value = false; }
+    try {
+      const next = await api.repoOpen(id);
+      if (!isCurrentSnapshotRequest(id, requestId)) return;
+      snapshot.value = next;
+      selectedLogBranch.value = next.head.branch;
+    }
+    catch (e: any) {
+      if (isCurrentSnapshotRequest(id, requestId)) pushToast("error", formatErr(e));
+    }
+    finally {
+      if (isCurrentSnapshotRequest(id, requestId)) loading.value = false;
+    }
   }
   async function refresh(id: string) {
+    if (activeRepoId !== id) return;
+    const requestId = ++snapshotRequestId;
     loading.value = true;
-    try { snapshot.value = await api.repoRefresh(id, selectedLogBranch.value ?? undefined); }
-    catch (e: any) { pushToast("error", formatErr(e)); }
-    finally { loading.value = false; }
+    try {
+      const next = await api.repoRefresh(id, selectedLogBranch.value ?? undefined);
+      if (!isCurrentSnapshotRequest(id, requestId)) return;
+      snapshot.value = next;
+    }
+    catch (e: any) {
+      if (isCurrentSnapshotRequest(id, requestId)) pushToast("error", formatErr(e));
+    }
+    finally {
+      if (isCurrentSnapshotRequest(id, requestId)) loading.value = false;
+    }
   }
   function setLogBranch(id: string, branch: string) { selectedLogBranch.value = branch; refresh(id); }
 
   async function loadMoreLog(id: string) {
     if (logLoadingMore.value || logEnd.value || !snapshot.value) return;
+    const requestId = snapshotRequestId;
     logLoadingMore.value = true;
     try {
       const branch = selectedLogBranch.value;
       const skip = snapshot.value.log.length;
       const next = await api.logPage(id, branch, skip, LOG_PAGE_SIZE);
+      if (!isCurrentSnapshotRequest(id, requestId) || !snapshot.value) return;
       if (next.length === 0) { logEnd.value = true; return; }
       // 追加而不是替换 snapshot，避免 watcher 重置游标
       snapshot.value.log = [...snapshot.value.log, ...next];
       if (next.length < LOG_PAGE_SIZE) logEnd.value = true;
     } catch (e: any) {
-      pushToast("error", formatErr(e));
+      if (isCurrentSnapshotRequest(id, requestId)) pushToast("error", formatErr(e));
     } finally {
-      logLoadingMore.value = false;
+      if (isCurrentSnapshotRequest(id, requestId)) logLoadingMore.value = false;
     }
   }
 

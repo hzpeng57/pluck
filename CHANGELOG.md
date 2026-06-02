@@ -2,6 +2,13 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 规范，版本号采用 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [0.1.6] - 2026-06-02
+
+### Fixed
+- 修复分支名与路径同名时 History 执行 `git log` 报 `fatal: ambiguous argument` 的问题，例如 taptap-pc 中的 `main`。
+- 修复仓库切换或打开失败时旧仓库快照回写，导致分支列表显示成上一个仓库的问题。
+- 修复危险按钮 hover 与禁用按钮 cursor/hover 状态不清晰的问题。
+
 ## [0.1.5] - 2026-06-01
 
 ### Fixed
@@ -78,6 +85,7 @@
 - 快捷键：⌘K commit / ⌘⇧K push / ⌘T fetch / ⌘R refresh。
 - Toast tray 替代内联 lastError。
 
+[0.1.6]: https://github.com/hzpeng57/pluck/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/hzpeng57/pluck/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/hzpeng57/pluck/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/hzpeng57/pluck/compare/v0.1.2...v0.1.3

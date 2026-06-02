@@ -123,7 +123,7 @@ input, textarea, select, .gl-selectable {
 *::-webkit-scrollbar-thumb:hover { background: var(--fg-3); background-clip: padding-box; border: 2px solid transparent; }
 
 button { outline: none; cursor: pointer; }
-button[disabled] { cursor: default; }
+button[disabled] { cursor: not-allowed; }
 a, label, summary, select,
 input[type="checkbox"], input[type="radio"], input[type="submit"], input[type="button"], input[type="reset"] {
   cursor: pointer;
@@ -151,7 +151,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
 }
 .gl-btn:hover { background: var(--hover); }
-.gl-btn[disabled] { opacity: 0.4; pointer-events: none; }
+.gl-btn[disabled] { opacity: 0.4; cursor: not-allowed; }
 
 .gl-btn-ghost { border-color: var(--border); }
 .gl-btn-primary {
@@ -165,7 +165,20 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   font-weight: 600;
   box-shadow: var(--shadow-btn-inset);
 }
-.gl-btn-danger:hover { filter: brightness(1.08); }
+.gl-btn-danger:hover {
+  background: var(--danger); color: var(--on-danger); border-color: var(--danger);
+  filter: brightness(1.08);
+}
+.gl-btn[disabled]:hover {
+  background: transparent;
+  filter: none;
+}
+.gl-btn-primary[disabled]:hover {
+  background: var(--accent); border-color: var(--accent);
+}
+.gl-btn-danger[disabled]:hover {
+  background: var(--danger); color: var(--on-danger); border-color: var(--danger);
+}
 
 .gl-chip {
   display: inline-flex; align-items: center; gap: 3px;
@@ -222,7 +235,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 }
 .gl-menu-item:hover { background: var(--hover); }
 .gl-menu-item.is-danger { color: var(--danger); }
-.gl-menu-item[disabled] { opacity: 0.4; pointer-events: none; }
+.gl-menu-item[disabled] { opacity: 0.4; cursor: not-allowed; }
+.gl-menu-item[disabled]:hover { background: transparent; }
 .gl-menu-sep { height: 1px; background: var(--border); margin: 4px 0; }
 
 .gl-icon-btn {

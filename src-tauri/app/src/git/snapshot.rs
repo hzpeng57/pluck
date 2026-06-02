@@ -47,7 +47,7 @@ pub async fn log_page(
     let limit_arg = limit.to_string();
     let log_out = run_git(
         repo,
-        &["log", &log_fmt, "-n", &limit_arg, &skip_arg, log_target],
+        &["log", &log_fmt, "-n", &limit_arg, &skip_arg, log_target, "--"],
     )
     .await?;
     parse_log(&log_out.stdout)
@@ -80,7 +80,7 @@ pub async fn log_search(
         if let Ok(out) = run_git(repo, &["rev-parse", "--verify", "--quiet", &spec]).await {
             let hash = out.stdout.trim().to_string();
             if !hash.is_empty() {
-                let one = run_git(repo, &["log", &log_fmt, "-n", "1", &hash]).await?;
+                let one = run_git(repo, &["log", &log_fmt, "-n", "1", &hash, "--"]).await?;
                 let mut parsed = parse_log(&one.stdout)?;
                 if let Some(c) = parsed.pop() {
                     hash_hit = Some(c.hash.clone());
@@ -104,6 +104,7 @@ pub async fn log_search(
     args.push("-n");
     args.push(&limit_arg);
     args.push(log_target);
+    args.push("--");
 
     let grep_out = run_git(repo, &args).await?;
     for c in parse_log(&grep_out.stdout)? {
@@ -114,6 +115,53 @@ pub async fn log_search(
     }
 
     Ok(results)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::process::Command;
+    use tempfile::tempdir;
+
+    fn git(repo: &Path, args: &[&str]) {
+        let status = Command::new("git")
+            .current_dir(repo)
+            .args(args)
+            .status()
+            .unwrap();
+        assert!(status.success(), "git {:?} failed", args);
+    }
+
+    fn repo_with_main_branch_and_path() -> tempfile::TempDir {
+        let dir = tempdir().unwrap();
+        git(dir.path(), &["init", "-b", "main"]);
+        git(dir.path(), &["config", "user.email", "t@t.t"]);
+        git(dir.path(), &["config", "user.name", "t"]);
+        std::fs::write(dir.path().join("main"), "path named like branch\n").unwrap();
+        git(dir.path(), &["add", "main"]);
+        git(dir.path(), &["commit", "-m", "init main path"]);
+        dir
+    }
+
+    #[tokio::test]
+    async fn log_page_disambiguates_branch_from_path() {
+        let dir = repo_with_main_branch_and_path();
+
+        let commits = log_page(dir.path(), "main", 0, 10).await.unwrap();
+
+        assert_eq!(commits.len(), 1);
+        assert_eq!(commits[0].subject, "init main path");
+    }
+
+    #[tokio::test]
+    async fn log_search_disambiguates_branch_from_path() {
+        let dir = repo_with_main_branch_and_path();
+
+        let commits = log_search(dir.path(), "main", "init", "", 10).await.unwrap();
+
+        assert_eq!(commits.len(), 1);
+        assert_eq!(commits[0].subject, "init main path");
+    }
 }
 
 fn branch_list_contains(branches: &BranchList, name: &str) -> bool {

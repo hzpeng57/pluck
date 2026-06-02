@@ -102,7 +102,8 @@ watch(() => repos.activeId, async id => {
     try { await api.repoAdd(meta.path); }
     catch (e: any) { state.pushToast("error", e?.data?.friendly ?? String(e)); return; }
   }
-  state.open(id);
+  if (repos.activeId !== id) return;
+  await state.open(id);
 }, { immediate: true });
 
 function onFocus() { if (repos.activeId) state.refresh(repos.activeId); }
