@@ -32,6 +32,7 @@ export const useRepoStateStore = defineStore("repoState", () => {
   const editMessageDialog = ref<{ hash: string; initial: string; mode: "amend" | "reword" } | null>(null);
   const resetDialog = ref<{ hash: string; short: string; subject: string } | null>(null);
   const branchCreateDialog = ref<{ from: string } | null>(null);
+  const branchRenameDialog = ref<{ name: string; upstream: string | null } | null>(null);
   const branchDeleteDialog = ref<{ name: string } | null>(null);
   const confirmDialog = ref<ConfirmDialog | null>(null);
   const logEnd = ref(false);
@@ -68,6 +69,8 @@ export const useRepoStateStore = defineStore("repoState", () => {
   function closeResetDialog() { resetDialog.value = null; }
   function openBranchCreateDialog(from: string) { branchCreateDialog.value = { from }; }
   function closeBranchCreateDialog() { branchCreateDialog.value = null; }
+  function openBranchRenameDialog(name: string, upstream: string | null) { branchRenameDialog.value = { name, upstream }; }
+  function closeBranchRenameDialog() { branchRenameDialog.value = null; }
   function openBranchDeleteDialog(name: string) { branchDeleteDialog.value = { name }; }
   function closeBranchDeleteDialog() { branchDeleteDialog.value = null; }
   function confirmAction(options: ConfirmOptions): Promise<boolean> {
@@ -125,6 +128,7 @@ export const useRepoStateStore = defineStore("repoState", () => {
     editMessageDialog.value = null;
     resetDialog.value = null;
     branchCreateDialog.value = null;
+    branchRenameDialog.value = null;
     branchDeleteDialog.value = null;
     logEnd.value = false;
     logLoadingMore.value = false;
@@ -219,13 +223,14 @@ export const useRepoStateStore = defineStore("repoState", () => {
   return {
     snapshot, loading, toasts, selectedLogBranch, selectedCommit, loadingCommit,
     selectedHashes, anchorHash, selectionCount,
-    editMessageDialog, resetDialog, branchCreateDialog, branchDeleteDialog,
+    editMessageDialog, resetDialog, branchCreateDialog, branchRenameDialog, branchDeleteDialog,
     confirmDialog,
     logEnd, logLoadingMore,
     open, refresh, setLogBranch, pushToast, selectCommit, clearSelectedCommit,
     setSingleSelection, toggleSelection, selectRange, clearSelection,
     openEditMessageDialog, closeEditMessageDialog, openResetDialog, closeResetDialog,
     openBranchCreateDialog, closeBranchCreateDialog,
+    openBranchRenameDialog, closeBranchRenameDialog,
     openBranchDeleteDialog, closeBranchDeleteDialog,
     confirmAction, resolveConfirm,
     loadMoreLog,

@@ -2,6 +2,14 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 规范，版本号采用 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [0.1.7] - 2026-06-03
+
+### Added
+- 分支右键菜单新增 Rename 功能，支持本地分支重命名，并可选择同时取消 upstream。
+
+### Changed
+- `New branch from here...` 创建分支时显式使用 `--no-track`，避免从远端分支创建新分支时自动跟踪原远端分支。
+
 ## [0.1.6] - 2026-06-02
 
 ### Fixed
@@ -85,6 +93,7 @@
 - 快捷键：⌘K commit / ⌘⇧K push / ⌘T fetch / ⌘R refresh。
 - Toast tray 替代内联 lastError。
 
+[0.1.7]: https://github.com/hzpeng57/pluck/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/hzpeng57/pluck/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/hzpeng57/pluck/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/hzpeng57/pluck/compare/v0.1.3...v0.1.4

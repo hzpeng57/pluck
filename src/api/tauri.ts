@@ -29,6 +29,8 @@ export const ops = {
     invoke<RepoSnapshot>("branch_checkout", { id, name }),
   branchCreate: (id: string, name: string, from: string | null) =>
     invoke<RepoSnapshot>("branch_create", { id, name, from }),
+  branchRename: (id: string, oldName: string, newName: string, unsetUpstream: boolean) =>
+    invoke<RepoSnapshot>("branch_rename", { id, oldName, newName, unsetUpstream }),
   branchDelete: (id: string, name: string, force: boolean) =>
     invoke<RepoSnapshot>("branch_delete", { id, name, force }),
   branchDeletePrecheck: (id: string, name: string) =>

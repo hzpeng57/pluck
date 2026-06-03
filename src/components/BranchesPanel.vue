@@ -115,6 +115,12 @@ function newFromHere() {
   const from = menu.value.branch.name; menu.value = null;
   state.openBranchCreateDialog(from);
 }
+function rename() {
+  if (!menu.value || !repos.activeId) return;
+  const branch = menu.value.branch; menu.value = null;
+  if (branch.kind !== "local") return;
+  state.openBranchRenameDialog(branch.name, branch.upstream);
+}
 function del() {
   if (!menu.value || !repos.activeId) return;
   const name = menu.value.branch.name; menu.value = null;
@@ -316,6 +322,7 @@ window.addEventListener("click", () => (menu.value = null));
         {{ menu.branch.kind === "remote" ? "Checkout as local branch" : "Checkout" }}
       </button>
       <button class="gl-menu-item" @click="newFromHere">New branch from here…</button>
+      <button class="gl-menu-item" @click="rename" :disabled="menu.branch.kind !== 'local'">Rename…</button>
       <button class="gl-menu-item" @click="mergeIntoCurrent" :disabled="menu.branch.isCurrent">Merge into current</button>
       <button class="gl-menu-item"
               @click="pullIntoCurrentRebase"

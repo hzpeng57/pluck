@@ -18,6 +18,7 @@ import RebaseTodoDialog from "./components/RebaseTodoDialog.vue";
 import CommitMessageDialog from "./components/CommitMessageDialog.vue";
 import ResetDialog from "./components/ResetDialog.vue";
 import BranchCreateDialog from "./components/BranchCreateDialog.vue";
+import BranchRenameDialog from "./components/BranchRenameDialog.vue";
 import BranchDeleteDialog from "./components/BranchDeleteDialog.vue";
 import ConfirmDialog from "./components/ConfirmDialog.vue";
 import UpdateBanner from "./components/UpdateBanner.vue";
@@ -196,6 +197,7 @@ onBeforeUnmount(() => {
     <CommitMessageDialog />
     <ResetDialog />
     <BranchCreateDialog />
+    <BranchRenameDialog />
     <BranchDeleteDialog />
     <ConfirmDialog />
   </div>

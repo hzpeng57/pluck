@@ -25,6 +25,13 @@ export const useBranchPrefsStore = defineStore("branchPrefs", () => {
     const i = p.pinned.indexOf(name);
     if (i >= 0) p.pinned.splice(i, 1); else p.pinned.push(name);
   }
+  function renamePinned(repoId: string, oldName: string, newName: string) {
+    const p = ensure(repoId);
+    const i = p.pinned.indexOf(oldName);
+    if (i < 0) return;
+    p.pinned.splice(i, 1);
+    if (!p.pinned.includes(newName)) p.pinned.push(newName);
+  }
   function isCollapsed(repoId: string, prefix: string): boolean { return ensure(repoId).collapsed.includes(prefix); }
   function toggleCollapse(repoId: string, prefix: string) {
     const p = ensure(repoId);
@@ -32,5 +39,5 @@ export const useBranchPrefsStore = defineStore("branchPrefs", () => {
     if (i >= 0) p.collapsed.splice(i, 1); else p.collapsed.push(prefix);
   }
 
-  return { all, pinned, isPinned, togglePin, isCollapsed, toggleCollapse };
+  return { all, pinned, isPinned, togglePin, renamePinned, isCollapsed, toggleCollapse };
 });

@@ -35,6 +35,7 @@ pub fn run() {
             commands::repo_open,
             commands::branch_checkout,
             commands::branch_create,
+            commands::branch_rename,
             commands::branch_delete,
             commands::branch_delete_precheck,
             commands::commit,

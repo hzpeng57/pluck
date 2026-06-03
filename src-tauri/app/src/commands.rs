@@ -1,5 +1,7 @@
 use crate::error::{GitError, GitResult};
-use crate::git::ops::branch::{create_branch, delete_branch, delete_precheck, DeletePrecheck};
+use crate::git::ops::branch::{
+    create_branch, delete_branch, delete_precheck, rename_branch, DeletePrecheck,
+};
 use crate::git::ops::checkout::checkout_branch;
 use crate::git::ops::cherry_pick::{cherry_pick, cherry_pick_abort, cherry_pick_continue};
 use crate::git::ops::commit::commit_files;
@@ -98,6 +100,29 @@ pub async fn branch_create(
         .ok_or_else(|| GitError::parse("unknown repo id"))?;
     let path = { sess.lock().await.path.clone() };
     create_branch(&path, &name, from.as_deref()).await?;
+    refresh_session(&sess).await
+}
+
+#[tauri::command]
+pub async fn branch_rename(
+    id: String,
+    old_name: String,
+    new_name: String,
+    unset_upstream: bool,
+    state: State<'_, AppState>,
+) -> GitResult<RepoSnapshot> {
+    let sess = state
+        .get(&id)
+        .await
+        .ok_or_else(|| GitError::parse("unknown repo id"))?;
+    let path = { sess.lock().await.path.clone() };
+    rename_branch(&path, &old_name, &new_name, unset_upstream).await?;
+    {
+        let mut s = sess.lock().await;
+        if s.log_branch.as_deref() == Some(old_name.as_str()) {
+            s.log_branch = Some(new_name);
+        }
+    }
     refresh_session(&sess).await
 }
 

@@ -5,9 +5,22 @@ use std::path::Path;
 
 pub async fn create_branch(repo: &Path, name: &str, from: Option<&str>) -> GitResult<()> {
     if let Some(from) = from {
-        run_git(repo, &["checkout", "-b", name, from]).await?;
+        run_git(repo, &["checkout", "--no-track", "-b", name, from]).await?;
     } else {
         run_git(repo, &["checkout", "-b", name]).await?;
+    }
+    Ok(())
+}
+
+pub async fn rename_branch(
+    repo: &Path,
+    old_name: &str,
+    new_name: &str,
+    unset_upstream: bool,
+) -> GitResult<()> {
+    run_git(repo, &["branch", "-m", old_name, new_name]).await?;
+    if unset_upstream {
+        run_git(repo, &["branch", "--unset-upstream", new_name]).await?;
     }
     Ok(())
 }
@@ -93,4 +106,3 @@ pub async fn delete_precheck(repo: &Path, name: &str) -> GitResult<DeletePrechec
         ahead_of_head,
     })
 }
-
