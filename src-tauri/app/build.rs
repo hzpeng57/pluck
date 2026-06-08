@@ -20,6 +20,11 @@ fn main() {
     let dst = dst_dir.join("pluck-git-bridge");
     if src.exists() {
         let _ = std::fs::copy(&src, &dst);
+    } else if profile == "release" {
+        panic!(
+            "pluck-git-bridge binary not found at {}; build it before packaging the app",
+            src.display()
+        );
     } else if !dst.exists() {
         // Ensure the resource file exists so tauri_build doesn't fail validation.
         // The real binary will be copied here on subsequent builds once the

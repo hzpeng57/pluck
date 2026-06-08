@@ -4,6 +4,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { useRepoStateStore } from "../stores/repoState";
 import { useReposStore } from "../stores/repos";
 import { api } from "../api/tauri";
+import { formatErr } from "../lib/errors";
 import { relativeTime } from "../lib/format";
 import type { Commit, RepoSnapshot } from "../types/git";
 
@@ -48,7 +49,7 @@ async function runSearch(q: string, a: string, seq: number) {
     searchResults.value = res;
   } catch (e: any) {
     if (seq !== searchSeq) return;
-    searchError.value = e?.data?.friendly ?? String(e);
+    searchError.value = formatErr(e);
     searchResults.value = [];
   } finally {
     if (seq === searchSeq) searching.value = false;
@@ -144,7 +145,7 @@ async function doCherryPick() {
   const hashes = selectedInOrder.value.map(c => c.hash);
   menu.value = null;
   try { state.snapshot = await api.cherryPick(id, hashes); }
-  catch (e: any) { state.pushToast("error", e?.data?.friendly ?? String(e)); }
+  catch (e: any) { state.pushToast("error", formatErr(e)); }
 }
 
 async function doRevert() {
@@ -154,7 +155,7 @@ async function doRevert() {
   const hashes = selectedInOrder.value.map(c => c.hash).reverse();
   menu.value = null;
   try { state.snapshot = await api.revert(id, hashes); }
-  catch (e: any) { state.pushToast("error", e?.data?.friendly ?? String(e)); }
+  catch (e: any) { state.pushToast("error", formatErr(e)); }
 }
 
 function doEditMessage() {
@@ -178,7 +179,7 @@ async function interactiveRebase() {
   const id = repos.activeId; const from = menu.value.commit.hash;
   menu.value = null;
   try { state.snapshot = await invoke<RepoSnapshot>("rebase_interactive_start", { id, fromCommit: from }); }
-  catch (e: any) { state.pushToast("error", e?.data?.friendly ?? String(e)); }
+  catch (e: any) { state.pushToast("error", formatErr(e)); }
 }
 
 function authorInitial(name: string) {

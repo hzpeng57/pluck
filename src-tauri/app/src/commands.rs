@@ -19,7 +19,7 @@ use crate::git::snapshot::{log_page, log_search, RepoSnapshot};
 use crate::rebase_editor::{deliver_reply, socket_path, EditReply, RebaseBridge};
 use crate::state::{refresh_session, AppState};
 use serde::Serialize;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tauri::State;
 
@@ -424,24 +424,58 @@ pub async fn reword_ancestor(
 
 fn current_bridge_path() -> GitResult<PathBuf> {
     let exe = std::env::current_exe().map_err(|e| GitError::parse(e.to_string()))?;
-    if let Some(parent) = exe.parent() {
-        let bundled = parent.join("../Resources/binaries/pluck-git-bridge");
-        if bundled.exists() {
-            return Ok(bundled);
+    let cwd = std::env::current_dir().unwrap_or_default();
+    let candidates = bridge_path_candidates(&exe, &cwd);
+    for candidate in &candidates {
+        if is_nonempty_file(candidate) {
+            return Ok(candidate.clone());
         }
-        let sibling = parent.join("pluck-git-bridge");
-        if sibling.exists() {
-            return Ok(sibling);
-        }
-    }
-    let dev = std::env::current_dir()
-        .unwrap_or_default()
-        .join("src-tauri/target/debug/pluck-git-bridge");
-    if dev.exists() {
-        return Ok(dev);
     }
     Err(GitError::parse(format!(
-        "bridge binary not found (searched bundled, sibling of {:?}, and {:?})",
-        exe, dev
+        "bridge binary not found (searched {:?})",
+        candidates
     )))
+}
+
+fn bridge_path_candidates(exe: &Path, cwd: &Path) -> Vec<PathBuf> {
+    let mut candidates = Vec::new();
+    if let Some(parent) = exe.parent() {
+        let resource_dir = parent.join("../Resources");
+        candidates.push(resource_dir.join("binaries/pluck-git-bridge"));
+        candidates.push(resource_dir.join("_up_/binaries/pluck-git-bridge"));
+        candidates.push(parent.join("pluck-git-bridge"));
+    }
+    candidates.push(cwd.join("src-tauri/target/debug/pluck-git-bridge"));
+    candidates
+}
+
+fn is_nonempty_file(path: &Path) -> bool {
+    path.metadata().map(|m| m.is_file() && m.len() > 0).unwrap_or(false)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::bridge_path_candidates;
+    use std::path::Path;
+
+    #[test]
+    fn bridge_path_candidates_cover_stable_and_legacy_resource_layouts() {
+        let exe = Path::new("/Applications/Pluck.app/Contents/MacOS/Pluck");
+        let cwd = Path::new("/tmp/nowhere");
+
+        let candidates = bridge_path_candidates(exe, cwd);
+
+        assert_eq!(
+            candidates[0],
+            Path::new("/Applications/Pluck.app/Contents/MacOS/../Resources/binaries/pluck-git-bridge")
+        );
+        assert!(
+            candidates.iter().any(|p| {
+                p == Path::new(
+                    "/Applications/Pluck.app/Contents/MacOS/../Resources/_up_/binaries/pluck-git-bridge"
+                )
+            }),
+            "candidates: {candidates:?}"
+        );
+    }
 }

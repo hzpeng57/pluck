@@ -2,6 +2,15 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 规范，版本号采用 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [0.1.8] - 2026-06-08
+
+### Fixed
+- 修复发布包中 Interactive rebase 无法找到 `pluck-git-bridge`，导致 `Interactively rebase from here...` 报错的问题。
+- 修复 rebase 等操作收到结构化错误时 toast 显示 `[object Object]` 的问题。
+
+### Changed
+- 发布构建缺少 `pluck-git-bridge` 时直接失败，避免生成缺少 rebase bridge 的安装包。
+
 ## [0.1.7] - 2026-06-03
 
 ### Added
@@ -93,6 +102,7 @@
 - 快捷键：⌘K commit / ⌘⇧K push / ⌘T fetch / ⌘R refresh。
 - Toast tray 替代内联 lastError。
 
+[0.1.8]: https://github.com/hzpeng57/pluck/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/hzpeng57/pluck/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/hzpeng57/pluck/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/hzpeng57/pluck/compare/v0.1.4...v0.1.5
