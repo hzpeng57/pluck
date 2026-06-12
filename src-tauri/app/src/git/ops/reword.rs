@@ -1,5 +1,5 @@
 use crate::error::{GitError, GitResult};
-use crate::git::cmd::run_git;
+use crate::git::cmd::{git_command, run_git};
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 
@@ -65,8 +65,7 @@ pub async fn reword_commit(repo: &Path, hash: &str, new_message: &str) -> GitRes
         let _ = std::fs::remove_file(&editor_script);
     };
 
-    let output = tokio::process::Command::new("git")
-        .current_dir(repo)
+    let output = git_command(repo)
         .env("GIT_SEQUENCE_EDITOR", &seq_script)
         .env("GIT_EDITOR", &editor_script)
         .args(["rebase", "-i", &format!("{hash}^")])

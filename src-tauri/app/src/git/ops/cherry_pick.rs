@@ -1,4 +1,5 @@
 use crate::error::{GitError, GitResult};
+use crate::git::cmd::git_command;
 use std::path::Path;
 
 /// Apply the given commits as new commits on top of HEAD.
@@ -12,8 +13,7 @@ pub async fn cherry_pick(repo: &Path, hashes: &[String]) -> GitResult<()> {
     for h in hashes {
         args.push(h.as_str());
     }
-    let output = tokio::process::Command::new("git")
-        .current_dir(repo)
+    let output = git_command(repo)
         .args(&args)
         .output()
         .await
@@ -29,8 +29,7 @@ pub async fn cherry_pick(repo: &Path, hashes: &[String]) -> GitResult<()> {
 }
 
 pub async fn cherry_pick_continue(repo: &Path) -> GitResult<()> {
-    let output = tokio::process::Command::new("git")
-        .current_dir(repo)
+    let output = git_command(repo)
         .args(["cherry-pick", "--continue"])
         .output()
         .await
@@ -46,8 +45,7 @@ pub async fn cherry_pick_continue(repo: &Path) -> GitResult<()> {
 }
 
 pub async fn cherry_pick_abort(repo: &Path) -> GitResult<()> {
-    let output = tokio::process::Command::new("git")
-        .current_dir(repo)
+    let output = git_command(repo)
         .args(["cherry-pick", "--abort"])
         .output()
         .await

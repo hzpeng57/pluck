@@ -1,5 +1,5 @@
 use crate::error::{GitError, GitResult};
-use crate::git::cmd::run_git;
+use crate::git::cmd::{git_command, run_git};
 use std::path::Path;
 
 /// For each hash, generate a new commit that undoes its changes.
@@ -27,8 +27,7 @@ pub async fn revert(repo: &Path, hashes: &[String]) -> GitResult<()> {
     for h in hashes {
         args.push(h.as_str());
     }
-    let output = tokio::process::Command::new("git")
-        .current_dir(repo)
+    let output = git_command(repo)
         .args(&args)
         .output()
         .await
@@ -44,8 +43,7 @@ pub async fn revert(repo: &Path, hashes: &[String]) -> GitResult<()> {
 }
 
 pub async fn revert_continue(repo: &Path) -> GitResult<()> {
-    let output = tokio::process::Command::new("git")
-        .current_dir(repo)
+    let output = git_command(repo)
         .args(["revert", "--continue"])
         .output()
         .await
@@ -61,8 +59,7 @@ pub async fn revert_continue(repo: &Path) -> GitResult<()> {
 }
 
 pub async fn revert_abort(repo: &Path) -> GitResult<()> {
-    let output = tokio::process::Command::new("git")
-        .current_dir(repo)
+    let output = git_command(repo)
         .args(["revert", "--abort"])
         .output()
         .await

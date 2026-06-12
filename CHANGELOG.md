@@ -2,6 +2,12 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 规范，版本号采用 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [0.1.9] - 2026-06-12
+
+### Fixed
+- 修复从 macOS Dock / Finder 启动 Pluck 时，Git LFS 安装在 Homebrew 路径下无法被 `git` 子进程找到，导致 checkout / 新建分支等操作报 `git-lfs filter-process: git-lfs: command not found` 的问题。
+- 统一 merge、pull、rebase、cherry-pick、revert、reword 等 Git 操作的子进程 PATH 处理，避免同类 LFS filter 问题在其他操作中复现。
+
 ## [0.1.8] - 2026-06-08
 
 ### Fixed
@@ -102,6 +108,7 @@
 - 快捷键：⌘K commit / ⌘⇧K push / ⌘T fetch / ⌘R refresh。
 - Toast tray 替代内联 lastError。
 
+[0.1.9]: https://github.com/hzpeng57/pluck/compare/v0.1.8...v0.1.9
 [0.1.8]: https://github.com/hzpeng57/pluck/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/hzpeng57/pluck/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/hzpeng57/pluck/compare/v0.1.5...v0.1.6

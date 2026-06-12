@@ -1,10 +1,9 @@
 use crate::error::{GitError, GitResult};
-use crate::git::cmd::run_git;
+use crate::git::cmd::{git_command, run_git};
 use std::path::{Path, PathBuf};
 
 pub async fn merge_into_current(repo: &Path, branch: &str) -> GitResult<()> {
-    let output = tokio::process::Command::new("git")
-        .current_dir(repo)
+    let output = git_command(repo)
         .args(["merge", "--no-edit", branch])
         .output()
         .await

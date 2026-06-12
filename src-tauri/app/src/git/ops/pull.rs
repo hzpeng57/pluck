@@ -1,5 +1,5 @@
 use crate::error::{GitError, GitResult};
-use crate::git::cmd::run_git;
+use crate::git::cmd::{git_command, run_git};
 use crate::git::ops::merge::rebase_in_progress;
 use std::path::Path;
 
@@ -15,8 +15,7 @@ pub async fn pull_into_rebase(repo: &Path, source: &str) -> GitResult<()> {
             run_git(repo, &["fetch", remote, branch]).await?;
         }
     }
-    let output = tokio::process::Command::new("git")
-        .current_dir(repo)
+    let output = git_command(repo)
         .args(["rebase", source])
         .output()
         .await
@@ -36,8 +35,7 @@ pub async fn pull_rebase(repo: &Path, target_branch: &str) -> GitResult<()> {
     let head = run_git(repo, &["symbolic-ref", "--short", "HEAD"]).await?;
     let current = head.stdout.trim().to_string();
     if current == target_branch {
-        let output = tokio::process::Command::new("git")
-            .current_dir(repo)
+        let output = git_command(repo)
             .args(["pull", "--rebase"])
             .output()
             .await

@@ -1,5 +1,5 @@
 use crate::error::{GitError, GitResult};
-use crate::git::cmd::run_git;
+use crate::git::cmd::{git_command, run_git};
 use std::path::Path;
 
 pub async fn rebase_interactive(
@@ -8,9 +8,7 @@ pub async fn rebase_interactive(
     bridge_bin: &Path,
     sock: &Path,
 ) -> GitResult<()> {
-    use tokio::process::Command;
-    let output = Command::new("git")
-        .current_dir(repo)
+    let output = git_command(repo)
         .env("GIT_SEQUENCE_EDITOR", bridge_bin)
         .env("GIT_EDITOR", bridge_bin)
         .env("PLUCK_GIT_SOCK", sock)
