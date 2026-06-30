@@ -299,9 +299,11 @@ window.addEventListener("click", () => (menu.value = null));
           <span class="gl-chip">{{ entry.childCount }}</span>
         </li>
         <li v-else
+            @click="pickForLog(entry.branch)"
             @contextmenu.prevent="onContext($event, entry.branch)"
             :title="entry.branch.name"
-            class="gl-row group" style="cursor: default">
+            class="gl-row group"
+            :class="{ 'is-selected': entry.branch.name === state.selectedLogBranch }">
           <span :style="{ paddingLeft: (entry.depth * 12) + 'px' }" class="inline-flex" />
           <span class="w-3 inline-flex justify-center" style="color: var(--fg-3)">⬡</span>
           <button @click="togglePin($event, entry.branch)" title="Pin"
