@@ -66,6 +66,11 @@ function onKey(e: KeyboardEvent) {
 
       <div class="p-3">
         <input ref="input" v-model="name"
+               type="text"
+               autocapitalize="off"
+               autocorrect="off"
+               autocomplete="off"
+               spellcheck="false"
                class="gl-input gl-mono text-[13px] w-full"
                placeholder="Branch name…" />
       </div>

@@ -83,6 +83,11 @@ function onKey(e: KeyboardEvent) {
         <label class="flex items-center gap-2 text-[13px]">
           <span class="shrink-0" style="color: var(--fg-2)">Branch Name:</span>
           <input ref="input" v-model="name"
+                 type="text"
+                 autocapitalize="off"
+                 autocorrect="off"
+                 autocomplete="off"
+                 spellcheck="false"
                  class="gl-input gl-mono text-[13px] flex-1"
                  :disabled="submitting" />
         </label>
