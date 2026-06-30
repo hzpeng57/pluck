@@ -2,6 +2,14 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 规范，版本号采用 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [0.1.10] - 2026-06-30
+
+### Added
+- History 支持直接点击远程分支查看对应 commit 历史，并在分支列表中高亮当前查看的远程分支。
+
+### Fixed
+- 关闭新建分支和重命名分支输入框的自动大写、自动纠错和拼写检查，避免 macOS WebView 将 `feat` 等小写分支名前缀自动改成 `Feat`。
+
 ## [0.1.9] - 2026-06-12
 
 ### Fixed
