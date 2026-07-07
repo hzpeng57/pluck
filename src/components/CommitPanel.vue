@@ -1,5 +1,10 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from "vue";
+import {
+  CheckCircle2,
+  CircleOff,
+  GitCommitHorizontal,
+} from "lucide-vue-next";
 import { useRepoStateStore } from "../stores/repoState";
 import { ops } from "../api/tauri";
 import { useReposStore } from "../stores/repos";
@@ -38,19 +43,18 @@ function statusOf(s: string) { return statusMeta[s] ?? { letter: s[0]?.toUpperCa
 
 <template>
   <div class="flex flex-col h-full">
-    <div class="flex items-center gap-2 px-3 pt-3 pb-2">
+    <div class="gl-panel-header">
       <span class="gl-section-title">Changes</span>
-      <span class="gl-chip">{{ files.length }}</span>
+      <span class="gl-badge">{{ files.length }}</span>
       <div class="flex-1" />
-      <button class="text-[12px] transition-colors" style="color: var(--fg-3)"
-              @click="toggleAll(true)"
-              @mouseover="(e: any) => (e.currentTarget.style.color = 'var(--fg)')"
-              @mouseleave="(e: any) => (e.currentTarget.style.color = 'var(--fg-3)')">All</button>
-      <span style="color: var(--fg-3)">·</span>
-      <button class="text-[12px] transition-colors" style="color: var(--fg-3)"
-              @click="toggleAll(false)"
-              @mouseover="(e: any) => (e.currentTarget.style.color = 'var(--fg)')"
-              @mouseleave="(e: any) => (e.currentTarget.style.color = 'var(--fg-3)')">None</button>
+      <button class="gl-command-btn h-7 px-2" @click="toggleAll(true)" title="Select all files">
+        <CheckCircle2 :size="13" />
+        All
+      </button>
+      <button class="gl-command-btn h-7 px-2" @click="toggleAll(false)" title="Select no files">
+        <CircleOff :size="13" />
+        None
+      </button>
     </div>
     <ul class="flex-1 overflow-auto px-2 flex flex-col gap-0.5">
       <li v-for="f in files" :key="f.path"
@@ -68,14 +72,12 @@ function statusOf(s: string) { return statusMeta[s] ?? { letter: s[0]?.toUpperCa
         </span>
         <span class="truncate flex-1 text-[13px] gl-mono" style="color: var(--fg-2)">{{ f.path }}</span>
       </li>
-      <li v-if="files.length === 0"
-          class="flex flex-col items-center justify-center gap-1 py-8 text-center"
-          style="color: var(--fg-3)">
-        <span class="text-2xl">✓</span>
+      <li v-if="files.length === 0" class="gl-empty">
+        <CheckCircle2 :size="24" style="color: var(--success)" />
         <span class="text-[13px]">Working tree clean</span>
       </li>
     </ul>
-    <div class="p-3 flex flex-col gap-2" style="border-top: 1px solid var(--border-soft)">
+    <div class="p-3 flex flex-col gap-2" style="border-top: 1px solid var(--border-soft); background: var(--bg)">
       <textarea v-model="message" rows="3" placeholder="Commit message…  (⌘K to focus)"
                 class="gl-input resize-none gl-mono text-[13px]" />
       <div class="flex items-center justify-between gap-2">
@@ -83,9 +85,10 @@ function statusOf(s: string) { return statusMeta[s] ?? { letter: s[0]?.toUpperCa
           <input type="checkbox" v-model="skipHooks" class="w-3.5 h-3.5 rounded gl-checkbox" />
           Skip hooks (-n)
         </label>
-        <button class="gl-btn gl-btn-primary"
+        <button class="gl-command-btn gl-btn-primary"
                 :disabled="checkedFiles.length === 0 || !message.trim()"
                 @click="doCommit">
+          <GitCommitHorizontal :size="14" />
           Commit {{ checkedFiles.length ? `(${checkedFiles.length})` : "" }}
         </button>
       </div>

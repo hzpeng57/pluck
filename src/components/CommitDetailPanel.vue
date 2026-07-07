@@ -1,5 +1,12 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
+import {
+  ChevronRight,
+  FileCode2,
+  Folder,
+  GitCommitHorizontal,
+  X,
+} from "lucide-vue-next";
 import { useRepoStateStore } from "../stores/repoState";
 import type { ChangedFile, CommitDetail } from "../types/git";
 import { buildFileTree, type FileTreeEntry } from "../lib/fileTree";
@@ -44,19 +51,18 @@ function formatAbsolute(unix: number): string {
       <span class="text-[13px]">Loading commit detail…</span>
     </div>
     <template v-else>
-    <!-- Top bar: SHA + close -->
-    <div class="flex items-center gap-2 px-3 pt-3 pb-2">
+    <div class="gl-panel-header">
+      <GitCommitHorizontal :size="15" style="color: var(--accent)" />
       <span class="gl-section-title">Commit</span>
-      <span class="gl-mono text-[12px] px-1.5 py-0.5 rounded"
-            style="background: var(--accent-soft); color: var(--accent-2)">{{ detail.short }}</span>
-      <span class="gl-chip">{{ detail.files.length }} {{ detail.files.length === 1 ? "file" : "files" }}</span>
+      <span class="gl-badge">{{ detail.short }}</span>
+      <span class="gl-badge">{{ detail.files.length }} {{ detail.files.length === 1 ? "file" : "files" }}</span>
       <div class="flex-1" />
-      <button class="gl-btn" @click="state.clearSelectedCommit()" title="Back to working tree (Esc)">
-        ✕ Close
+      <button class="gl-command-btn h-7 px-2" @click="state.clearSelectedCommit()" title="Back to working tree (Esc)">
+        <X :size="13" />
+        Close
       </button>
     </div>
 
-    <!-- File tree -->
     <ul class="flex-1 overflow-auto px-2 flex flex-col gap-0.5">
       <template v-for="entry in tree" :key="entry.kind === 'folder' ? 'd:' + entry.prefix : 'f:' + entry.file.path">
         <li v-if="entry.kind === 'folder'"
@@ -64,17 +70,17 @@ function formatAbsolute(unix: number): string {
             :title="entry.prefix"
             class="gl-row group">
           <span :style="{ paddingLeft: (entry.depth * 12) + 'px' }" class="inline-flex" />
-          <span class="text-[11px] w-3 inline-flex justify-center transition-transform"
-                style="color: var(--fg-3)"
-                :style="{ transform: entry.collapsed ? 'rotate(0)' : 'rotate(90deg)' }">▶</span>
-          <span class="text-[13px]" style="color: var(--accent-2)">▦</span>
+          <ChevronRight :size="13" class="transition-transform shrink-0"
+                        :style="{ transform: entry.collapsed ? 'rotate(0)' : 'rotate(90deg)', color: 'var(--fg-3)' }" />
+          <Folder :size="14" class="shrink-0" style="color: var(--accent-2)" />
           <span class="truncate flex-1 text-[13.5px]" style="color: var(--fg)">{{ entry.label }}</span>
-          <span class="gl-chip">{{ entry.fileCount }}</span>
+          <span class="gl-badge">{{ entry.fileCount }}</span>
         </li>
         <li v-else
             :title="entry.file.oldPath ? `${entry.file.oldPath} → ${entry.file.path}` : entry.file.path"
             class="gl-row group" style="cursor: default">
           <span :style="{ paddingLeft: (entry.depth * 12) + 'px' }" class="inline-flex" />
+          <FileCode2 :size="14" class="shrink-0" style="color: var(--fg-3)" />
           <span class="inline-flex items-center justify-center w-5 h-5 rounded text-[11px] font-bold gl-mono shrink-0"
                 :style="{ background: statusMeta(entry.file.status).bg, color: statusMeta(entry.file.status).color }">
             {{ statusMeta(entry.file.status).letter }}
