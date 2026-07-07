@@ -2,6 +2,7 @@
 import { ref, onMounted, onBeforeUnmount } from "vue";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
+import { ArrowDown, ArrowUp } from "lucide-vue-next";
 
 interface TodoRow { action: string; hash: string; rest: string }
 
@@ -59,10 +60,8 @@ onBeforeUnmount(() => unlisten?.());
 
 <template>
   <div v-if="visible"
-       class="fixed inset-0 flex items-center justify-center z-50"
-       style="background: var(--overlay); backdrop-filter: blur(4px)">
-    <div class="rounded-xl w-[680px] max-h-[80vh] flex flex-col overflow-hidden"
-         style="background: var(--panel); border: 1px solid var(--border); box-shadow: var(--shadow-elev)">
+       class="fixed inset-0 flex items-center justify-center z-50 gl-overlay">
+    <div class="gl-dialog-shell w-[680px] max-h-[80vh] flex flex-col">
       <div class="flex items-center gap-2 px-4 h-12 shrink-0" style="border-bottom: 1px solid var(--border-soft)">
         <span class="w-2 h-2 rounded-full" style="background: var(--accent)" />
         <span class="font-semibold text-[13.5px]">
@@ -90,8 +89,12 @@ onBeforeUnmount(() => unlisten?.());
               </select>
               <span class="gl-mono text-[12px] shrink-0" style="color: var(--fg-3)">{{ r.hash }}</span>
               <span class="flex-1 truncate text-[13px]" style="color: var(--fg)">{{ r.rest }}</span>
-              <button class="gl-btn px-1.5" @click="moveUp(i)" title="Move up">↑</button>
-              <button class="gl-btn px-1.5" @click="moveDown(i)" title="Move down">↓</button>
+              <button class="gl-command-btn h-7 w-7 px-0" @click="moveUp(i)" title="Move up">
+                <ArrowUp :size="14" />
+              </button>
+              <button class="gl-command-btn h-7 w-7 px-0" @click="moveDown(i)" title="Move down">
+                <ArrowDown :size="14" />
+              </button>
             </div>
           </div>
         </template>
@@ -104,8 +107,8 @@ onBeforeUnmount(() => unlisten?.());
           pick · reword · edit · squash · fixup · drop
         </span>
         <div class="flex-1" />
-        <button class="gl-btn gl-btn-ghost" @click="abort">Abort rebase</button>
-        <button class="gl-btn gl-btn-primary" @click="save">Save & continue</button>
+        <button class="gl-command-btn" @click="abort">Abort rebase</button>
+        <button class="gl-command-btn gl-btn-primary" @click="save">Save & continue</button>
       </div>
     </div>
   </div>

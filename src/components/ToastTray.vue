@@ -6,13 +6,8 @@ const state = useRepoStateStore();
   <div class="fixed bottom-4 right-4 flex flex-col gap-2 z-[60]">
     <transition-group name="toast">
       <div v-for="t in state.toasts" :key="t.id"
-           class="flex items-start gap-2.5 px-3.5 py-2.5 rounded-lg shadow-2xl text-[13px] max-w-md"
-           :style="{
-             background: 'var(--raised)',
-             border: '1px solid ' + (t.level === 'error' ? 'var(--danger-ring)' : 'var(--border)'),
-             color: 'var(--fg)',
-             boxShadow: 'var(--shadow-toast)'
-           }">
+           class="gl-toast flex items-start gap-2.5 px-3.5 py-2.5 rounded-lg text-[13px] max-w-md"
+           :style="{ borderColor: t.level === 'error' ? 'var(--danger-ring)' : 'var(--border)' }">
         <span class="mt-0.5 w-1.5 h-1.5 rounded-full shrink-0"
               :style="{ background: t.level === 'error' ? 'var(--danger)' : 'var(--info)' }" />
         <span class="break-words whitespace-pre-wrap">{{ t.msg }}</span>

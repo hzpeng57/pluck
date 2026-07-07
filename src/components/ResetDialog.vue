@@ -53,11 +53,9 @@ function onKey(e: KeyboardEvent) {
 
 <template>
   <div v-if="visible && dialog"
-       class="fixed inset-0 flex items-center justify-center z-50"
-       style="background: var(--overlay); backdrop-filter: blur(4px)"
+       class="fixed inset-0 flex items-center justify-center z-50 gl-overlay"
        @keydown="onKey">
-    <div class="rounded-xl w-[560px] flex flex-col overflow-hidden"
-         style="background: var(--panel); border: 1px solid var(--border); box-shadow: var(--shadow-elev)">
+    <div class="gl-dialog-shell w-[560px] flex flex-col">
       <div class="flex items-center gap-2 px-4 h-12 shrink-0" style="border-bottom: 1px solid var(--border-soft)">
         <span class="w-2 h-2 rounded-full" style="background: var(--warning)" />
         <span class="font-semibold text-[13.5px]">Reset Current Branch to Here</span>
@@ -94,8 +92,8 @@ function onKey(e: KeyboardEvent) {
       <div class="flex items-center gap-2 px-4 py-3 shrink-0" style="border-top: 1px solid var(--border-soft)">
         <span class="text-[12px]" style="color: var(--fg-3)">⌘↩ Reset · Esc Cancel</span>
         <div class="flex-1" />
-        <button class="gl-btn gl-btn-ghost" :disabled="submitting" @click="cancel">Cancel</button>
-        <button class="gl-btn"
+        <button class="gl-command-btn" :disabled="submitting" @click="cancel">Cancel</button>
+        <button class="gl-command-btn"
                 :class="mode === 'hard' ? 'gl-btn-danger' : 'gl-btn-primary'"
                 :disabled="submitting" @click="submit">
           {{ submitting ? "Resetting…" : "Reset" }}

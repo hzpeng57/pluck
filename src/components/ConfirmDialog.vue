@@ -42,11 +42,9 @@ function onKey(e: KeyboardEvent) {
 
 <template>
   <div v-if="dialog"
-       class="fixed inset-0 flex items-center justify-center z-50"
-       style="background: var(--overlay); backdrop-filter: blur(4px)"
+       class="fixed inset-0 flex items-center justify-center z-50 gl-overlay"
        @keydown="onKey">
-    <div class="rounded-xl w-[480px] flex flex-col overflow-hidden"
-         style="background: var(--panel); border: 1px solid var(--border); box-shadow: var(--shadow-elev)">
+    <div class="gl-dialog-shell w-[480px] flex flex-col">
       <div class="flex items-center gap-2 px-4 h-12 shrink-0" style="border-bottom: 1px solid var(--border-soft)">
         <span class="w-2 h-2 rounded-full" :style="{ background: toneColor }" />
         <span class="font-semibold text-[13.5px]">{{ dialog.title }}</span>
@@ -64,11 +62,11 @@ function onKey(e: KeyboardEvent) {
 
       <div class="flex items-center gap-2 px-4 py-3 shrink-0" style="border-top: 1px solid var(--border-soft)">
         <div class="flex-1" />
-        <button class="gl-btn gl-btn-ghost" @click="cancel">
+        <button class="gl-command-btn" @click="cancel">
           {{ dialog.cancelLabel ?? "Cancel" }}
         </button>
         <button ref="confirmBtn"
-                class="gl-btn"
+                class="gl-command-btn"
                 :class="dialog.tone === 'danger' ? 'gl-btn-danger' : 'gl-btn-primary'"
                 :disabled="!canConfirm"
                 @click="confirm">
