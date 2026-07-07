@@ -11,6 +11,7 @@ import StatusBar from "./components/StatusBar.vue";
 import BranchesPanel from "./components/BranchesPanel.vue";
 import CommitPanel from "./components/CommitPanel.vue";
 import CommitDetailPanel from "./components/CommitDetailPanel.vue";
+import DiffReviewWorkspace from "./components/DiffReviewWorkspace.vue";
 import LogPanel from "./components/LogPanel.vue";
 import InProgressBanner from "./components/InProgressBanner.vue";
 import ToastTray from "./components/ToastTray.vue";
@@ -44,7 +45,12 @@ function loadInspectorWidth(): number {
   return Number.isFinite(n) && n >= MIN_INSPECTOR_W && n <= MAX_INSPECTOR_W ? n : 390;
 }
 watch(inspectorWidth, v => localStorage.setItem(INSPECTOR_KEY, String(v)));
-const gridCols = computed(() => `${sideWidth.value}px 6px minmax(380px, 1fr) 6px ${inspectorWidth.value}px`);
+const reviewMode = computed(() => state.diffTarget !== null);
+const gridCols = computed(() =>
+  reviewMode.value
+    ? `${sideWidth.value}px 6px minmax(920px, 1fr)`
+    : `${sideWidth.value}px 6px minmax(380px, 1fr) 6px ${inspectorWidth.value}px`
+);
 
 let dragStartX = 0; let dragStartW = 0;
 function onDragMove(e: MouseEvent) {
@@ -102,6 +108,14 @@ watch(() => repos.activeId, async id => {
 function onFocus() { if (repos.activeId) state.refresh(repos.activeId); }
 function isMeta(e: KeyboardEvent) { return e.metaKey || e.ctrlKey; }
 async function onKey(e: KeyboardEvent) {
+  if (e.key === "Escape" && state.diffTarget) {
+    const tag = (document.activeElement as HTMLElement | null)?.tagName;
+    if (tag !== "INPUT" && tag !== "TEXTAREA") {
+      e.preventDefault();
+      state.closeReviewMode();
+      return;
+    }
+  }
   if (e.key === "Escape" && state.selectedCommit) {
     const tag = (document.activeElement as HTMLElement | null)?.tagName;
     if (tag !== "INPUT" && tag !== "TEXTAREA") {
@@ -164,19 +178,26 @@ onBeforeUnmount(() => {
              title="Drag to resize · double-click to reset">
           <div class="gl-splitter-line" />
         </div>
-        <div class="gl-panel overflow-auto min-h-0 min-w-0">
-          <LogPanel />
-        </div>
-        <div class="cursor-col-resize gl-splitter flex justify-center"
-             @mousedown="startInspectorDrag"
-             @dblclick="inspectorWidth = 390"
-             title="Drag to resize inspector · double-click to reset">
-          <div class="gl-splitter-line" />
-        </div>
-        <div class="gl-panel overflow-auto min-h-0 min-w-0">
-          <CommitDetailPanel v-if="state.selectedCommit" />
-          <CommitPanel v-else />
-        </div>
+        <template v-if="reviewMode">
+          <div class="gl-panel overflow-hidden min-h-0 min-w-0">
+            <DiffReviewWorkspace />
+          </div>
+        </template>
+        <template v-else>
+          <div class="gl-panel overflow-auto min-h-0 min-w-0">
+            <LogPanel />
+          </div>
+          <div class="cursor-col-resize gl-splitter flex justify-center"
+               @mousedown="startInspectorDrag"
+               @dblclick="inspectorWidth = 390"
+               title="Drag to resize inspector · double-click to reset">
+            <div class="gl-splitter-line" />
+          </div>
+          <div class="gl-panel overflow-auto min-h-0 min-w-0">
+            <CommitDetailPanel v-if="state.selectedCommit" />
+            <CommitPanel v-else />
+          </div>
+        </template>
       </div>
       <StatusBar />
     </div>
