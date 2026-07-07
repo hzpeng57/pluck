@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import { invoke } from "@tauri-apps/api/core";
+import {
+  GitCommitHorizontal,
+  Search,
+  UserRound,
+  X,
+} from "lucide-vue-next";
 import { useRepoStateStore } from "../stores/repoState";
 import { useReposStore } from "../stores/repos";
 import { api } from "../api/tauri";
@@ -215,55 +221,44 @@ function onScroll() {
 
 <template>
   <div class="flex flex-col h-full">
-    <div class="flex items-center gap-2 px-3 pt-3 pb-2">
+    <div class="gl-panel-header">
+      <GitCommitHorizontal :size="15" style="color: var(--accent)" />
       <span class="gl-section-title">History</span>
-      <span class="gl-mono text-[12px] px-1.5 py-0.5 rounded"
-            style="background: var(--accent-soft); color: var(--accent-2)">
-        {{ state.selectedLogBranch ?? "—" }}
-      </span>
+      <span class="gl-badge">{{ state.selectedLogBranch ?? "—" }}</span>
       <div class="flex-1" />
-      <span v-if="selectedCount > 1" class="gl-chip" style="background: var(--accent-soft); color: var(--accent-2)">
+      <span v-if="selectedCount > 1" class="gl-badge" style="color: var(--accent-2)">
         {{ selectedCount }} selected
       </span>
     </div>
-    <div class="px-3 pb-2 flex items-center gap-2">
-      <div class="relative flex-[3] min-w-0">
-        <svg class="absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none"
-             width="14" height="14" viewBox="0 0 24 24" fill="none"
-             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-             style="color: var(--fg-3)">
-          <circle cx="11" cy="11" r="7" />
-          <path d="m20 20-3.5-3.5" />
-        </svg>
+    <div class="px-3 py-2 flex items-center gap-2" style="border-bottom: 1px solid var(--border-soft)">
+      <div class="gl-search flex-[3] min-w-0">
+        <Search class="absolute left-2 pointer-events-none top-1/2 -translate-y-1/2"
+                :size="14"
+                style="color: var(--fg-3)" />
         <input v-model="query" type="text" placeholder="Search hash or message…"
-               class="gl-input w-full pl-8 pr-6" />
-        <button v-if="hasQuery"
-                @click="query = ''"
-                class="absolute right-2 top-1/2 -translate-y-1/2 text-[14px] leading-none px-1"
-                style="color: var(--fg-3)"
-                title="Clear">×</button>
+               class="gl-input w-full pl-8 pr-8" />
+        <button v-if="hasQuery" @click="query = ''"
+                class="gl-icon-btn absolute right-1 top-1/2 -translate-y-1/2"
+                title="Clear">
+          <X :size="13" />
+        </button>
       </div>
-      <div class="relative flex-[2] min-w-0">
-        <svg class="absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none"
-             width="14" height="14" viewBox="0 0 24 24" fill="none"
-             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-             style="color: var(--fg-3)">
-          <circle cx="12" cy="8" r="4" />
-          <path d="M4 21a8 8 0 0 1 16 0" />
-        </svg>
+      <div class="gl-search flex-[2] min-w-0">
+        <UserRound class="absolute left-2 pointer-events-none top-1/2 -translate-y-1/2"
+                   :size="14"
+                   style="color: var(--fg-3)" />
         <input v-model="author" type="text" placeholder="Author…"
-               class="gl-input w-full pl-8" :class="canPickMe ? 'pr-14' : 'pr-6'" />
+               class="gl-input w-full pl-8" :class="canPickMe ? 'pr-14' : 'pr-8'" />
         <button v-if="canPickMe && !isMeSelected"
                 @click="pickMe"
-                class="absolute top-1/2 -translate-y-1/2 text-[10px] leading-none px-1.5 py-0.5 rounded gl-mono"
-                :class="hasAuthor ? 'right-6' : 'right-2'"
-                style="background: var(--accent-soft); color: var(--accent-2)"
+                class="absolute top-1/2 -translate-y-1/2 gl-badge"
+                :class="hasAuthor ? 'right-7' : 'right-2'"
                 :title="`Filter by me (${me?.name})`">me</button>
-        <button v-if="hasAuthor"
-                @click="author = ''"
-                class="absolute right-2 top-1/2 -translate-y-1/2 text-[14px] leading-none px-1"
-                style="color: var(--fg-3)"
-                title="Clear">×</button>
+        <button v-if="hasAuthor" @click="author = ''"
+                class="gl-icon-btn absolute right-1 top-1/2 -translate-y-1/2"
+                title="Clear">
+          <X :size="13" />
+        </button>
       </div>
     </div>
     <ul ref="scrollRoot" @scroll.passive="onScroll" class="flex-1 overflow-auto px-2 flex flex-col gap-0.5">
@@ -271,39 +266,31 @@ function onScroll() {
           @click="onCommitClick($event, c)"
           @contextmenu.prevent="onContext($event, c)"
           :title="c.subject"
-          class="flex items-center gap-2.5 px-2 h-8 rounded-md cursor-pointer transition-colors"
+          class="flex items-center gap-2.5 px-2.5 h-9 rounded-md cursor-pointer transition-colors"
           :class="{ 'gl-row-active': isSelected(c.hash) }"
           @mouseover="(e: any) => { if (!isSelected(c.hash)) e.currentTarget.style.background = 'var(--hover)' }"
           @mouseleave="(e: any) => { if (!isSelected(c.hash)) e.currentTarget.style.background = '' }">
-        <span class="gl-mono text-[11px] px-1.5 py-0.5 rounded shrink-0"
-              style="background: var(--hover); color: var(--fg-3)">{{ c.short }}</span>
+        <span class="gl-badge shrink-0">{{ c.short }}</span>
         <span class="inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-semibold shrink-0"
               :style="{ background: authorColor(c.author), color: 'var(--on-graph)' }"
               :title="c.author">{{ authorInitial(c.author) }}</span>
         <span class="flex-1 truncate text-[13px]" style="color: var(--fg)">{{ c.subject }}</span>
         <span class="text-[12px] shrink-0" style="color: var(--fg-3)">{{ relativeTime(c.dateUnix) }}</span>
       </li>
-      <li v-if="log.length === 0 && !hasQuery"
-          class="flex flex-col items-center justify-center gap-1 py-8 text-center"
-          style="color: var(--fg-3)">
-        <span class="text-2xl">∅</span>
+      <li v-if="log.length === 0 && !hasFilter" class="gl-empty">
+        <GitCommitHorizontal :size="24" />
         <span class="text-[13px]">No commits</span>
       </li>
-      <li v-else-if="hasFilter && searching"
-          class="flex items-center justify-center gap-2 py-8"
-          style="color: var(--fg-3)">
+      <li v-else-if="hasFilter && searching" class="gl-empty">
         <span class="gl-spinner" />
         <span class="text-[12px]">Searching…</span>
       </li>
-      <li v-else-if="hasFilter && searchError"
-          class="flex flex-col items-center justify-center gap-1 py-8 text-center"
-          style="color: var(--danger)">
+      <li v-else-if="hasFilter && searchError" class="gl-empty" style="color: var(--danger)">
         <span class="text-[13px]">Search failed</span>
         <span class="text-[12px]">{{ searchError }}</span>
       </li>
-      <li v-else-if="hasFilter && log.length === 0"
-          class="flex flex-col items-center justify-center gap-1 py-8 text-center"
-          style="color: var(--fg-3)">
+      <li v-else-if="hasFilter && log.length === 0" class="gl-empty">
+        <Search :size="22" />
         <span class="text-[13px]">No match</span>
       </li>
       <li v-else-if="hasFilter"
