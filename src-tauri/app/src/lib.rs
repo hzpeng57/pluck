@@ -53,6 +53,7 @@ pub fn run() {
             commands::commit_detail,
             commands::working_file_diff,
             commands::commit_file_diff,
+            commands::rollback_file,
             commands::cherry_pick_cmd,
             commands::cherry_pick_continue_cmd,
             commands::cherry_pick_abort_cmd,

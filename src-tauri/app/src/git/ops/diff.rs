@@ -1,7 +1,7 @@
 use crate::error::{GitError, GitResult};
 use crate::git::cmd::{run_git, run_git_allow_exit_codes};
 use serde::Serialize;
-use std::path::{Component, Path};
+use std::path::{Component, Path, PathBuf};
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -66,9 +66,16 @@ const MAX_DIFF_BYTES: usize = 1_500_000;
 fn validate_repo_relative(path: &str) -> GitResult<()> {
     let p = Path::new(path);
     if path.is_empty()
+        || path.contains('\0')
         || p.is_absolute()
         || p.components().any(|c| {
-            matches!(c, Component::ParentDir)
+            matches!(
+                c,
+                Component::CurDir
+                    | Component::ParentDir
+                    | Component::Prefix(_)
+                    | Component::RootDir
+            )
                 || matches!(
                     c,
                     Component::Normal(name)
@@ -77,6 +84,39 @@ fn validate_repo_relative(path: &str) -> GitResult<()> {
         })
     {
         return Err(GitError::parse(format!("unsafe repository path: {path}")));
+    }
+    Ok(())
+}
+
+fn repo_path(repo: &Path, path: &str) -> GitResult<PathBuf> {
+    validate_repo_relative(path)?;
+    Ok(repo.join(path))
+}
+
+fn ensure_removal_stays_in_repo(repo: &Path, full: &Path, path: &str) -> GitResult<()> {
+    let repo = repo.canonicalize()?;
+    let Some(parent) = full.parent() else {
+        return Err(GitError::parse(format!("unsafe repository path: {path}")));
+    };
+    let parent = parent.canonicalize()?;
+    if !parent.starts_with(&repo) {
+        return Err(GitError::parse(format!("unsafe repository path: {path}")));
+    }
+    Ok(())
+}
+
+fn remove_worktree_path(repo: &Path, path: &str) -> GitResult<()> {
+    let full = repo_path(repo, path)?;
+    let meta = match full.symlink_metadata() {
+        Ok(meta) => meta,
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(err) => return Err(err.into()),
+    };
+    ensure_removal_stays_in_repo(repo, &full, path)?;
+    if meta.file_type().is_dir() {
+        std::fs::remove_dir_all(full)?;
+    } else {
+        std::fs::remove_file(full)?;
     }
     Ok(())
 }
@@ -104,6 +144,125 @@ async fn ensure_untracked_worktree_file(repo: &Path, path: &str) -> GitResult<()
         )));
     }
     Ok(())
+}
+
+async fn ensure_index_added_file(repo: &Path, path: &str) -> GitResult<()> {
+    let out = run_git(
+        repo,
+        &[
+            "diff",
+            "--cached",
+            "--name-only",
+            "--diff-filter=A",
+            "-z",
+            "--",
+            path,
+        ],
+    )
+    .await?;
+    let matches = out
+        .stdout
+        .split_terminator('\0')
+        .any(|candidate| candidate == path);
+    if !matches {
+        return Err(GitError::parse(format!("not an added index file: {path}")));
+    }
+    Ok(())
+}
+
+async fn ensure_renamed_file(repo: &Path, path: &str, old_path: &str) -> GitResult<()> {
+    let out = run_git(
+        repo,
+        &[
+            "diff",
+            "--name-status",
+            "--find-renames",
+            "-z",
+            "HEAD",
+            "--",
+            old_path,
+            path,
+        ],
+    )
+    .await?;
+    let mut parts = out.stdout.split_terminator('\0');
+    while let Some(status) = parts.next() {
+        if status.starts_with('R') {
+            let old = parts.next().unwrap_or("");
+            let new = parts.next().unwrap_or("");
+            if old == old_path && new == path {
+                return Ok(());
+            }
+        } else {
+            let _ = parts.next();
+        }
+    }
+    Err(GitError::parse(format!(
+        "not a renamed worktree file: {old_path} -> {path}"
+    )))
+}
+
+pub async fn rollback_file(
+    repo: &Path,
+    path: &str,
+    old_path: Option<&str>,
+    status: &str,
+) -> GitResult<()> {
+    validate_repo_relative(path)?;
+    if let Some(old) = old_path {
+        validate_repo_relative(old)?;
+    }
+
+    match status {
+        "conflicted" => Err(GitError::parse(
+            "Rollback for conflicted files is disabled in this version. Resolve or abort the in-progress operation first.",
+        )),
+        "untracked" => {
+            ensure_untracked_worktree_file(repo, path).await?;
+            remove_worktree_path(repo, path)
+        }
+        "added" => {
+            ensure_index_added_file(repo, path).await?;
+            run_git(
+                repo,
+                &["rm", "-f", "--cached", "--ignore-unmatch", "--", path],
+            )
+            .await?;
+            remove_worktree_path(repo, path)
+        }
+        "deleted" | "modified" => {
+            run_git(
+                repo,
+                &["restore", "--staged", "--worktree", "--source=HEAD", "--", path],
+            )
+            .await?;
+            Ok(())
+        }
+        "renamed" => {
+            let old =
+                old_path.ok_or_else(|| GitError::parse("missing old path for renamed file"))?;
+            ensure_renamed_file(repo, path, old).await?;
+            run_git(
+                repo,
+                &["restore", "--staged", "--worktree", "--source=HEAD", "--", old],
+            )
+            .await?;
+            run_git(
+                repo,
+                &["rm", "-f", "--cached", "--ignore-unmatch", "--", path],
+            )
+            .await?;
+            remove_worktree_path(repo, path)
+        }
+        _ => {
+            run_git(
+                repo,
+                &["restore", "--staged", "--worktree", "--source=HEAD", "--", path],
+            )
+            .await?;
+            Ok(())
+        }
+    }
 }
 
 pub async fn working_file_diff(
@@ -525,6 +684,112 @@ mod integration_tests {
         assert_eq!(diff.kind, DiffKind::Commit);
         assert_eq!(diff.additions, 1);
         assert_eq!(diff.deletions, 1);
+    }
+
+    fn assert_parse_error<T>(result: GitResult<T>, expected: &str) {
+        let Err(GitError::Parse(message)) = result else {
+            panic!("expected parse error containing {expected}");
+        };
+        assert!(
+            message.contains(expected),
+            "expected parse error containing {expected:?}, got {message:?}",
+        );
+    }
+}
+
+#[cfg(test)]
+mod rollback_tests {
+    use super::*;
+    use std::path::Path;
+    use std::process::Command;
+    use tempfile::tempdir;
+
+    fn git(repo: &Path, args: &[&str]) {
+        let status = Command::new("git").current_dir(repo).args(args).status().unwrap();
+        assert!(status.success(), "git {:?} failed", args);
+    }
+
+    fn clean_repo() -> tempfile::TempDir {
+        let dir = tempdir().unwrap();
+        git(dir.path(), &["init", "-b", "main"]);
+        git(dir.path(), &["config", "user.email", "t@t.t"]);
+        git(dir.path(), &["config", "user.name", "t"]);
+        std::fs::write(dir.path().join("a.txt"), "one\n").unwrap();
+        git(dir.path(), &["add", "a.txt"]);
+        git(dir.path(), &["commit", "-m", "init"]);
+        dir
+    }
+
+    fn status(repo: &Path) -> String {
+        let out = Command::new("git")
+            .current_dir(repo)
+            .args(["status", "--porcelain"])
+            .output()
+            .unwrap();
+        String::from_utf8_lossy(&out.stdout).into_owned()
+    }
+
+    #[tokio::test]
+    async fn rollback_modified_restores_head_version() {
+        let dir = clean_repo();
+        std::fs::write(dir.path().join("a.txt"), "changed\n").unwrap();
+
+        rollback_file(dir.path(), "a.txt", None, "modified").await.unwrap();
+
+        assert_eq!(std::fs::read_to_string(dir.path().join("a.txt")).unwrap(), "one\n");
+        assert_eq!(status(dir.path()), "");
+    }
+
+    #[tokio::test]
+    async fn rollback_untracked_removes_file() {
+        let dir = clean_repo();
+        std::fs::write(dir.path().join("new.txt"), "new\n").unwrap();
+
+        rollback_file(dir.path(), "new.txt", None, "untracked").await.unwrap();
+
+        assert!(!dir.path().join("new.txt").exists());
+        assert_eq!(status(dir.path()), "");
+    }
+
+    #[tokio::test]
+    async fn rollback_added_unstages_and_removes_file() {
+        let dir = clean_repo();
+        std::fs::write(dir.path().join("new.txt"), "new\n").unwrap();
+        git(dir.path(), &["add", "new.txt"]);
+
+        rollback_file(dir.path(), "new.txt", None, "added").await.unwrap();
+
+        assert!(!dir.path().join("new.txt").exists());
+        assert_eq!(status(dir.path()), "");
+    }
+
+    #[tokio::test]
+    async fn rollback_rejects_unsafe_paths() {
+        let dir = clean_repo();
+
+        assert_parse_error(
+            rollback_file(dir.path(), "../a.txt", None, "modified").await,
+            "unsafe repository path",
+        );
+        assert_parse_error(
+            rollback_file(dir.path(), ".git/config", None, "untracked").await,
+            "unsafe repository path",
+        );
+        assert_parse_error(
+            rollback_file(dir.path(), ".", None, "untracked").await,
+            "unsafe repository path",
+        );
+    }
+
+    #[tokio::test]
+    async fn rollback_conflicted_is_blocked_for_first_version() {
+        let dir = clean_repo();
+
+        let err = rollback_file(dir.path(), "a.txt", None, "conflicted")
+            .await
+            .unwrap_err();
+
+        assert!(format!("{err}").contains("conflicted files"));
     }
 
     fn assert_parse_error<T>(result: GitResult<T>, expected: &str) {

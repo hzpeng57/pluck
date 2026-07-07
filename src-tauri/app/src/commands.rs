@@ -6,7 +6,8 @@ use crate::git::ops::checkout::checkout_branch;
 use crate::git::ops::cherry_pick::{cherry_pick, cherry_pick_abort, cherry_pick_continue};
 use crate::git::ops::commit::commit_files;
 use crate::git::ops::diff::{
-    commit_file_diff as git_commit_file_diff, working_file_diff as git_working_file_diff, FileDiff,
+    commit_file_diff as git_commit_file_diff, rollback_file as git_rollback_file,
+    working_file_diff as git_working_file_diff, FileDiff,
 };
 use crate::git::ops::fetch::fetch_all;
 use crate::git::ops::merge::{merge_abort, merge_continue, merge_into_current};
@@ -327,6 +328,23 @@ pub async fn commit_file_diff(
         .ok_or_else(|| GitError::parse("unknown repo id"))?;
     let repo = { sess.lock().await.path.clone() };
     git_commit_file_diff(&repo, &hash, &path, old_path.as_deref(), &status).await
+}
+
+#[tauri::command]
+pub async fn rollback_file(
+    id: String,
+    path: String,
+    old_path: Option<String>,
+    status: String,
+    state: State<'_, AppState>,
+) -> GitResult<RepoSnapshot> {
+    let sess = state
+        .get(&id)
+        .await
+        .ok_or_else(|| GitError::parse("unknown repo id"))?;
+    let repo = { sess.lock().await.path.clone() };
+    git_rollback_file(&repo, &path, old_path.as_deref(), &status).await?;
+    refresh_session(&sess).await
 }
 
 #[tauri::command]
