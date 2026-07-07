@@ -53,8 +53,8 @@ function formatPath(file: FileDiff | DiffTarget | null) {
           {{ displayPath }}
         </span>
         <template v-if="diff">
-          <span class="gl-badge" style="color: var(--success)">+{{ diff.additions }}</span>
-          <span class="gl-badge" style="color: var(--danger)">-{{ diff.deletions }}</span>
+          <span class="gl-badge" style="color: var(--success)">{{ diff.tooLarge ? "partial " : "" }}+{{ diff.additions }}</span>
+          <span class="gl-badge" style="color: var(--danger)">{{ diff.tooLarge ? "partial " : "" }}-{{ diff.deletions }}</span>
           <span v-if="diff.tooLarge" class="gl-badge" style="color: var(--warning)">truncated</span>
         </template>
       </template>

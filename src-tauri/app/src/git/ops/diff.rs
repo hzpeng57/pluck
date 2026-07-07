@@ -391,6 +391,29 @@ async fn ensure_renamed_file(repo: &Path, path: &str, old_path: &str) -> GitResu
     )))
 }
 
+async fn resolve_commit_oid(repo: &Path, hash: &str) -> GitResult<String> {
+    if hash.is_empty() || hash.contains('\0') {
+        return Err(GitError::parse("invalid commit hash"));
+    }
+
+    let commit_spec = format!("{hash}^{{commit}}");
+    let out = run_git(
+        repo,
+        &[
+            "rev-parse",
+            "--verify",
+            "--end-of-options",
+            &commit_spec,
+        ],
+    )
+    .await?;
+    let oid = out.stdout.trim();
+    if oid.is_empty() || oid.contains('\n') || oid.contains('\0') {
+        return Err(GitError::parse("invalid commit hash"));
+    }
+    Ok(oid.to_string())
+}
+
 pub async fn rollback_file(
     repo: &Path,
     path: &str,
@@ -522,6 +545,7 @@ pub async fn commit_file_diff(
         validate_repo_relative(old)?;
     }
 
+    let oid = resolve_commit_oid(repo, hash).await?;
     let mut args = vec![
         "diff-tree",
         "--root",
@@ -534,7 +558,7 @@ pub async fn commit_file_diff(
         "--find-renames",
         "--no-color",
         "-U3",
-        hash,
+        oid.as_str(),
         "--",
     ];
     let paths = diff_paths(path, old_path);
@@ -872,6 +896,18 @@ mod integration_tests {
         assert_eq!(diff.kind, DiffKind::Commit);
         assert_eq!(diff.additions, 1);
         assert_eq!(diff.deletions, 1);
+    }
+
+    #[tokio::test]
+    async fn commit_file_diff_rejects_option_like_hash() {
+        let dir = repo();
+
+        assert!(
+            commit_file_diff(dir.path(), "--help", "a.txt", None, "modified")
+                .await
+                .is_err(),
+            "option-like hash should be rejected before diff-tree"
+        );
     }
 
     fn assert_parse_error<T>(result: GitResult<T>, expected: &str) {

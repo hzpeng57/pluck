@@ -57,6 +57,7 @@ export const useRepoStateStore = defineStore("repoState", () => {
       selectedLogBranch.value = null;
       return;
     }
+    reconcileWorkingReview(snap);
     const selected = selectedLogBranch.value;
     const branches = [...snap.branches.local, ...snap.branches.remote];
     if (selected && !branches.some(b => b.name === selected)) {
@@ -132,6 +133,24 @@ export const useRepoStateStore = defineStore("repoState", () => {
     selectedDiff.value = null;
     loadingDiff.value = false;
     diffError.value = null;
+  }
+
+  function sameWorkingTarget(target: DiffTarget, file: WorkingFile) {
+    return target.kind === "workingTree"
+      && target.path === file.path
+      && target.oldPath === file.oldPath
+      && target.status === file.status;
+  }
+
+  function reconcileWorkingReview(snap: RepoSnapshot) {
+    const target = diffTarget.value;
+    if (!target || target.kind !== "workingTree" || !activeRepoId) return;
+    const freshFile = snap.files.find(file => file.path === target.path);
+    if (!freshFile || !sameWorkingTarget(target, freshFile)) {
+      closeReviewMode();
+      return;
+    }
+    void openWorkingDiff(activeRepoId, freshFile);
   }
 
   function clearRepoView() {
@@ -216,20 +235,21 @@ export const useRepoStateStore = defineStore("repoState", () => {
     if (activeRepoId !== repoId) return;
     const target = diffTarget.value;
     if (!target || target.kind !== "workingTree") return;
-    const requestId = ++snapshotRequestId;
+    snapshotRequestId++;
     loading.value = true;
     diffError.value = null;
     try {
       const next = await api.rollbackFile(repoId, target.path, target.oldPath, target.status);
-      if (!isCurrentSnapshotRequest(repoId, requestId)) return;
+      if (activeRepoId !== repoId) return;
+      snapshotRequestId++;
       snapshot.value = next;
       closeReviewMode();
     }
     catch (e: any) {
-      if (isCurrentSnapshotRequest(repoId, requestId)) diffError.value = formatErr(e);
+      if (activeRepoId === repoId) diffError.value = formatErr(e);
     }
     finally {
-      if (isCurrentSnapshotRequest(repoId, requestId)) loading.value = false;
+      if (activeRepoId === repoId) loading.value = false;
     }
   }
 

@@ -10,7 +10,7 @@ import { ops } from "../api/tauri";
 import { useReposStore } from "../stores/repos";
 import type { WorkingFile } from "../types/git";
 
-defineProps<{ reviewMode?: boolean }>();
+const props = withDefaults(defineProps<{ reviewMode?: boolean }>(), { reviewMode: false });
 
 const state = useRepoStateStore();
 const repos = useReposStore();
@@ -60,11 +60,11 @@ function statusOf(s: string) { return statusMeta[s] ?? { letter: s[0]?.toUpperCa
       <span class="gl-section-title">Changes</span>
       <span class="gl-badge">{{ files.length }}</span>
       <div class="flex-1" />
-      <button class="gl-command-btn h-7 px-2" @click="toggleAll(true)" title="Select all files">
+      <button v-if="!props.reviewMode" class="gl-command-btn h-7 px-2" @click="toggleAll(true)" title="Select all files">
         <CheckCircle2 :size="13" />
         All
       </button>
-      <button class="gl-command-btn h-7 px-2" @click="toggleAll(false)" title="Select no files">
+      <button v-if="!props.reviewMode" class="gl-command-btn h-7 px-2" @click="toggleAll(false)" title="Select no files">
         <CircleOff :size="13" />
         None
       </button>
@@ -74,7 +74,7 @@ function statusOf(s: string) { return statusMeta[s] ?? { letter: s[0]?.toUpperCa
           class="gl-row group"
           :class="{ 'is-selected': isDiffSelected(f) }"
           @click="openDiff(f)">
-        <input type="checkbox" :checked="selected[f.path]" @click.stop
+        <input v-if="!props.reviewMode" type="checkbox" :checked="selected[f.path]" @click.stop
                @change="selected[f.path] = !selected[f.path]"
                class="w-3.5 h-3.5 rounded gl-checkbox" />
         <span class="inline-flex items-center justify-center w-5 h-5 rounded text-[11px] font-bold gl-mono"
@@ -88,7 +88,7 @@ function statusOf(s: string) { return statusMeta[s] ?? { letter: s[0]?.toUpperCa
         <span class="text-[13px]">Working tree clean</span>
       </li>
     </ul>
-    <div class="p-3 flex flex-col gap-2" style="border-top: 1px solid var(--border-soft); background: var(--bg)">
+    <div v-if="!props.reviewMode" class="p-3 flex flex-col gap-2" style="border-top: 1px solid var(--border-soft); background: var(--bg)">
       <textarea v-model="message" rows="3" placeholder="Commit message…  (⌘K to focus)"
                 class="gl-input resize-none gl-mono text-[13px]" />
       <div class="flex items-center justify-between gap-2">
