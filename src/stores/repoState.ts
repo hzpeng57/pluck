@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 import { ref, computed, watch } from "vue";
 import { api } from "../api/tauri";
-import type { RepoSnapshot, CommitDetail, Commit } from "../types/git";
+import type { RepoSnapshot, CommitDetail, Commit, WorkingFile, ChangedFile, FileDiff, DiffTarget } from "../types/git";
 
 const LOG_PAGE_SIZE = 200;
 
@@ -26,6 +26,10 @@ export const useRepoStateStore = defineStore("repoState", () => {
   const selectedLogBranch = ref<string | null>(null);
   const selectedCommit = ref<CommitDetail | null>(null);
   const loadingCommit = ref(false);
+  const diffTarget = ref<DiffTarget | null>(null);
+  const selectedDiff = ref<FileDiff | null>(null);
+  const loadingDiff = ref(false);
+  const diffError = ref<string | null>(null);
   const selectedHashes = ref<Set<string>>(new Set());
   const anchorHash = ref<string | null>(null);
   const selectionCount = computed(() => selectedHashes.value.size);
@@ -41,6 +45,7 @@ export const useRepoStateStore = defineStore("repoState", () => {
   let activeRepoId: string | null = null;
   let snapshotRequestId = 0;
   let commitRequestId = 0;
+  let diffRequestId = 0;
 
   // 每次 snapshot 整体替换（首次 open / refresh / 任何 mutation 后回流），
   // 重置 log 分页游标。追加 (snapshot.log = [...]) 不会触发 ref 变化。
@@ -121,10 +126,19 @@ export const useRepoStateStore = defineStore("repoState", () => {
     clearSelectionState();
   }
 
+  function closeReviewMode() {
+    diffRequestId++;
+    diffTarget.value = null;
+    selectedDiff.value = null;
+    loadingDiff.value = false;
+    diffError.value = null;
+  }
+
   function clearRepoView() {
     snapshot.value = null;
     selectedLogBranch.value = null;
     clearSelectionState();
+    closeReviewMode();
     editMessageDialog.value = null;
     resetDialog.value = null;
     branchCreateDialog.value = null;
@@ -156,6 +170,67 @@ export const useRepoStateStore = defineStore("repoState", () => {
   }
   function clearSelectedCommit() {
     clearSelectionState();
+  }
+
+  async function openWorkingDiff(repoId: string, file: WorkingFile) {
+    if (activeRepoId !== repoId) return;
+    const requestId = ++diffRequestId;
+    diffTarget.value = { kind: "workingTree", path: file.path, oldPath: file.oldPath, status: file.status };
+    selectedDiff.value = null;
+    diffError.value = null;
+    loadingDiff.value = true;
+    try {
+      const diff = await api.workingFileDiff(repoId, file.path, file.oldPath, file.status);
+      if (activeRepoId !== repoId || diffRequestId !== requestId) return;
+      selectedDiff.value = diff;
+    }
+    catch (e: any) {
+      if (activeRepoId === repoId && diffRequestId === requestId) diffError.value = formatErr(e);
+    }
+    finally {
+      if (activeRepoId === repoId && diffRequestId === requestId) loadingDiff.value = false;
+    }
+  }
+
+  async function openCommitFileDiff(repoId: string, commit: CommitDetail, file: ChangedFile) {
+    if (activeRepoId !== repoId) return;
+    const requestId = ++diffRequestId;
+    diffTarget.value = { kind: "commit", hash: commit.hash, path: file.path, oldPath: file.oldPath, status: file.status };
+    selectedDiff.value = null;
+    diffError.value = null;
+    loadingDiff.value = true;
+    try {
+      const diff = await api.commitFileDiff(repoId, commit.hash, file.path, file.oldPath, file.status);
+      if (activeRepoId !== repoId || diffRequestId !== requestId) return;
+      selectedDiff.value = diff;
+    }
+    catch (e: any) {
+      if (activeRepoId === repoId && diffRequestId === requestId) diffError.value = formatErr(e);
+    }
+    finally {
+      if (activeRepoId === repoId && diffRequestId === requestId) loadingDiff.value = false;
+    }
+  }
+
+  async function rollbackCurrentWorkingFile(repoId: string) {
+    if (activeRepoId !== repoId) return;
+    const target = diffTarget.value;
+    if (!target || target.kind !== "workingTree") return;
+    const requestId = ++snapshotRequestId;
+    loading.value = true;
+    diffError.value = null;
+    try {
+      const next = await api.rollbackFile(repoId, target.path, target.oldPath, target.status);
+      if (!isCurrentSnapshotRequest(repoId, requestId)) return;
+      snapshot.value = next;
+      closeReviewMode();
+    }
+    catch (e: any) {
+      if (isCurrentSnapshotRequest(repoId, requestId)) diffError.value = formatErr(e);
+    }
+    finally {
+      if (isCurrentSnapshotRequest(repoId, requestId)) loading.value = false;
+    }
   }
 
   function pushToast(level: "error" | "info", msg: string) {
@@ -222,11 +297,13 @@ export const useRepoStateStore = defineStore("repoState", () => {
 
   return {
     snapshot, loading, toasts, selectedLogBranch, selectedCommit, loadingCommit,
+    diffTarget, selectedDiff, loadingDiff, diffError,
     selectedHashes, anchorHash, selectionCount,
     editMessageDialog, resetDialog, branchCreateDialog, branchRenameDialog, branchDeleteDialog,
     confirmDialog,
     logEnd, logLoadingMore,
     open, refresh, setLogBranch, pushToast, selectCommit, clearSelectedCommit,
+    openWorkingDiff, openCommitFileDiff, closeReviewMode, rollbackCurrentWorkingFile,
     setSingleSelection, toggleSelection, selectRange, clearSelection,
     openEditMessageDialog, closeEditMessageDialog, openResetDialog, closeResetDialog,
     openBranchCreateDialog, closeBranchCreateDialog,

@@ -30,6 +30,36 @@ export interface CommitDetail {
   hash: string; short: string; author: string; email: string; dateUnix: number;
   subject: string; body: string; parents: string[]; refs: string[]; files: ChangedFile[];
 }
+export type DiffKind = "workingTree" | "commit";
+export type DiffLineKind = "context" | "added" | "deleted" | "noNewline";
+export interface DiffLine {
+  kind: DiffLineKind;
+  oldNumber: number | null;
+  newNumber: number | null;
+  content: string;
+}
+export interface DiffHunk {
+  header: string;
+  oldStart: number;
+  oldLines: number;
+  newStart: number;
+  newLines: number;
+  lines: DiffLine[];
+}
+export interface FileDiff {
+  kind: DiffKind;
+  path: string;
+  oldPath: string | null;
+  status: FileStatus | ChangedFileStatus | "copied" | "typechange";
+  binary: boolean;
+  tooLarge: boolean;
+  additions: number;
+  deletions: number;
+  hunks: DiffHunk[];
+}
+export type DiffTarget =
+  | { kind: "workingTree"; path: string; oldPath: string | null; status: FileStatus }
+  | { kind: "commit"; hash: string; path: string; oldPath: string | null; status: ChangedFileStatus };
 export interface DeletePrecheck {
   exists: boolean;
   isCurrent: boolean;
