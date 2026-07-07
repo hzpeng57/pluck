@@ -5,6 +5,9 @@ use crate::git::ops::branch::{
 use crate::git::ops::checkout::checkout_branch;
 use crate::git::ops::cherry_pick::{cherry_pick, cherry_pick_abort, cherry_pick_continue};
 use crate::git::ops::commit::commit_files;
+use crate::git::ops::diff::{
+    commit_file_diff as git_commit_file_diff, working_file_diff as git_working_file_diff, FileDiff,
+};
 use crate::git::ops::fetch::fetch_all;
 use crate::git::ops::merge::{merge_abort, merge_continue, merge_into_current};
 use crate::git::ops::pull::{pull_into_rebase, pull_rebase};
@@ -291,6 +294,39 @@ pub async fn commit_detail(
         .ok_or_else(|| GitError::parse("unknown repo id"))?;
     let path = { sess.lock().await.path.clone() };
     commit_show(&path, &hash).await
+}
+
+#[tauri::command]
+pub async fn working_file_diff(
+    id: String,
+    path: String,
+    old_path: Option<String>,
+    status: String,
+    state: State<'_, AppState>,
+) -> GitResult<FileDiff> {
+    let sess = state
+        .get(&id)
+        .await
+        .ok_or_else(|| GitError::parse("unknown repo id"))?;
+    let repo = { sess.lock().await.path.clone() };
+    git_working_file_diff(&repo, &path, old_path.as_deref(), &status).await
+}
+
+#[tauri::command]
+pub async fn commit_file_diff(
+    id: String,
+    hash: String,
+    path: String,
+    old_path: Option<String>,
+    status: String,
+    state: State<'_, AppState>,
+) -> GitResult<FileDiff> {
+    let sess = state
+        .get(&id)
+        .await
+        .ok_or_else(|| GitError::parse("unknown repo id"))?;
+    let repo = { sess.lock().await.path.clone() };
+    git_commit_file_diff(&repo, &hash, &path, old_path.as_deref(), &status).await
 }
 
 #[tauri::command]

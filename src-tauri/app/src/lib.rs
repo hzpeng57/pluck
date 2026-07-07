@@ -51,6 +51,8 @@ pub fn run() {
             commands::rebase_continue_cmd,
             commands::rebase_abort_cmd,
             commands::commit_detail,
+            commands::working_file_diff,
+            commands::commit_file_diff,
             commands::cherry_pick_cmd,
             commands::cherry_pick_continue_cmd,
             commands::cherry_pick_abort_cmd,

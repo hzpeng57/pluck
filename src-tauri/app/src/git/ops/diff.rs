@@ -1,5 +1,7 @@
 use crate::error::{GitError, GitResult};
+use crate::git::cmd::{run_git, run_git_allow_exit_codes};
 use serde::Serialize;
+use std::path::{Component, Path};
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -60,6 +62,114 @@ pub struct FileDiff {
 }
 
 const MAX_DIFF_BYTES: usize = 1_500_000;
+
+fn validate_repo_relative(path: &str) -> GitResult<()> {
+    let p = Path::new(path);
+    if path.is_empty()
+        || p.is_absolute()
+        || p.components().any(|c| matches!(c, Component::ParentDir))
+    {
+        return Err(GitError::parse(format!("unsafe repository path: {path}")));
+    }
+    Ok(())
+}
+
+fn diff_paths<'a>(path: &'a str, old_path: Option<&'a str>) -> Vec<&'a str> {
+    match old_path {
+        Some(old) if old != path => vec![old, path],
+        _ => vec![path],
+    }
+}
+
+pub async fn working_file_diff(
+    repo: &Path,
+    path: &str,
+    old_path: Option<&str>,
+    status: &str,
+) -> GitResult<FileDiff> {
+    validate_repo_relative(path)?;
+    if let Some(old) = old_path {
+        validate_repo_relative(old)?;
+    }
+
+    let raw = if status == "untracked" {
+        let (out, _) = run_git_allow_exit_codes(
+            repo,
+            &["diff", "--no-index", "--no-color", "-U3", "--", "/dev/null", path],
+            &[1],
+        )
+        .await?;
+        out.stdout
+    } else {
+        let mut args = vec![
+            "diff",
+            "--no-ext-diff",
+            "--no-color",
+            "--find-renames",
+            "-U3",
+            "HEAD",
+            "--",
+        ];
+        let paths = diff_paths(path, old_path);
+        for p in &paths {
+            args.push(p);
+        }
+        run_git(repo, &args).await?.stdout
+    };
+
+    parse_unified_diff(
+        &raw,
+        DiffMeta {
+            kind: DiffKind::WorkingTree,
+            path: path.to_string(),
+            old_path: old_path.map(str::to_string),
+            status: status.to_string(),
+        },
+    )
+}
+
+pub async fn commit_file_diff(
+    repo: &Path,
+    hash: &str,
+    path: &str,
+    old_path: Option<&str>,
+    status: &str,
+) -> GitResult<FileDiff> {
+    validate_repo_relative(path)?;
+    if let Some(old) = old_path {
+        validate_repo_relative(old)?;
+    }
+
+    let mut args = vec![
+        "diff-tree",
+        "--root",
+        "--no-commit-id",
+        "-r",
+        "-p",
+        "-m",
+        "--first-parent",
+        "--find-renames",
+        "--no-color",
+        "-U3",
+        hash,
+        "--",
+    ];
+    let paths = diff_paths(path, old_path);
+    for p in &paths {
+        args.push(p);
+    }
+    let raw = run_git(repo, &args).await?.stdout;
+
+    parse_unified_diff(
+        &raw,
+        DiffMeta {
+            kind: DiffKind::Commit,
+            path: path.to_string(),
+            old_path: old_path.map(str::to_string),
+            status: status.to_string(),
+        },
+    )
+}
 
 pub fn parse_unified_diff(raw: &str, meta: DiffMeta) -> GitResult<FileDiff> {
     let too_large = raw.len() > MAX_DIFF_BYTES;
@@ -256,5 +366,73 @@ index 1111111..2222222 100644
 
         assert!(diff.too_large);
         assert_eq!(diff.hunks.len(), 1);
+    }
+}
+
+#[cfg(test)]
+mod integration_tests {
+    use super::*;
+    use std::path::Path;
+    use std::process::Command;
+    use tempfile::tempdir;
+
+    fn git(repo: &Path, args: &[&str]) {
+        let status = Command::new("git").current_dir(repo).args(args).status().unwrap();
+        assert!(status.success(), "git {:?} failed", args);
+    }
+
+    fn repo() -> tempfile::TempDir {
+        let dir = tempdir().unwrap();
+        git(dir.path(), &["init", "-b", "main"]);
+        git(dir.path(), &["config", "user.email", "t@t.t"]);
+        git(dir.path(), &["config", "user.name", "t"]);
+        std::fs::write(dir.path().join("a.txt"), "one\ntwo\n").unwrap();
+        git(dir.path(), &["add", "a.txt"]);
+        git(dir.path(), &["commit", "-m", "init"]);
+        dir
+    }
+
+    #[tokio::test]
+    async fn working_file_diff_includes_staged_and_unstaged_changes() {
+        let dir = repo();
+        std::fs::write(dir.path().join("a.txt"), "one\nthree\nfour\n").unwrap();
+
+        let diff = working_file_diff(dir.path(), "a.txt", None, "modified").await.unwrap();
+
+        assert_eq!(diff.path, "a.txt");
+        assert_eq!(diff.additions, 2);
+        assert_eq!(diff.deletions, 1);
+        assert!(!diff.hunks.is_empty());
+    }
+
+    #[tokio::test]
+    async fn untracked_file_diff_uses_no_index_exit_one_as_success() {
+        let dir = repo();
+        std::fs::write(dir.path().join("new.txt"), "hello\n").unwrap();
+
+        let diff = working_file_diff(dir.path(), "new.txt", None, "untracked").await.unwrap();
+
+        assert_eq!(diff.status, "untracked");
+        assert_eq!(diff.additions, 1);
+        assert_eq!(diff.deletions, 0);
+    }
+
+    #[tokio::test]
+    async fn commit_file_diff_reads_selected_commit_patch() {
+        let dir = repo();
+        std::fs::write(dir.path().join("a.txt"), "one\nthree\n").unwrap();
+        git(dir.path(), &["commit", "-am", "change a"]);
+        let hash = Command::new("git")
+            .current_dir(dir.path())
+            .args(["rev-parse", "HEAD"])
+            .output()
+            .unwrap();
+        let hash = String::from_utf8_lossy(&hash.stdout).trim().to_string();
+
+        let diff = commit_file_diff(dir.path(), &hash, "a.txt", None, "modified").await.unwrap();
+
+        assert_eq!(diff.kind, DiffKind::Commit);
+        assert_eq!(diff.additions, 1);
+        assert_eq!(diff.deletions, 1);
     }
 }
