@@ -1,5 +1,15 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
+import {
+  ChevronRight,
+  Circle,
+  Folder,
+  Pin,
+  PinOff,
+  Search,
+  Star,
+  X,
+} from "lucide-vue-next";
 import { useRepoStateStore } from "../stores/repoState";
 import { useReposStore } from "../stores/repos";
 import { useBranchPrefsStore } from "../stores/branchPrefs";
@@ -76,12 +86,24 @@ function onKeydown(e: KeyboardEvent) {
     searchInput.value?.blur();
   }
 }
-onMounted(() => window.addEventListener("keydown", onKeydown));
-onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
+function dismissMenu() {
+  menu.value = null;
+}
+onMounted(() => {
+  window.addEventListener("keydown", onKeydown);
+  window.addEventListener("click", dismissMenu);
+});
+onBeforeUnmount(() => {
+  window.removeEventListener("keydown", onKeydown);
+  window.removeEventListener("click", dismissMenu);
+});
 
 function pickForLog(b: Branch) {
   if (!repos.activeId) return;
   state.setLogBranch(repos.activeId, b.name);
+}
+function isPinned(name: string) {
+  return !!repos.activeId && prefs.isPinned(repos.activeId, name);
 }
 function togglePin(e: MouseEvent, b: Branch) {
   e.stopPropagation();
@@ -144,34 +166,25 @@ function toggleMenuPin() {
   prefs.togglePin(repos.activeId, menu.value.branch.name);
   menu.value = null;
 }
-
-window.addEventListener("click", () => (menu.value = null));
 </script>
 
 <template>
   <div class="flex flex-col p-2 gap-1">
     <!-- Search -->
-    <div class="sticky top-0 z-10 pb-1 -mx-2 px-2 pt-0"
-         style="background: var(--panel)">
-      <div class="relative">
-        <span class="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none inline-flex"
-              style="color: var(--fg-3)">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-               stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="11" cy="11" r="7" />
-            <path d="m20 20-3.5-3.5" />
-          </svg>
-        </span>
+    <div class="sticky top-0 z-10 p-2 -mx-2 pt-0"
+         style="background: var(--panel); border-bottom: 1px solid var(--border-soft)">
+      <div class="gl-search">
+        <Search class="absolute left-2.5 pointer-events-none top-1/2 -translate-y-1/2"
+                :size="14"
+                style="color: var(--fg-3)" />
         <input ref="searchInput" v-model="search" type="text"
                placeholder="Search branches  ⌘F"
-               class="gl-input pl-8 pr-7 py-1.5 text-[13px] h-8"
-               style="border-radius: 6px" />
+               class="gl-input pl-8 pr-8 py-1.5 text-[13px] h-8" />
         <button v-if="search" @click="search = ''"
-                class="absolute right-2 top-1/2 -translate-y-1/2 text-[13px] transition-colors"
-                style="color: var(--fg-3)"
-                @mouseover="(e: any) => (e.currentTarget.style.color = 'var(--fg)')"
-                @mouseleave="(e: any) => (e.currentTarget.style.color = 'var(--fg-3)')"
-                title="Clear (Esc)">✕</button>
+                class="gl-icon-btn absolute right-1 top-1/2 -translate-y-1/2"
+                title="Clear (Esc)">
+          <X :size="13" />
+        </button>
       </div>
       <div v-if="isSearching" class="text-[11px] mt-1 px-0.5"
            style="color: var(--fg-3)">
@@ -180,24 +193,21 @@ window.addEventListener("click", () => (menu.value = null));
     </div>
 
     <!-- No matches -->
-    <div v-if="isSearching && totalMatches === 0"
-         class="flex flex-col items-center justify-center py-6 gap-1 text-center"
-         style="color: var(--fg-3)">
-      <span class="text-2xl">∅</span>
+    <div v-if="isSearching && totalMatches === 0" class="gl-empty">
+      <Search :size="22" />
       <span class="text-[13px]">No branch matches "{{ search }}"</span>
     </div>
 
     <!-- Pinned -->
     <template v-if="pinnedBranches.length">
-      <button class="flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors"
+      <button class="flex items-center gap-1.5 px-2 py-1.5 rounded-md transition-colors hover:bg-[var(--hover)]"
               style="color: var(--fg-3)"
-              @click="showPinned = !showPinned"
-              @mouseover="(e: any) => (e.currentTarget.style.color = 'var(--fg)')"
-              @mouseleave="(e: any) => (e.currentTarget.style.color = 'var(--fg-3)')">
-        <span class="text-[11px] transition-transform"
-              :style="{ transform: showPinned ? 'rotate(90deg)' : 'rotate(0)' }">▶</span>
+              @click="showPinned = !showPinned">
+        <ChevronRight :size="13"
+                      class="transition-transform"
+                      :style="{ transform: showPinned ? 'rotate(90deg)' : 'rotate(0)' }" />
         <span class="gl-section-title">Pinned</span>
-        <span class="ml-auto gl-mono text-[11px]" style="color: var(--fg-3)">{{ pinnedBranches.length }}</span>
+        <span class="ml-auto gl-badge">{{ pinnedBranches.length }}</span>
       </button>
       <ul v-if="showPinned" class="flex flex-col gap-0.5">
         <li v-for="b in pinnedBranches" :key="'pin:' + b.name"
@@ -206,13 +216,21 @@ window.addEventListener("click", () => (menu.value = null));
             :title="b.name"
             class="gl-row group"
             :class="{ 'is-selected': b.name === state.selectedLogBranch }">
-          <span class="w-3 inline-flex justify-center"
-                :style="{ color: b.isCurrent ? 'var(--success)' : 'transparent' }">●</span>
+          <Circle :size="8"
+                  class="shrink-0"
+                  :fill="b.isCurrent ? 'var(--success)' : 'transparent'"
+                  :style="{ color: b.isCurrent ? 'var(--success)' : 'transparent' }" />
           <button @click="togglePin($event, b)" title="Unpin"
-                  class="text-[12px] transition-colors"
-                  style="color: var(--warning)">★</button>
+                  class="inline-flex items-center justify-center shrink-0"
+                  style="color: var(--warning)">
+            <PinOff :size="13" />
+          </button>
           <span class="truncate flex-1 text-[13.5px]"
                 :style="b.isCurrent ? 'font-weight: 600' : ''">{{ b.name }}</span>
+          <Star v-if="b.name === state.selectedLogBranch"
+                :size="13"
+                class="shrink-0"
+                style="color: var(--accent)" />
           <span v-if="b.ahead" class="gl-chip gl-chip-ahead">↑{{ b.ahead }}</span>
           <span v-if="b.behind" class="gl-chip gl-chip-behind">↓{{ b.behind }}</span>
         </li>
@@ -220,15 +238,14 @@ window.addEventListener("click", () => (menu.value = null));
     </template>
 
     <!-- Local -->
-    <button class="flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors mt-1"
+    <button class="flex items-center gap-1.5 px-2 py-1.5 rounded-md transition-colors hover:bg-[var(--hover)] mt-1"
             style="color: var(--fg-3)"
-            @click="showLocal = !showLocal"
-            @mouseover="(e: any) => (e.currentTarget.style.color = 'var(--fg)')"
-            @mouseleave="(e: any) => (e.currentTarget.style.color = 'var(--fg-3)')">
-      <span class="text-[11px] transition-transform"
-            :style="{ transform: showLocal ? 'rotate(90deg)' : 'rotate(0)' }">▶</span>
+            @click="showLocal = !showLocal">
+      <ChevronRight :size="13"
+                    class="transition-transform"
+                    :style="{ transform: showLocal ? 'rotate(90deg)' : 'rotate(0)' }" />
       <span class="gl-section-title">Local</span>
-      <span class="ml-auto gl-mono text-[11px]" style="color: var(--fg-3)">{{ unpinnedLocal.length }}</span>
+      <span class="ml-auto gl-badge">{{ unpinnedLocal.length }}</span>
     </button>
     <ul v-if="showLocal" class="flex flex-col gap-0.5">
       <template v-for="entry in localTree" :key="'l:' + (entry.kind === 'folder' ? entry.prefix : entry.branch.name)">
@@ -239,16 +256,21 @@ window.addEventListener("click", () => (menu.value = null));
             :title="entry.prefix"
             class="gl-row group">
           <span :style="{ paddingLeft: (entry.depth * 12) + 'px' }" class="inline-flex" />
-          <span class="text-[11px] w-3 inline-flex justify-center transition-transform"
-                style="color: var(--fg-3)"
-                :style="{ transform: entry.collapsed ? 'rotate(0)' : 'rotate(90deg)' }">▶</span>
-          <span class="text-[13px]" style="color: var(--accent-2)">▦</span>
+          <ChevronRight :size="13"
+                        class="shrink-0 transition-transform"
+                        style="color: var(--fg-3)"
+                        :style="{ transform: entry.collapsed ? 'rotate(0)' : 'rotate(90deg)' }" />
+          <Folder :size="14" class="shrink-0" style="color: var(--accent-2)" />
           <span class="truncate flex-1 text-[13.5px]"
                 :style="entry.selfBranch?.isCurrent ? 'font-weight: 600; color: var(--fg)' : 'color: var(--fg)'">
             {{ entry.label }}<span v-if="entry.selfBranch" class="gl-mono text-[11px] ml-1"
                                    style="color: var(--fg-3)">·branch</span>
           </span>
           <span class="gl-chip">{{ entry.childCount }}</span>
+          <Star v-if="entry.selfBranch?.name === state.selectedLogBranch"
+                :size="13"
+                class="shrink-0"
+                style="color: var(--accent)" />
           <span v-if="entry.collapsed && entry.ahead" class="gl-chip gl-chip-ahead">↑{{ entry.ahead }}</span>
           <span v-if="entry.collapsed && entry.behind" class="gl-chip gl-chip-behind">↓{{ entry.behind }}</span>
         </li>
@@ -260,13 +282,22 @@ window.addEventListener("click", () => (menu.value = null));
             class="gl-row group"
             :class="{ 'is-selected': entry.branch.name === state.selectedLogBranch }">
           <span :style="{ paddingLeft: (entry.depth * 12) + 'px' }" class="inline-flex" />
-          <span class="w-3 inline-flex justify-center"
-                :style="{ color: entry.branch.isCurrent ? 'var(--success)' : 'transparent' }">●</span>
+          <Circle :size="8"
+                  class="shrink-0"
+                  :fill="entry.branch.isCurrent ? 'var(--success)' : 'transparent'"
+                  :style="{ color: entry.branch.isCurrent ? 'var(--success)' : 'transparent' }" />
           <button @click="togglePin($event, entry.branch)" title="Pin"
-                  class="text-[12px] opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity"
-                  style="color: var(--fg-3)">☆</button>
+                  class="inline-flex items-center justify-center shrink-0 opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity"
+                  :style="{ color: isPinned(entry.branch.name) ? 'var(--warning)' : 'var(--fg-3)' }">
+            <PinOff v-if="isPinned(entry.branch.name)" :size="13" />
+            <Pin v-else :size="13" />
+          </button>
           <span class="truncate flex-1 text-[13.5px]"
                 :style="entry.branch.isCurrent ? 'font-weight: 600' : ''">{{ entry.displayLabel }}</span>
+          <Star v-if="entry.branch.name === state.selectedLogBranch"
+                :size="13"
+                class="shrink-0"
+                style="color: var(--accent)" />
           <span v-if="entry.branch.ahead" class="gl-chip gl-chip-ahead">↑{{ entry.branch.ahead }}</span>
           <span v-if="entry.branch.behind" class="gl-chip gl-chip-behind">↓{{ entry.branch.behind }}</span>
         </li>
@@ -274,15 +305,14 @@ window.addEventListener("click", () => (menu.value = null));
     </ul>
 
     <!-- Remote -->
-    <button class="flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors mt-2"
+    <button class="flex items-center gap-1.5 px-2 py-1.5 rounded-md transition-colors hover:bg-[var(--hover)] mt-2"
             style="color: var(--fg-3)"
-            @click="showRemote = !showRemote"
-            @mouseover="(e: any) => (e.currentTarget.style.color = 'var(--fg)')"
-            @mouseleave="(e: any) => (e.currentTarget.style.color = 'var(--fg-3)')">
-      <span class="text-[11px] transition-transform"
-            :style="{ transform: showRemote ? 'rotate(90deg)' : 'rotate(0)' }">▶</span>
+            @click="showRemote = !showRemote">
+      <ChevronRight :size="13"
+                    class="transition-transform"
+                    :style="{ transform: showRemote ? 'rotate(90deg)' : 'rotate(0)' }" />
       <span class="gl-section-title">Remote</span>
-      <span class="ml-auto gl-mono text-[11px]" style="color: var(--fg-3)">{{ unpinnedRemote.length }}</span>
+      <span class="ml-auto gl-badge">{{ unpinnedRemote.length }}</span>
     </button>
     <ul v-if="showRemote" class="flex flex-col gap-0.5">
       <template v-for="entry in remoteTree" :key="'r:' + (entry.kind === 'folder' ? entry.prefix : entry.branch.name)">
@@ -291,12 +321,17 @@ window.addEventListener("click", () => (menu.value = null));
             :title="entry.prefix"
             class="gl-row group" style="cursor: pointer">
           <span :style="{ paddingLeft: (entry.depth * 12) + 'px' }" class="inline-flex" />
-          <span class="text-[11px] w-3 inline-flex justify-center transition-transform"
-                style="color: var(--fg-3)"
-                :style="{ transform: entry.collapsed ? 'rotate(0)' : 'rotate(90deg)' }">▶</span>
-          <span class="text-[13px]" style="color: var(--fg-3)">▦</span>
+          <ChevronRight :size="13"
+                        class="shrink-0 transition-transform"
+                        style="color: var(--fg-3)"
+                        :style="{ transform: entry.collapsed ? 'rotate(0)' : 'rotate(90deg)' }" />
+          <Folder :size="14" class="shrink-0" style="color: var(--fg-3)" />
           <span class="truncate flex-1 text-[13.5px]" style="color: var(--fg-2)">{{ entry.label }}</span>
           <span class="gl-chip">{{ entry.childCount }}</span>
+          <Star v-if="entry.selfBranch?.name === state.selectedLogBranch"
+                :size="13"
+                class="shrink-0"
+                style="color: var(--accent)" />
         </li>
         <li v-else
             @click="pickForLog(entry.branch)"
@@ -305,11 +340,18 @@ window.addEventListener("click", () => (menu.value = null));
             class="gl-row group"
             :class="{ 'is-selected': entry.branch.name === state.selectedLogBranch }">
           <span :style="{ paddingLeft: (entry.depth * 12) + 'px' }" class="inline-flex" />
-          <span class="w-3 inline-flex justify-center" style="color: var(--fg-3)">⬡</span>
+          <Circle :size="8" class="shrink-0" style="color: transparent" />
           <button @click="togglePin($event, entry.branch)" title="Pin"
-                  class="text-[12px] opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity"
-                  style="color: var(--fg-3)">☆</button>
+                  class="inline-flex items-center justify-center shrink-0 opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity"
+                  :style="{ color: isPinned(entry.branch.name) ? 'var(--warning)' : 'var(--fg-3)' }">
+            <PinOff v-if="isPinned(entry.branch.name)" :size="13" />
+            <Pin v-else :size="13" />
+          </button>
           <span class="truncate flex-1 text-[13.5px]" style="color: var(--fg-2)">{{ entry.displayLabel }}</span>
+          <Star v-if="entry.branch.name === state.selectedLogBranch"
+                :size="13"
+                class="shrink-0"
+                style="color: var(--accent)" />
         </li>
       </template>
     </ul>
