@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, computed } from "vue";
 import { open } from "@tauri-apps/plugin-dialog";
+import { Plus, X } from "lucide-vue-next";
 import { useReposStore } from "../stores/repos";
 import { useRepoStateStore } from "../stores/repoState";
 import { api } from "../api/tauri";
@@ -46,8 +47,8 @@ const items = computed(() => repos.all);
 </script>
 
 <template>
-  <aside class="w-14 shrink-0 flex flex-col items-center py-3 gap-2"
-         style="background: var(--bg); border-right: 1px solid var(--border-soft)">
+  <aside class="w-[60px] shrink-0 flex flex-col items-center py-3 gap-2"
+         style="background: color-mix(in srgb, var(--bg) 88%, black); border-right: 1px solid var(--border-soft)">
     <button
       v-for="r in items" :key="r.id"
       @click="repos.setActive(r.id)"
@@ -76,10 +77,15 @@ const items = computed(() => repos.all);
       title="Add repository"
       @mouseover="(e: any) => (e.currentTarget.style.color = 'var(--fg)')"
       @mouseleave="(e: any) => (e.currentTarget.style.color = 'var(--fg-3)')"
-    >＋</button>
+    >
+      <Plus :size="18" />
+    </button>
 
     <div v-if="menu" :style="{ top: menu.y + 'px', left: menu.x + 'px' }" class="gl-menu">
-      <button class="gl-menu-item is-danger" @click="removeCurrent">Remove from list</button>
+      <button class="gl-menu-item is-danger" @click="removeCurrent">
+        <X :size="14" />
+        Remove from list
+      </button>
     </div>
   </aside>
 </template>

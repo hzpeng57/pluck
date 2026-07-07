@@ -18,30 +18,29 @@ async function onCheckUpdate() {
 }
 </script>
 <template>
-  <footer class="flex items-center gap-4 px-4 h-7 shrink-0 text-[12px]"
+  <footer class="flex items-center gap-2 px-3 h-7 shrink-0 text-[12px]"
           style="background: var(--bg); border-top: 1px solid var(--border-soft); color: var(--fg-3)">
-    <span class="flex items-center gap-1">
-      <span class="w-1 h-1 rounded-full" :style="{ background: counts.dirty ? 'var(--warning)' : 'var(--fg-3)' }" />
+    <span class="gl-badge">
+      <span class="w-1.5 h-1.5 rounded-full"
+            :style="{ background: counts.dirty ? 'var(--warning)' : 'var(--fg-3)' }" />
       <span class="gl-mono">{{ counts.dirty }}</span> dirty
     </span>
-    <span class="flex items-center gap-1">
-      <span :style="{ color: counts.ahead ? 'var(--success)' : 'inherit' }">↑</span>
-      <span class="gl-mono">{{ counts.ahead }}</span>
+    <span class="gl-badge" :style="{ color: counts.ahead ? 'var(--success)' : 'var(--fg-3)' }">
+      ↑ <span class="gl-mono">{{ counts.ahead }}</span>
     </span>
-    <span class="flex items-center gap-1">
-      <span :style="{ color: counts.behind ? 'var(--danger)' : 'inherit' }">↓</span>
-      <span class="gl-mono">{{ counts.behind }}</span>
+    <span class="gl-badge" :style="{ color: counts.behind ? 'var(--danger)' : 'var(--fg-3)' }">
+      ↓ <span class="gl-mono">{{ counts.behind }}</span>
     </span>
     <div class="flex-1" />
     <span v-if="state.loading" class="flex items-center gap-1.5">
-      <span class="w-1.5 h-1.5 rounded-full animate-pulse" style="background: var(--accent)" />
-      refreshing…
+      <span class="gl-spinner" />
+      refreshing
     </span>
-    <button class="gl-mono opacity-60 hover:opacity-100 transition-opacity"
+    <button class="gl-badge hover:opacity-100 transition-opacity"
             :title="checking ? 'Checking for updates…' : 'Click to check for updates'"
             :disabled="checking"
             @click="onCheckUpdate">
-      pluck v{{ version }}{{ checking ? ' · checking…' : '' }}
+      pluck v{{ version }}{{ checking ? ' · checking' : '' }}
     </button>
   </footer>
 </template>
