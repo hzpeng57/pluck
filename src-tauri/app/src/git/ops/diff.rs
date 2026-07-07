@@ -129,15 +129,8 @@ fn diff_paths<'a>(path: &'a str, old_path: Option<&'a str>) -> Vec<&'a str> {
 }
 
 async fn ensure_untracked_worktree_file(repo: &Path, path: &str) -> GitResult<()> {
-    let out = run_git(
-        repo,
-        &["ls-files", "-z", "--others", "--exclude-standard", "--", path],
-    )
-    .await?;
-    let matches = out
-        .stdout
-        .split_terminator('\0')
-        .any(|candidate| candidate == path);
+    let candidates = untracked_worktree_candidates(repo, path).await?;
+    let matches = candidates.iter().any(|candidate| candidate == path);
     if !matches {
         return Err(GitError::parse(format!(
             "not an untracked worktree file: {path}"
@@ -146,14 +139,100 @@ async fn ensure_untracked_worktree_file(repo: &Path, path: &str) -> GitResult<()
     Ok(())
 }
 
+async fn untracked_worktree_candidates(repo: &Path, path: &str) -> GitResult<Vec<String>> {
+    let out = run_git(
+        repo,
+        &["ls-files", "-z", "--others", "--exclude-standard", "--", path],
+    )
+    .await?;
+    Ok(out
+        .stdout
+        .split_terminator('\0')
+        .filter(|candidate| !candidate.is_empty())
+        .map(str::to_string)
+        .collect())
+}
+
+async fn ensure_untracked_worktree_path(repo: &Path, path: &str) -> GitResult<()> {
+    let candidates = untracked_worktree_candidates(repo, path).await?;
+    if candidates.iter().any(|candidate| candidate == path) {
+        return Ok(());
+    }
+    if is_untracked_directory_entry(repo, path, &candidates).await? {
+        return Ok(());
+    }
+    Err(GitError::parse(format!(
+        "not an untracked worktree file: {path}"
+    )))
+}
+
+async fn is_untracked_directory_entry(
+    repo: &Path,
+    path: &str,
+    candidates: &[String],
+) -> GitResult<bool> {
+    if candidates.is_empty() {
+        return Ok(false);
+    }
+
+    let dir = path.trim_end_matches('/');
+    if dir.is_empty() {
+        return Ok(false);
+    }
+
+    let full = repo_path(repo, path)?;
+    let meta = match full.symlink_metadata() {
+        Ok(meta) => meta,
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(false),
+        Err(err) => return Err(err.into()),
+    };
+    if !meta.file_type().is_dir() {
+        return Ok(false);
+    }
+    ensure_removal_stays_in_repo(repo, &full, path)?;
+
+    let dir_path = Path::new(dir);
+    let all_inside_dir = candidates.iter().all(|candidate| {
+        validate_repo_relative(candidate).is_ok()
+            && Path::new(candidate).starts_with(dir_path)
+            && Path::new(candidate) != dir_path
+    });
+    if !all_inside_dir {
+        return Ok(false);
+    }
+
+    let ignored = run_git(
+        repo,
+        &[
+            "ls-files",
+            "-z",
+            "--others",
+            "--ignored",
+            "--exclude-standard",
+            "--",
+            path,
+        ],
+    )
+    .await?;
+    if ignored
+        .stdout
+        .split_terminator('\0')
+        .any(|candidate| !candidate.is_empty())
+    {
+        return Err(GitError::parse(format!(
+            "untracked directory contains ignored files: {path}"
+        )));
+    }
+
+    Ok(true)
+}
+
 async fn ensure_index_added_file(repo: &Path, path: &str) -> GitResult<()> {
     let out = run_git(
         repo,
         &[
-            "diff",
-            "--cached",
-            "--name-only",
-            "--diff-filter=A",
+            "status",
+            "--porcelain=v2",
             "-z",
             "--",
             path,
@@ -163,11 +242,25 @@ async fn ensure_index_added_file(repo: &Path, path: &str) -> GitResult<()> {
     let matches = out
         .stdout
         .split_terminator('\0')
-        .any(|candidate| candidate == path);
+        .any(|record| status_record_is_added_path(record, path));
     if !matches {
         return Err(GitError::parse(format!("not an added index file: {path}")));
     }
     Ok(())
+}
+
+fn status_record_is_added_path(record: &str, path: &str) -> bool {
+    let Some(rest) = record.strip_prefix("1 ") else {
+        return false;
+    };
+    let parts: Vec<&str> = rest.splitn(8, ' ').collect();
+    let Some(xy) = parts.first() else {
+        return false;
+    };
+    let Some(candidate) = parts.get(7) else {
+        return false;
+    };
+    xy.as_bytes().contains(&b'A') && *candidate == path
 }
 
 async fn ensure_renamed_file(repo: &Path, path: &str, old_path: &str) -> GitResult<()> {
@@ -218,7 +311,7 @@ pub async fn rollback_file(
             "Rollback for conflicted files is disabled in this version. Resolve or abort the in-progress operation first.",
         )),
         "untracked" => {
-            ensure_untracked_worktree_file(repo, path).await?;
+            ensure_untracked_worktree_path(repo, path).await?;
             remove_worktree_path(repo, path)
         }
         "added" => {
@@ -760,6 +853,44 @@ mod rollback_tests {
         rollback_file(dir.path(), "new.txt", None, "added").await.unwrap();
 
         assert!(!dir.path().join("new.txt").exists());
+        assert_eq!(status(dir.path()), "");
+    }
+
+    #[tokio::test]
+    async fn rollback_intent_to_add_removes_index_entry_and_worktree_file() {
+        let dir = clean_repo();
+        std::fs::write(dir.path().join("intent.txt"), "intent\n").unwrap();
+        git(dir.path(), &["add", "-N", "intent.txt"]);
+
+        rollback_file(dir.path(), "intent.txt", None, "added").await.unwrap();
+
+        assert!(!dir.path().join("intent.txt").exists());
+        assert_eq!(status(dir.path()), "");
+    }
+
+    #[tokio::test]
+    async fn rollback_untracked_directory_entry_removes_contained_files() {
+        let dir = clean_repo();
+        std::fs::create_dir(dir.path().join("dir")).unwrap();
+        std::fs::write(dir.path().join("dir/a.txt"), "a\n").unwrap();
+
+        rollback_file(dir.path(), "dir/", None, "untracked").await.unwrap();
+
+        assert!(!dir.path().join("dir").exists());
+        assert_eq!(status(dir.path()), "");
+    }
+
+    #[tokio::test]
+    async fn rollback_renamed_restores_old_path_and_removes_new_path() {
+        let dir = clean_repo();
+        git(dir.path(), &["mv", "a.txt", "renamed.txt"]);
+
+        rollback_file(dir.path(), "renamed.txt", Some("a.txt"), "renamed")
+            .await
+            .unwrap();
+
+        assert_eq!(std::fs::read_to_string(dir.path().join("a.txt")).unwrap(), "one\n");
+        assert!(!dir.path().join("renamed.txt").exists());
         assert_eq!(status(dir.path()), "");
     }
 
