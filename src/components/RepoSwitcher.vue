@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, computed } from "vue";
 import { open } from "@tauri-apps/plugin-dialog";
-import { Plus, X } from "lucide-vue-next";
+import { Plus, Trash2 } from "lucide-vue-next";
 import { useReposStore } from "../stores/repos";
 import { useRepoStateStore } from "../stores/repoState";
 import { api } from "../api/tauri";
@@ -71,20 +71,18 @@ const items = computed(() => repos.all);
     </button>
 
     <button
-      class="w-10 h-10 rounded-xl flex items-center justify-center text-lg font-light transition-colors"
-      style="color: var(--fg-3); border: 1px dashed var(--border)"
+      class="w-10 h-10 rounded-xl flex items-center justify-center text-lg font-light transition-colors border border-dashed hover:text-[var(--fg)]"
+      style="color: var(--fg-3); border-color: var(--border)"
       @click="addRepo"
       title="Add repository"
-      @mouseover="(e: any) => (e.currentTarget.style.color = 'var(--fg)')"
-      @mouseleave="(e: any) => (e.currentTarget.style.color = 'var(--fg-3)')"
     >
       <Plus :size="18" />
     </button>
 
     <div v-if="menu" :style="{ top: menu.y + 'px', left: menu.x + 'px' }" class="gl-menu">
       <button class="gl-menu-item is-danger" @click="removeCurrent">
-        <X :size="14" />
-        Remove from list
+        <Trash2 :size="14" class="shrink-0" />
+        <span class="truncate">Remove from list</span>
       </button>
     </div>
   </aside>

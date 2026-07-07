@@ -5,6 +5,7 @@ import {
   FileCode2,
   Folder,
   GitCommitHorizontal,
+  Inbox,
   X,
 } from "lucide-vue-next";
 import { useRepoStateStore } from "../stores/repoState";
@@ -93,7 +94,7 @@ function formatAbsolute(unix: number): string {
       <li v-if="detail.files.length === 0"
           class="flex flex-col items-center justify-center gap-1 py-8 text-center"
           style="color: var(--fg-3)">
-        <span class="text-2xl">∅</span>
+        <Inbox :size="22" />
         <span class="text-[13px]">No file changes</span>
       </li>
     </ul>

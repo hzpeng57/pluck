@@ -359,22 +359,40 @@ function toggleMenuPin() {
     <!-- Context menu -->
     <div v-if="menu" :style="{ top: menu.y + 'px', left: menu.x + 'px' }" class="gl-menu">
       <button class="gl-menu-item" @click="toggleMenuPin">
-        {{ repoId && prefs.isPinned(repoId, menu.branch.name) ? "★ Unpin" : "☆ Pin to top" }}
+        <PinOff v-if="repoId && prefs.isPinned(repoId, menu.branch.name)" :size="14" class="shrink-0" />
+        <Pin v-else :size="14" class="shrink-0" />
+        <span>{{ repoId && prefs.isPinned(repoId, menu.branch.name) ? "Unpin" : "Pin to top" }}</span>
       </button>
-      <div class="my-1 h-px" style="background: var(--border)"></div>
+      <div class="gl-menu-sep"></div>
       <button class="gl-menu-item" @click="checkout" :disabled="menu.branch.isCurrent">
+        <span class="inline-block w-3.5 shrink-0" aria-hidden="true"></span>
         {{ menu.branch.kind === "remote" ? "Checkout as local branch" : "Checkout" }}
       </button>
-      <button class="gl-menu-item" @click="newFromHere">New branch from here…</button>
-      <button class="gl-menu-item" @click="rename" :disabled="menu.branch.kind !== 'local'">Rename…</button>
-      <button class="gl-menu-item" @click="mergeIntoCurrent" :disabled="menu.branch.isCurrent">Merge into current</button>
+      <button class="gl-menu-item" @click="newFromHere">
+        <span class="inline-block w-3.5 shrink-0" aria-hidden="true"></span>
+        <span>New branch from here…</span>
+      </button>
+      <button class="gl-menu-item" @click="rename" :disabled="menu.branch.kind !== 'local'">
+        <span class="inline-block w-3.5 shrink-0" aria-hidden="true"></span>
+        <span>Rename…</span>
+      </button>
+      <button class="gl-menu-item" @click="mergeIntoCurrent" :disabled="menu.branch.isCurrent">
+        <span class="inline-block w-3.5 shrink-0" aria-hidden="true"></span>
+        <span>Merge into current</span>
+      </button>
       <button class="gl-menu-item"
               @click="pullIntoCurrentRebase"
               :disabled="menu.branch.isCurrent || !currentBranchName">
+        <span class="inline-block w-3.5 shrink-0" aria-hidden="true"></span>
+        <span>
         Pull into "{{ currentBranchName ?? "current" }}" using rebase
+        </span>
       </button>
-      <div class="my-1 h-px" style="background: var(--border)"></div>
-      <button class="gl-menu-item is-danger" @click="del" :disabled="menu.branch.isCurrent">Delete</button>
+      <div class="gl-menu-sep"></div>
+      <button class="gl-menu-item is-danger" @click="del" :disabled="menu.branch.isCurrent">
+        <span class="inline-block w-3.5 shrink-0" aria-hidden="true"></span>
+        <span>Delete</span>
+      </button>
     </div>
   </div>
 </template>
