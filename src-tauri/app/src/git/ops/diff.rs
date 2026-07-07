@@ -63,7 +63,7 @@ const MAX_DIFF_BYTES: usize = 1_500_000;
 
 pub fn parse_unified_diff(raw: &str, meta: DiffMeta) -> GitResult<FileDiff> {
     let too_large = raw.len() > MAX_DIFF_BYTES;
-    let content = if too_large { &raw[..MAX_DIFF_BYTES] } else { raw };
+    let content = truncate_to_char_boundary(raw, MAX_DIFF_BYTES);
     let binary = content.contains("Binary files ") || content.contains("GIT binary patch");
     let mut hunks = Vec::new();
     let mut current: Option<DiffHunk> = None;
@@ -146,6 +146,18 @@ pub fn parse_unified_diff(raw: &str, meta: DiffMeta) -> GitResult<FileDiff> {
     })
 }
 
+fn truncate_to_char_boundary(raw: &str, max_bytes: usize) -> &str {
+    if raw.len() <= max_bytes {
+        return raw;
+    }
+
+    let mut end = max_bytes;
+    while !raw.is_char_boundary(end) {
+        end -= 1;
+    }
+    &raw[..end]
+}
+
 fn parse_hunk_header(line: &str) -> GitResult<Option<(u32, u32, u32, u32)>> {
     if !line.starts_with("@@ ") {
         return Ok(None);
@@ -223,5 +235,26 @@ index 1111111..2222222 100644
 
         assert!(diff.binary);
         assert_eq!(diff.hunks.len(), 0);
+    }
+
+    #[test]
+    fn truncates_large_utf8_diff_on_char_boundary() {
+        let prefix = "\
+diff --git a/src/app.ts b/src/app.ts
+index 1111111..2222222 100644
+--- a/src/app.ts
++++ b/src/app.ts
+@@ -1 +1 @@
++";
+        let filler = "x".repeat(MAX_DIFF_BYTES - prefix.len() - 1);
+        let raw = format!("{prefix}{filler}好\n");
+
+        assert!(raw.len() > MAX_DIFF_BYTES);
+        assert!(!raw.is_char_boundary(MAX_DIFF_BYTES));
+
+        let diff = parse_unified_diff(&raw, meta()).unwrap();
+
+        assert!(diff.too_large);
+        assert_eq!(diff.hunks.len(), 1);
     }
 }
