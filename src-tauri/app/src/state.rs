@@ -40,10 +40,21 @@ impl AppState {
 }
 
 pub async fn refresh_session(sess: &Arc<Mutex<RepoSession>>) -> GitResult<RepoSnapshot> {
+    refresh_session_inner(sess, false).await
+}
+
+pub async fn refresh_session_force(sess: &Arc<Mutex<RepoSession>>) -> GitResult<RepoSnapshot> {
+    refresh_session_inner(sess, true).await
+}
+
+async fn refresh_session_inner(
+    sess: &Arc<Mutex<RepoSession>>,
+    force: bool,
+) -> GitResult<RepoSnapshot> {
     {
         let mut s = sess.lock().await;
         if s.refreshing { /* fall through; second caller will see new snapshot */ }
-        else if s.last_refresh.elapsed() < Duration::from_millis(DEBOUNCE_MS) {
+        else if !force && s.last_refresh.elapsed() < Duration::from_millis(DEBOUNCE_MS) {
             if let Some(snap) = &s.last_snapshot { return Ok(snap.clone()) }
         }
         s.refreshing = true;
@@ -77,5 +88,29 @@ mod tests {
         let snap1 = refresh_session(&sess).await.unwrap();
         let snap2 = refresh_session(&sess).await.unwrap();
         assert_eq!(snap1.head.branch, snap2.head.branch);
+    }
+
+    #[tokio::test]
+    async fn forced_refresh_bypasses_debounce_cache() {
+        let dir = tempdir().unwrap();
+        Command::new("git").current_dir(dir.path()).args(["init", "-b", "main"]).status().unwrap();
+        Command::new("git").current_dir(dir.path()).args(["config", "user.email", "t@t.t"]).status().unwrap();
+        Command::new("git").current_dir(dir.path()).args(["config", "user.name", "t"]).status().unwrap();
+        Command::new("git").current_dir(dir.path()).args(["commit", "--allow-empty", "-m", "init"]).status().unwrap();
+
+        let state = AppState::default();
+        let sess = state.add("r1".into(), dir.path().into()).await;
+
+        let snap1 = refresh_session(&sess).await.unwrap();
+        assert_eq!(snap1.files.len(), 0);
+
+        std::fs::write(dir.path().join("fresh.txt"), "fresh\n").unwrap();
+
+        let cached = refresh_session(&sess).await.unwrap();
+        assert_eq!(cached.files.len(), 0);
+
+        let fresh = refresh_session_force(&sess).await.unwrap();
+        assert_eq!(fresh.files.len(), 1);
+        assert_eq!(fresh.files[0].path, "fresh.txt");
     }
 }

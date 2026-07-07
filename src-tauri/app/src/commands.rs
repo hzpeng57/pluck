@@ -21,7 +21,7 @@ use crate::git::ops::show::{commit_show, CommitDetail};
 use crate::git::parse::Commit;
 use crate::git::snapshot::{log_page, log_search, RepoSnapshot};
 use crate::rebase_editor::{deliver_reply, socket_path, EditReply, RebaseBridge};
-use crate::state::{refresh_session, AppState};
+use crate::state::{refresh_session, refresh_session_force, AppState};
 use serde::Serialize;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -344,7 +344,7 @@ pub async fn rollback_file(
         .ok_or_else(|| GitError::parse("unknown repo id"))?;
     let repo = { sess.lock().await.path.clone() };
     git_rollback_file(&repo, &path, old_path.as_deref(), &status).await?;
-    refresh_session(&sess).await
+    refresh_session_force(&sess).await
 }
 
 #[tauri::command]
