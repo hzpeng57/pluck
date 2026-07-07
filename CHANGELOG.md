@@ -2,6 +2,17 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 规范，版本号采用 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [0.1.11] - 2026-07-07
+
+### Added
+- 新增设置弹窗，集中展示当前版本、检查更新入口和主题模式设置。
+- 新增 System / Light / Dark 主题切换，支持跟随系统并持久化用户偏好。
+
+### Changed
+- 重构工作台为分支、历史和检查器三栏布局，提升仓库浏览与提交检查效率。
+- 调整整体配色、控件状态和侧边栏设置入口，将右下角版本号移入设置弹窗。
+- 将分支列表中的 History 可见性标识改为 eye icon，避免与收藏/置顶语义混淆。
+
 ## [0.1.10] - 2026-06-30
 
 ### Added
@@ -116,6 +127,8 @@
 - 快捷键：⌘K commit / ⌘⇧K push / ⌘T fetch / ⌘R refresh。
 - Toast tray 替代内联 lastError。
 
+[0.1.11]: https://github.com/hzpeng57/pluck/compare/v0.1.10...v0.1.11
+[0.1.10]: https://github.com/hzpeng57/pluck/compare/v0.1.9...v0.1.10
 [0.1.9]: https://github.com/hzpeng57/pluck/compare/v0.1.8...v0.1.9
 [0.1.8]: https://github.com/hzpeng57/pluck/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/hzpeng57/pluck/compare/v0.1.6...v0.1.7
