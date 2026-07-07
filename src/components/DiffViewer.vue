@@ -49,7 +49,7 @@ function formatPath(file: FileDiff | DiffTarget | null) {
 
       <template v-if="displayStatus">
         <span class="gl-badge">{{ displayStatus }}</span>
-        <span class="min-w-0 flex-1 truncate gl-mono text-[12px] gl-selectable" :title="displayPath">
+        <span class="min-w-0 flex-1 truncate text-[12.5px] gl-selectable" :title="displayPath" style="color: var(--fg-2)">
           {{ displayPath }}
         </span>
         <template v-if="diff">
@@ -91,11 +91,11 @@ function formatPath(file: FileDiff | DiffTarget | null) {
     </div>
     <div v-else-if="diff.binary" class="gl-empty flex-1">
       <span class="text-[13px]">Binary file diff is not available</span>
-      <span class="gl-mono text-[12px] gl-selectable">{{ diff.path }}</span>
+      <span class="text-[12.5px] gl-selectable">{{ diff.path }}</span>
     </div>
     <div v-else-if="diff.hunks.length === 0" class="gl-empty flex-1">
       <span class="text-[13px]">No textual changes</span>
-      <span class="gl-mono text-[12px] gl-selectable">{{ diff.path }}</span>
+      <span class="text-[12.5px] gl-selectable">{{ diff.path }}</span>
     </div>
     <div v-else class="gl-diff-scroll" :class="{ 'is-wrap': wrap }">
       <table class="gl-diff-table">

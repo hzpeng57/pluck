@@ -72,8 +72,9 @@ function formatAbsolute(unix: number): string {
       <span class="gl-badge">{{ detail.short }}</span>
       <span class="gl-badge">{{ detail.files.length }} {{ detail.files.length === 1 ? "file" : "files" }}</span>
       <div class="flex-1" />
-      <button class="gl-command-btn h-7 px-2"
-              @click="reviewMode ? state.closeReviewMode() : state.clearSelectedCommit()"
+      <button v-if="!reviewMode"
+              class="gl-command-btn h-7 px-2"
+              @click="state.clearSelectedCommit()"
               title="Back">
         <X :size="13" />
         Close
@@ -104,7 +105,7 @@ function formatAbsolute(unix: number): string {
                 :style="{ background: statusMeta(entry.file.status).bg, color: statusMeta(entry.file.status).color }">
             {{ statusMeta(entry.file.status).letter }}
           </span>
-          <span class="truncate flex-1 text-[13px] gl-mono gl-selectable" style="color: var(--fg-2)">
+          <span class="truncate flex-1 text-[13px] gl-selectable" style="color: var(--fg-2)">
             {{ entry.displayLabel }}
           </span>
         </li>

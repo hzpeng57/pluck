@@ -81,7 +81,7 @@ function statusOf(s: string) { return statusMeta[s] ?? { letter: s[0]?.toUpperCa
               :style="{ background: statusOf(f.status).bg, color: statusOf(f.status).color }">
           {{ statusOf(f.status).letter }}
         </span>
-        <span class="truncate flex-1 text-[13px] gl-mono" style="color: var(--fg-2)">{{ f.path }}</span>
+        <span class="truncate flex-1 text-[13px] gl-selectable" style="color: var(--fg-2)">{{ f.path }}</span>
       </li>
       <li v-if="files.length === 0" class="gl-empty">
         <CheckCircle2 :size="24" style="color: var(--success)" />

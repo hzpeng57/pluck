@@ -64,13 +64,17 @@
   --graph-7: #77c9d0;
   --graph-8: #e69f74;
 
+  --diff-bg: #181b19;
+  --diff-gutter-bg: #151815;
+  --diff-hunk-bg: #1c2524;
+
   --overlay: rgba(8, 9, 10, 0.74);
   --shadow-elev: 0 28px 80px rgba(0, 0, 0, 0.54);
   --shadow-menu: 0 18px 48px rgba(0, 0, 0, 0.38), 0 1px 0 rgba(255, 255, 255, 0.05) inset;
   --shadow-toast: 0 16px 48px rgba(0, 0, 0, 0.42), 0 1px 0 rgba(255, 255, 255, 0.06) inset;
   --shadow-btn-inset: 0 1px 0 rgba(255, 255, 255, 0.18) inset;
 
-  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 :root[data-theme="light"] {
@@ -85,6 +89,9 @@
   --fg: #1c211d;
   --fg-2: #596258;
   --fg-3: #838d82;
+  --diff-bg: #f7f9f5;
+  --diff-gutter-bg: #edf2ec;
+  --diff-hunk-bg: #e8f1ef;
   --overlay: rgba(241, 244, 240, 0.76);
   --shadow-elev: 0 28px 80px rgba(35, 48, 40, 0.17);
   --shadow-menu: 0 18px 48px rgba(35, 48, 40, 0.13), 0 1px 0 rgba(255, 255, 255, 0.82) inset;
@@ -425,7 +432,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
     min-width: 0;
     min-height: 0;
     height: 100%;
-    background: var(--bg);
+    background: var(--diff-bg);
   }
 
   .gl-diff-toolbar {
@@ -442,7 +449,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
     flex: 1;
     min-height: 0;
     overflow: auto;
-    background: color-mix(in srgb, var(--bg) 92%, var(--panel));
+    background: var(--diff-bg);
   }
 
   .gl-diff-table {
@@ -466,7 +473,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
     text-align: right;
     color: var(--fg-3);
     border-right: 1px solid var(--border-soft);
-    background: color-mix(in srgb, var(--panel) 72%, var(--bg));
+    background: var(--diff-gutter-bg);
     user-select: none;
     -webkit-user-select: none;
   }
@@ -496,10 +503,10 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
     overflow-wrap: anywhere;
   }
 
-  .gl-diff-row.is-added { background: color-mix(in srgb, var(--success-soft) 72%, transparent); }
+  .gl-diff-row.is-added { background: color-mix(in srgb, var(--success-soft) 72%, var(--diff-bg)); }
   .gl-diff-row.is-added .gl-diff-code,
   .gl-diff-row.is-added .gl-diff-mark { color: var(--success); }
-  .gl-diff-row.is-deleted { background: color-mix(in srgb, var(--danger-soft) 74%, transparent); }
+  .gl-diff-row.is-deleted { background: color-mix(in srgb, var(--danger-soft) 74%, var(--diff-bg)); }
   .gl-diff-row.is-deleted .gl-diff-code,
   .gl-diff-row.is-deleted .gl-diff-mark { color: var(--danger); }
 
@@ -507,7 +514,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
     position: sticky;
     top: 0;
     z-index: 1;
-    background: color-mix(in srgb, var(--info-soft) 48%, var(--panel));
+    background: var(--diff-hunk-bg);
     color: var(--info);
     font-family: var(--mono);
     font-size: 12px;
