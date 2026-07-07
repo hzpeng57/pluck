@@ -28,11 +28,11 @@ const repos = useReposStore();
 const state = useRepoStateStore();
 
 const SIDE_KEY = "pluck:sideWidth";
-const MIN_W = 180, MAX_W = 600;
+const MIN_W = 220, MAX_W = 560;
 const sideWidth = ref<number>(loadWidth());
 function loadWidth(): number {
   const n = Number(localStorage.getItem(SIDE_KEY));
-  return Number.isFinite(n) && n >= MIN_W && n <= MAX_W ? n : 260;
+  return Number.isFinite(n) && n >= MIN_W && n <= MAX_W ? n : 292;
 }
 watch(sideWidth, v => localStorage.setItem(SIDE_KEY, String(v)));
 const gridCols = computed(() => `${sideWidth.value}px 6px 1fr`);
@@ -155,27 +155,26 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="flex h-full" style="background: var(--bg); color: var(--fg)">
+  <div class="gl-app-shell flex h-full">
     <RepoSwitcher />
     <div class="flex-1 flex flex-col min-w-0">
       <UpdateBanner />
       <TitleBar />
       <InProgressBanner v-if="state.snapshot?.inProgress" />
-      <div class="flex-1 grid p-3 overflow-hidden"
+      <div class="flex-1 grid gap-0 px-3 py-3 overflow-hidden"
            :style="{ gridTemplateColumns: gridCols }">
-        <div class="gl-surface rounded-lg overflow-auto"
-             style="border: 1px solid var(--border)">
+        <div class="gl-panel overflow-auto min-h-0">
           <BranchesPanel />
         </div>
         <div class="cursor-col-resize gl-splitter flex justify-center"
              @mousedown="startDrag"
-             @dblclick="sideWidth = 260"
+             @dblclick="sideWidth = 292"
              title="Drag to resize · double-click to reset">
           <div class="gl-splitter-line" />
         </div>
         <div ref="rightCol" class="grid min-h-0 min-w-0"
              :style="{ gridTemplateRows: rightRows }">
-          <div class="gl-surface rounded-lg overflow-auto min-h-0" style="border: 1px solid var(--border)">
+          <div class="gl-panel overflow-auto min-h-0">
             <CommitDetailPanel v-if="state.selectedCommit" />
             <CommitPanel v-else />
           </div>
@@ -185,7 +184,7 @@ onBeforeUnmount(() => {
                title="Drag to resize · double-click to reset">
             <div class="gl-splitter-line" />
           </div>
-          <div class="gl-surface rounded-lg overflow-auto min-h-0" style="border: 1px solid var(--border)">
+          <div class="gl-panel overflow-auto min-h-0">
             <LogPanel />
           </div>
         </div>
