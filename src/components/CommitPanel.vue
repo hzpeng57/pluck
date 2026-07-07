@@ -8,6 +8,9 @@ import {
 import { useRepoStateStore } from "../stores/repoState";
 import { ops } from "../api/tauri";
 import { useReposStore } from "../stores/repos";
+import type { WorkingFile } from "../types/git";
+
+defineProps<{ reviewMode?: boolean }>();
 
 const state = useRepoStateStore();
 const repos = useReposStore();
@@ -17,6 +20,16 @@ const skipHooks = ref(false);
 
 const files = computed(() => state.snapshot?.files ?? []);
 const checkedFiles = computed(() => files.value.filter(f => selected[f.path]).map(f => f.path));
+
+async function openDiff(f: WorkingFile) {
+  if (!repos.activeId) return;
+  await state.openWorkingDiff(repos.activeId, f);
+}
+
+function isDiffSelected(f: WorkingFile) {
+  const target = state.diffTarget;
+  return target?.kind === "workingTree" && target.path === f.path;
+}
 
 function toggleAll(on: boolean) {
   for (const f of files.value) selected[f.path] = on;
@@ -58,11 +71,9 @@ function statusOf(s: string) { return statusMeta[s] ?? { letter: s[0]?.toUpperCa
     </div>
     <ul class="flex-1 overflow-auto px-2 flex flex-col gap-0.5">
       <li v-for="f in files" :key="f.path"
-          class="flex items-center gap-2 px-2 h-7 rounded-md cursor-pointer transition-colors"
-          @click="selected[f.path] = !selected[f.path]"
-          :style="selected[f.path] ? 'background: var(--accent-soft)' : ''"
-          @mouseover="(e: any) => { if (!selected[f.path]) e.currentTarget.style.background = 'var(--hover)' }"
-          @mouseleave="(e: any) => { if (!selected[f.path]) e.currentTarget.style.background = '' }">
+          class="gl-row group"
+          :class="{ 'is-selected': isDiffSelected(f) }"
+          @click="openDiff(f)">
         <input type="checkbox" :checked="selected[f.path]" @click.stop
                @change="selected[f.path] = !selected[f.path]"
                class="w-3.5 h-3.5 rounded gl-checkbox" />

@@ -9,10 +9,14 @@ import {
   X,
 } from "lucide-vue-next";
 import { useRepoStateStore } from "../stores/repoState";
+import { useReposStore } from "../stores/repos";
 import type { ChangedFile, CommitDetail } from "../types/git";
 import { buildFileTree, type FileTreeEntry } from "../lib/fileTree";
 
+defineProps<{ reviewMode?: boolean }>();
+
 const state = useRepoStateStore();
+const repos = useReposStore();
 const detail = computed<CommitDetail | null>(() => state.selectedCommit);
 
 const collapsed = ref<Set<string>>(new Set());
@@ -25,6 +29,16 @@ const tree = computed<FileTreeEntry[]>(() =>
   buildFileTree(detail.value?.files ?? [], p => collapsed.value.has(p))
 );
 const showAllRefs = ref(false);
+
+async function openCommitDiff(file: ChangedFile) {
+  if (!repos.activeId || !detail.value) return;
+  await state.openCommitFileDiff(repos.activeId, detail.value, file);
+}
+
+function isDiffSelected(file: ChangedFile) {
+  const target = state.diffTarget;
+  return target?.kind === "commit" && target.path === file.path;
+}
 
 function statusMeta(s: ChangedFile["status"]) {
   switch (s) {
@@ -58,7 +72,9 @@ function formatAbsolute(unix: number): string {
       <span class="gl-badge">{{ detail.short }}</span>
       <span class="gl-badge">{{ detail.files.length }} {{ detail.files.length === 1 ? "file" : "files" }}</span>
       <div class="flex-1" />
-      <button class="gl-command-btn h-7 px-2" @click="state.clearSelectedCommit()" title="Back to working tree (Esc)">
+      <button class="gl-command-btn h-7 px-2"
+              @click="reviewMode ? state.closeReviewMode() : state.clearSelectedCommit()"
+              title="Back">
         <X :size="13" />
         Close
       </button>
@@ -79,7 +95,9 @@ function formatAbsolute(unix: number): string {
         </li>
         <li v-else
             :title="entry.file.oldPath ? `${entry.file.oldPath} → ${entry.file.path}` : entry.file.path"
-            class="gl-row group" style="cursor: default">
+            class="gl-row group"
+            :class="{ 'is-selected': isDiffSelected(entry.file) }"
+            @click="openCommitDiff(entry.file)">
           <span :style="{ paddingLeft: (entry.depth * 12) + 'px' }" class="inline-flex" />
           <FileCode2 :size="14" class="shrink-0" style="color: var(--fg-3)" />
           <span class="inline-flex items-center justify-center w-5 h-5 rounded text-[11px] font-bold gl-mono shrink-0"
