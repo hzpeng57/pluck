@@ -67,7 +67,14 @@ fn validate_repo_relative(path: &str) -> GitResult<()> {
     let p = Path::new(path);
     if path.is_empty()
         || p.is_absolute()
-        || p.components().any(|c| matches!(c, Component::ParentDir))
+        || p.components().any(|c| {
+            matches!(c, Component::ParentDir)
+                || matches!(
+                    c,
+                    Component::Normal(name)
+                        if name.to_string_lossy().eq_ignore_ascii_case(".git")
+                )
+        })
     {
         return Err(GitError::parse(format!("unsafe repository path: {path}")));
     }
@@ -79,6 +86,24 @@ fn diff_paths<'a>(path: &'a str, old_path: Option<&'a str>) -> Vec<&'a str> {
         Some(old) if old != path => vec![old, path],
         _ => vec![path],
     }
+}
+
+async fn ensure_untracked_worktree_file(repo: &Path, path: &str) -> GitResult<()> {
+    let out = run_git(
+        repo,
+        &["ls-files", "-z", "--others", "--exclude-standard", "--", path],
+    )
+    .await?;
+    let matches = out
+        .stdout
+        .split_terminator('\0')
+        .any(|candidate| candidate == path);
+    if !matches {
+        return Err(GitError::parse(format!(
+            "not an untracked worktree file: {path}"
+        )));
+    }
+    Ok(())
 }
 
 pub async fn working_file_diff(
@@ -93,9 +118,19 @@ pub async fn working_file_diff(
     }
 
     let raw = if status == "untracked" {
+        ensure_untracked_worktree_file(repo, path).await?;
         let (out, _) = run_git_allow_exit_codes(
             repo,
-            &["diff", "--no-index", "--no-color", "-U3", "--", "/dev/null", path],
+            &[
+                "diff",
+                "--no-ext-diff",
+                "--no-index",
+                "--no-color",
+                "-U3",
+                "--",
+                "/dev/null",
+                path,
+            ],
             &[1],
         )
         .await?;
@@ -147,6 +182,7 @@ pub async fn commit_file_diff(
         "-r",
         "-p",
         "-m",
+        "--no-ext-diff",
         "--first-parent",
         "--find-renames",
         "--no-color",
@@ -395,6 +431,8 @@ mod integration_tests {
     #[tokio::test]
     async fn working_file_diff_includes_staged_and_unstaged_changes() {
         let dir = repo();
+        std::fs::write(dir.path().join("a.txt"), "one\nthree\n").unwrap();
+        git(dir.path(), &["add", "a.txt"]);
         std::fs::write(dir.path().join("a.txt"), "one\nthree\nfour\n").unwrap();
 
         let diff = working_file_diff(dir.path(), "a.txt", None, "modified").await.unwrap();
@@ -418,6 +456,59 @@ mod integration_tests {
     }
 
     #[tokio::test]
+    async fn working_file_diff_rejects_absolute_and_parent_paths() {
+        let dir = repo();
+        let absolute = dir.path().join("a.txt");
+
+        assert_parse_error(
+            working_file_diff(
+                dir.path(),
+                absolute.to_str().unwrap(),
+                None,
+                "modified",
+            )
+            .await,
+            "unsafe repository path",
+        );
+        assert_parse_error(
+            working_file_diff(dir.path(), "../a.txt", None, "modified").await,
+            "unsafe repository path",
+        );
+    }
+
+    #[tokio::test]
+    async fn untracked_file_diff_rejects_git_metadata_paths() {
+        let dir = repo();
+
+        assert_parse_error(
+            working_file_diff(dir.path(), ".git/config", None, "untracked").await,
+            "unsafe repository path",
+        );
+    }
+
+    #[tokio::test]
+    async fn untracked_file_diff_requires_an_actual_untracked_file() {
+        let dir = repo();
+
+        assert_parse_error(
+            working_file_diff(dir.path(), "a.txt", None, "untracked").await,
+            "not an untracked worktree file",
+        );
+    }
+
+    #[tokio::test]
+    async fn untracked_file_diff_rejects_ignored_paths() {
+        let dir = repo();
+        std::fs::write(dir.path().join(".gitignore"), "*.secret\n").unwrap();
+        std::fs::write(dir.path().join("token.secret"), "hidden\n").unwrap();
+
+        assert_parse_error(
+            working_file_diff(dir.path(), "token.secret", None, "untracked").await,
+            "not an untracked worktree file",
+        );
+    }
+
+    #[tokio::test]
     async fn commit_file_diff_reads_selected_commit_patch() {
         let dir = repo();
         std::fs::write(dir.path().join("a.txt"), "one\nthree\n").unwrap();
@@ -434,5 +525,15 @@ mod integration_tests {
         assert_eq!(diff.kind, DiffKind::Commit);
         assert_eq!(diff.additions, 1);
         assert_eq!(diff.deletions, 1);
+    }
+
+    fn assert_parse_error<T>(result: GitResult<T>, expected: &str) {
+        let Err(GitError::Parse(message)) = result else {
+            panic!("expected parse error containing {expected}");
+        };
+        assert!(
+            message.contains(expected),
+            "expected parse error containing {expected:?}, got {message:?}",
+        );
     }
 }
