@@ -26,6 +26,25 @@ pub async fn run_git(cwd: &Path, args: &[&str]) -> GitResult<GitOutput> {
     Ok(GitOutput { stdout, stderr })
 }
 
+pub async fn run_git_allow_exit_codes(
+    cwd: &Path,
+    args: &[&str],
+    allowed: &[i32],
+) -> GitResult<(GitOutput, i32)> {
+    let output = git_command(cwd)
+        .args(args)
+        .output()
+        .await
+        .map_err(|e| GitError::spawn(format!("spawn git failed: {e}")))?;
+    let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
+    let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
+    let code = output.status.code().unwrap_or(-1);
+    if !output.status.success() && !allowed.contains(&code) {
+        return Err(GitError::from_stderr(code, &stderr));
+    }
+    Ok((GitOutput { stdout, stderr }, code))
+}
+
 pub fn git_command(cwd: &Path) -> Command {
     let mut command = Command::new("git");
     command.current_dir(cwd);
@@ -115,5 +134,24 @@ mod tests {
         let dir = tempdir().unwrap();
         let err = run_git(dir.path(), &["status"]).await.unwrap_err();
         assert!(format!("{err}").to_lowercase().contains("not a git repository"));
+    }
+
+    #[tokio::test]
+    async fn run_git_allow_exit_codes_returns_allowed_nonzero_exit() {
+        let dir = tempdir().unwrap();
+        std::fs::write(dir.path().join("a.txt"), "one\n").unwrap();
+        std::fs::write(dir.path().join("b.txt"), "two\n").unwrap();
+
+        let (out, code) = run_git_allow_exit_codes(
+            dir.path(),
+            &["diff", "--no-index", "a.txt", "b.txt"],
+            &[1],
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(code, 1);
+        assert!(out.stdout.contains("-one"));
+        assert!(out.stdout.contains("+two"));
     }
 }
