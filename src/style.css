@@ -1,41 +1,42 @@
 @import "tailwindcss";
 
-:root {
+:root,
+:root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #0b0f14;
-  --panel: #10161d;
-  --raised: #151c25;
-  --hover: #1b2530;
-  --active: #223142;
-  --border: #26313d;
-  --border-soft: #1b2530;
+  --bg: #0d0e10;
+  --panel: #141615;
+  --raised: #1a1d1b;
+  --hover: #222622;
+  --active: #24312c;
+  --border: #303730;
+  --border-soft: #242924;
 
-  --fg: #edf3f8;
-  --fg-2: #aebbc8;
-  --fg-3: #6f7d8a;
+  --fg: #f1f0ea;
+  --fg-2: #bbb8ae;
+  --fg-3: #80847a;
 
-  --accent: #58c7d8;
-  --accent-2: #8be0ec;
-  --accent-soft: rgba(88, 199, 216, 0.14);
-  --accent-ring: rgba(88, 199, 216, 0.42);
+  --accent: #78d7bd;
+  --accent-2: #a7ead8;
+  --accent-soft: rgba(120, 215, 189, 0.13);
+  --accent-ring: rgba(120, 215, 189, 0.38);
 
-  --success: #70d7a1;
-  --success-soft: rgba(112, 215, 161, 0.14);
-  --warning: #f0bf5f;
-  --warning-soft: rgba(240, 191, 95, 0.15);
-  --warning-soft-weak: rgba(240, 191, 95, 0.08);
-  --warning-ring: rgba(240, 191, 95, 0.28);
-  --danger: #ff7777;
-  --danger-soft: rgba(255, 119, 119, 0.15);
-  --danger-soft-strong: rgba(255, 119, 119, 0.23);
-  --danger-soft-weak: rgba(255, 119, 119, 0.09);
-  --danger-ring: rgba(255, 119, 119, 0.34);
-  --info: #80aef7;
-  --info-soft: rgba(128, 174, 247, 0.15);
+  --success: #86d49c;
+  --success-soft: rgba(134, 212, 156, 0.13);
+  --warning: #dfbd68;
+  --warning-soft: rgba(223, 189, 104, 0.14);
+  --warning-soft-weak: rgba(223, 189, 104, 0.08);
+  --warning-ring: rgba(223, 189, 104, 0.25);
+  --danger: #ee7f7a;
+  --danger-soft: rgba(238, 127, 122, 0.14);
+  --danger-soft-strong: rgba(238, 127, 122, 0.22);
+  --danger-soft-weak: rgba(238, 127, 122, 0.09);
+  --danger-ring: rgba(238, 127, 122, 0.31);
+  --info: #8caee8;
+  --info-soft: rgba(140, 174, 232, 0.14);
 
-  --on-accent: #061014;
-  --on-danger: #150707;
-  --on-graph: #061014;
+  --on-accent: #07120f;
+  --on-danger: #170908;
+  --on-graph: #07120f;
 
   --status-modified: var(--warning);
   --status-modified-bg: var(--warning-soft);
@@ -45,50 +46,48 @@
   --status-deleted-bg: var(--danger-soft);
   --status-renamed: var(--info);
   --status-renamed-bg: var(--info-soft);
-  --status-untracked: #c49cff;
-  --status-untracked-bg: rgba(196, 156, 255, 0.15);
-  --status-copied: #c49cff;
-  --status-copied-bg: rgba(196, 156, 255, 0.15);
-  --status-typechange: #f58fc8;
-  --status-typechange-bg: rgba(245, 143, 200, 0.15);
+  --status-untracked: #bca2e8;
+  --status-untracked-bg: rgba(188, 162, 232, 0.14);
+  --status-copied: #bca2e8;
+  --status-copied-bg: rgba(188, 162, 232, 0.14);
+  --status-typechange: #e596bc;
+  --status-typechange-bg: rgba(229, 150, 188, 0.14);
   --status-conflicted: var(--danger);
   --status-conflicted-bg: var(--danger-soft-strong);
 
-  --graph-1: #58c7d8;
-  --graph-2: #70d7a1;
-  --graph-3: #f0bf5f;
-  --graph-4: #80aef7;
-  --graph-5: #c49cff;
-  --graph-6: #f58fc8;
-  --graph-7: #7dd7c8;
-  --graph-8: #ffa177;
+  --graph-1: #78d7bd;
+  --graph-2: #86d49c;
+  --graph-3: #dfbd68;
+  --graph-4: #8caee8;
+  --graph-5: #bca2e8;
+  --graph-6: #e596bc;
+  --graph-7: #77c9d0;
+  --graph-8: #e69f74;
 
-  --overlay: rgba(7, 10, 14, 0.72);
-  --shadow-elev: 0 28px 80px rgba(0, 0, 0, 0.5);
-  --shadow-menu: 0 18px 48px rgba(0, 0, 0, 0.34), 0 1px 0 rgba(255, 255, 255, 0.05) inset;
-  --shadow-toast: 0 16px 48px rgba(0, 0, 0, 0.4), 0 1px 0 rgba(255, 255, 255, 0.06) inset;
+  --overlay: rgba(8, 9, 10, 0.74);
+  --shadow-elev: 0 28px 80px rgba(0, 0, 0, 0.54);
+  --shadow-menu: 0 18px 48px rgba(0, 0, 0, 0.38), 0 1px 0 rgba(255, 255, 255, 0.05) inset;
+  --shadow-toast: 0 16px 48px rgba(0, 0, 0, 0.42), 0 1px 0 rgba(255, 255, 255, 0.06) inset;
   --shadow-btn-inset: 0 1px 0 rgba(255, 255, 255, 0.18) inset;
 
   --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color-scheme: light;
-    --bg: #eef3f7;
-    --panel: #f8fbfd;
-    --raised: #ffffff;
-    --hover: #e7eef4;
-    --active: #dbeaf2;
-    --border: #cad6df;
-    --border-soft: #dce5eb;
-    --fg: #17212b;
-    --fg-2: #4e5d6b;
-    --fg-3: #7a8996;
-    --overlay: rgba(238, 243, 247, 0.74);
-    --shadow-elev: 0 28px 80px rgba(29, 45, 60, 0.18);
-    --shadow-menu: 0 18px 48px rgba(29, 45, 60, 0.14), 0 1px 0 rgba(255, 255, 255, 0.8) inset;
-  }
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f1f4f0;
+  --panel: #fbfcf8;
+  --raised: #ffffff;
+  --hover: #e7ece5;
+  --active: #d9eee7;
+  --border: #cdd7cf;
+  --border-soft: #dde5de;
+  --fg: #1c211d;
+  --fg-2: #596258;
+  --fg-3: #838d82;
+  --overlay: rgba(241, 244, 240, 0.76);
+  --shadow-elev: 0 28px 80px rgba(35, 48, 40, 0.17);
+  --shadow-menu: 0 18px 48px rgba(35, 48, 40, 0.13), 0 1px 0 rgba(255, 255, 255, 0.82) inset;
 }
 
 html, body, #app { height: 100%; margin: 0; }
@@ -133,7 +132,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 
   .gl-app-shell {
     background:
-      linear-gradient(180deg, rgba(88, 199, 216, 0.06), transparent 220px),
+      linear-gradient(180deg, rgba(120, 215, 189, 0.055), transparent 220px),
       var(--bg);
     color: var(--fg);
   }
@@ -433,6 +432,50 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
     background: var(--raised);
     border-radius: 4px;
     padding: 1px 4px;
+  }
+
+  .gl-theme-slider {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    min-height: 54px;
+    padding: 4px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--bg) 72%, var(--panel));
+    overflow: hidden;
+  }
+
+  .gl-theme-slider-thumb {
+    position: absolute;
+    inset: 4px auto 4px 4px;
+    width: calc((100% - 8px) / 3);
+    border-radius: 7px;
+    background: var(--raised);
+    border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--border));
+    box-shadow: var(--shadow-btn-inset);
+    transition: transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  .gl-theme-slider-option {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-width: 0;
+    border-radius: 7px;
+    color: var(--fg-3);
+    font-size: 12px;
+    font-weight: 600;
+    transition: color 140ms ease;
+  }
+
+  .gl-theme-slider-option:hover,
+  .gl-theme-slider-option.is-active {
+    color: var(--fg);
   }
 
   .gl-overlay {

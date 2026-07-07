@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, computed } from "vue";
 import { open } from "@tauri-apps/plugin-dialog";
-import { Plus, Trash2 } from "lucide-vue-next";
+import { Plus, Settings, Trash2 } from "lucide-vue-next";
 import { useReposStore } from "../stores/repos";
 import { useRepoStateStore } from "../stores/repoState";
 import { api } from "../api/tauri";
 import type { RepoMeta } from "../types/git";
+import SettingsDialog from "./SettingsDialog.vue";
 
 const repos = useReposStore();
 const state = useRepoStateStore();
 const menu = ref<{ x: number; y: number; repo: RepoMeta } | null>(null);
+const settingsOpen = ref(false);
 
 async function addRepo() {
   const dir = await open({ directory: true, multiple: false });
@@ -79,11 +81,23 @@ const items = computed(() => repos.all);
       <Plus :size="18" />
     </button>
 
+    <div class="flex-1" />
+
+    <button
+      class="w-10 h-10 rounded-xl flex items-center justify-center transition-colors border hover:text-[var(--fg)] hover:bg-[var(--hover)]"
+      style="color: var(--fg-3); border-color: var(--border-soft); background: var(--raised)"
+      title="Settings"
+      @click="settingsOpen = true"
+    >
+      <Settings :size="17" />
+    </button>
+
     <div v-if="menu" :style="{ top: menu.y + 'px', left: menu.x + 'px' }" class="gl-menu">
       <button class="gl-menu-item is-danger" @click="removeCurrent">
         <Trash2 :size="14" class="shrink-0" />
         <span class="truncate">Remove from list</span>
       </button>
     </div>
+    <SettingsDialog :open="settingsOpen" @close="settingsOpen = false" />
   </aside>
 </template>

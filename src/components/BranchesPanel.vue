@@ -3,11 +3,11 @@ import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import {
   ChevronRight,
   Circle,
+  Eye,
   Folder,
   Pin,
   PinOff,
   Search,
-  Star,
   X,
 } from "lucide-vue-next";
 import { useRepoStateStore } from "../stores/repoState";
@@ -227,10 +227,11 @@ function toggleMenuPin() {
           </button>
           <span class="truncate flex-1 text-[13.5px]"
                 :style="b.isCurrent ? 'font-weight: 600' : ''">{{ b.name }}</span>
-          <Star v-if="b.name === state.selectedLogBranch"
-                :size="13"
-                class="shrink-0"
-                style="color: var(--accent)" />
+          <Eye v-if="b.name === state.selectedLogBranch"
+               :size="13"
+               class="shrink-0"
+               style="color: var(--accent)"
+               title="Shown in History" />
           <span v-if="b.ahead" class="gl-chip gl-chip-ahead">↑{{ b.ahead }}</span>
           <span v-if="b.behind" class="gl-chip gl-chip-behind">↓{{ b.behind }}</span>
         </li>
@@ -267,10 +268,11 @@ function toggleMenuPin() {
                                    style="color: var(--fg-3)">·branch</span>
           </span>
           <span class="gl-chip">{{ entry.childCount }}</span>
-          <Star v-if="entry.selfBranch?.name === state.selectedLogBranch"
-                :size="13"
-                class="shrink-0"
-                style="color: var(--accent)" />
+          <Eye v-if="entry.selfBranch?.name === state.selectedLogBranch"
+               :size="13"
+               class="shrink-0"
+               style="color: var(--accent)"
+               title="Shown in History" />
           <span v-if="entry.collapsed && entry.ahead" class="gl-chip gl-chip-ahead">↑{{ entry.ahead }}</span>
           <span v-if="entry.collapsed && entry.behind" class="gl-chip gl-chip-behind">↓{{ entry.behind }}</span>
         </li>
@@ -294,10 +296,11 @@ function toggleMenuPin() {
           </button>
           <span class="truncate flex-1 text-[13.5px]"
                 :style="entry.branch.isCurrent ? 'font-weight: 600' : ''">{{ entry.displayLabel }}</span>
-          <Star v-if="entry.branch.name === state.selectedLogBranch"
-                :size="13"
-                class="shrink-0"
-                style="color: var(--accent)" />
+          <Eye v-if="entry.branch.name === state.selectedLogBranch"
+               :size="13"
+               class="shrink-0"
+               style="color: var(--accent)"
+               title="Shown in History" />
           <span v-if="entry.branch.ahead" class="gl-chip gl-chip-ahead">↑{{ entry.branch.ahead }}</span>
           <span v-if="entry.branch.behind" class="gl-chip gl-chip-behind">↓{{ entry.branch.behind }}</span>
         </li>
@@ -328,10 +331,11 @@ function toggleMenuPin() {
           <Folder :size="14" class="shrink-0" style="color: var(--fg-3)" />
           <span class="truncate flex-1 text-[13.5px]" style="color: var(--fg-2)">{{ entry.label }}</span>
           <span class="gl-chip">{{ entry.childCount }}</span>
-          <Star v-if="entry.selfBranch?.name === state.selectedLogBranch"
-                :size="13"
-                class="shrink-0"
-                style="color: var(--accent)" />
+          <Eye v-if="entry.selfBranch?.name === state.selectedLogBranch"
+               :size="13"
+               class="shrink-0"
+               style="color: var(--accent)"
+               title="Shown in History" />
         </li>
         <li v-else
             @click="pickForLog(entry.branch)"
@@ -348,10 +352,11 @@ function toggleMenuPin() {
             <Pin v-else :size="13" />
           </button>
           <span class="truncate flex-1 text-[13.5px]" style="color: var(--fg-2)">{{ entry.displayLabel }}</span>
-          <Star v-if="entry.branch.name === state.selectedLogBranch"
-                :size="13"
-                class="shrink-0"
-                style="color: var(--accent)" />
+          <Eye v-if="entry.branch.name === state.selectedLogBranch"
+               :size="13"
+               class="shrink-0"
+               style="color: var(--accent)"
+               title="Shown in History" />
         </li>
       </template>
     </ul>

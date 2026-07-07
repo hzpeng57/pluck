@@ -35,7 +35,16 @@ function loadWidth(): number {
   return Number.isFinite(n) && n >= MIN_W && n <= MAX_W ? n : 292;
 }
 watch(sideWidth, v => localStorage.setItem(SIDE_KEY, String(v)));
-const gridCols = computed(() => `${sideWidth.value}px 6px 1fr`);
+
+const INSPECTOR_KEY = "pluck:inspectorWidth";
+const MIN_INSPECTOR_W = 320, MAX_INSPECTOR_W = 560;
+const inspectorWidth = ref<number>(loadInspectorWidth());
+function loadInspectorWidth(): number {
+  const n = Number(localStorage.getItem(INSPECTOR_KEY));
+  return Number.isFinite(n) && n >= MIN_INSPECTOR_W && n <= MAX_INSPECTOR_W ? n : 390;
+}
+watch(inspectorWidth, v => localStorage.setItem(INSPECTOR_KEY, String(v)));
+const gridCols = computed(() => `${sideWidth.value}px 6px minmax(380px, 1fr) 6px ${inspectorWidth.value}px`);
 
 let dragStartX = 0; let dragStartW = 0;
 function onDragMove(e: MouseEvent) {
@@ -58,40 +67,23 @@ function startDrag(e: MouseEvent) {
   e.preventDefault();
 }
 
-// 右列上下分割：上半 commit/detail，下半 log。
-// 用 ratio 持久化而不是 px：窗口 resize 时按比例还原，避免重启后比例失真。
-const TOP_KEY = "pluck:rightTopRatio";
-const MIN_RATIO = 0.15, MAX_RATIO = 0.85;
-const rightTopRatio = ref<number>(loadRatio());
-function loadRatio(): number {
-  const n = Number(localStorage.getItem(TOP_KEY));
-  return Number.isFinite(n) && n >= MIN_RATIO && n <= MAX_RATIO ? n : 0.5;
+let inspectorDragStartX = 0; let inspectorDragStartW = 0;
+function onInspectorDragMove(e: MouseEvent) {
+  const next = inspectorDragStartW - (e.clientX - inspectorDragStartX);
+  inspectorWidth.value = Math.max(MIN_INSPECTOR_W, Math.min(MAX_INSPECTOR_W, next));
 }
-watch(rightTopRatio, v => localStorage.setItem(TOP_KEY, String(v)));
-const rightCol = ref<HTMLElement | null>(null);
-const rightRows = computed(() => `${(rightTopRatio.value * 100).toFixed(3)}% 6px 1fr`);
-
-let dragStartY = 0; let dragStartRatio = 0; let dragColHeight = 0;
-function onDragMoveV(e: MouseEvent) {
-  if (!dragColHeight) return;
-  const dyRatio = (e.clientY - dragStartY) / dragColHeight;
-  const next = dragStartRatio + dyRatio;
-  rightTopRatio.value = Math.max(MIN_RATIO, Math.min(MAX_RATIO, next));
-}
-function onDragEndV() {
-  document.removeEventListener("mousemove", onDragMoveV);
-  document.removeEventListener("mouseup", onDragEndV);
+function onInspectorDragEnd() {
+  document.removeEventListener("mousemove", onInspectorDragMove);
+  document.removeEventListener("mouseup", onInspectorDragEnd);
   document.body.style.cursor = "";
   document.body.style.userSelect = "";
 }
-function startDragV(e: MouseEvent) {
-  dragColHeight = rightCol.value?.clientHeight ?? 0;
-  if (!dragColHeight) return;
-  dragStartY = e.clientY;
-  dragStartRatio = rightTopRatio.value;
-  document.addEventListener("mousemove", onDragMoveV);
-  document.addEventListener("mouseup", onDragEndV);
-  document.body.style.cursor = "row-resize";
+function startInspectorDrag(e: MouseEvent) {
+  inspectorDragStartX = e.clientX;
+  inspectorDragStartW = inspectorWidth.value;
+  document.addEventListener("mousemove", onInspectorDragMove);
+  document.addEventListener("mouseup", onInspectorDragEnd);
+  document.body.style.cursor = "col-resize";
   document.body.style.userSelect = "none";
   e.preventDefault();
 }
@@ -172,21 +164,18 @@ onBeforeUnmount(() => {
              title="Drag to resize · double-click to reset">
           <div class="gl-splitter-line" />
         </div>
-        <div ref="rightCol" class="grid min-h-0 min-w-0"
-             :style="{ gridTemplateRows: rightRows }">
-          <div class="gl-panel overflow-auto min-h-0">
-            <CommitDetailPanel v-if="state.selectedCommit" />
-            <CommitPanel v-else />
-          </div>
-          <div class="cursor-row-resize gl-splitter gl-splitter--h flex items-center"
-               @mousedown="startDragV"
-               @dblclick="rightTopRatio = 0.5"
-               title="Drag to resize · double-click to reset">
-            <div class="gl-splitter-line" />
-          </div>
-          <div class="gl-panel overflow-auto min-h-0">
-            <LogPanel />
-          </div>
+        <div class="gl-panel overflow-auto min-h-0 min-w-0">
+          <LogPanel />
+        </div>
+        <div class="cursor-col-resize gl-splitter flex justify-center"
+             @mousedown="startInspectorDrag"
+             @dblclick="inspectorWidth = 390"
+             title="Drag to resize inspector · double-click to reset">
+          <div class="gl-splitter-line" />
+        </div>
+        <div class="gl-panel overflow-auto min-h-0 min-w-0">
+          <CommitDetailPanel v-if="state.selectedCommit" />
+          <CommitPanel v-else />
         </div>
       </div>
       <StatusBar />
