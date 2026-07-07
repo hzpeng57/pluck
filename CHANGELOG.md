@@ -2,6 +2,20 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 规范，版本号采用 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [0.1.12] - 2026-07-07
+
+### Added
+- 新增只读 Diff Viewer，支持在工作区文件和提交详情中查看文件级差异。
+- 新增工作区文件级 rollback，可对单个已修改、已新增、已删除或未跟踪文件执行全文件回滚。
+
+### Changed
+- 新增宽屏 Diff Review 布局，文件列表与 diff 区域支持拖拽调宽，提升大 diff 阅读体验。
+- 优化 diff 与文件列表字体，并调整 dark 模式 diff 背景层级，减少阅读压迫感。
+
+### Fixed
+- 回滚后强制刷新仓库快照，避免 debounce 缓存导致文件状态短暂停留在旧结果。
+- 加固提交 diff 与文件回滚的 commit、路径和未跟踪目录校验，降低误操作风险。
+
 ## [0.1.11] - 2026-07-07
 
 ### Added
@@ -127,6 +141,7 @@
 - 快捷键：⌘K commit / ⌘⇧K push / ⌘T fetch / ⌘R refresh。
 - Toast tray 替代内联 lastError。
 
+[0.1.12]: https://github.com/hzpeng57/pluck/compare/v0.1.11...v0.1.12
 [0.1.11]: https://github.com/hzpeng57/pluck/compare/v0.1.10...v0.1.11
 [0.1.10]: https://github.com/hzpeng57/pluck/compare/v0.1.9...v0.1.10
 [0.1.9]: https://github.com/hzpeng57/pluck/compare/v0.1.8...v0.1.9
