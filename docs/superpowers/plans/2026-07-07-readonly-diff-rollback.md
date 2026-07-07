@@ -1527,4 +1527,3 @@ Do not push unless the user explicitly asks.
 **Placeholder scan:** No implementation step relies on an unspecified future placeholder. The plan deliberately excludes hunk rollback, partial commit, staged/local three-way diff, and conflict resolving from this first version.
 
 **Type consistency:** Backend `FileDiff` maps to frontend `FileDiff`; backend `old_path` maps to frontend `oldPath`; `DiffKind::WorkingTree` maps to `"workingTree"`; rollback accepts only working-tree targets and returns `RepoSnapshot`.
-
