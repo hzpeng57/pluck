@@ -121,6 +121,23 @@ fn remove_worktree_path(repo: &Path, path: &str) -> GitResult<()> {
     Ok(())
 }
 
+fn remove_worktree_file(repo: &Path, path: &str) -> GitResult<()> {
+    let full = repo_path(repo, path)?;
+    let meta = match full.symlink_metadata() {
+        Ok(meta) => meta,
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(err) => return Err(err.into()),
+    };
+    ensure_removal_stays_in_repo(repo, &full, path)?;
+    if meta.file_type().is_dir() {
+        return Err(GitError::parse(format!(
+            "not an untracked worktree file: {path}"
+        )));
+    }
+    std::fs::remove_file(full)?;
+    Ok(())
+}
+
 fn diff_paths<'a>(path: &'a str, old_path: Option<&'a str>) -> Vec<&'a str> {
     match old_path {
         Some(old) if old != path => vec![old, path],
@@ -153,16 +170,16 @@ async fn untracked_worktree_candidates(repo: &Path, path: &str) -> GitResult<Vec
         .collect())
 }
 
-async fn ensure_untracked_worktree_path(repo: &Path, path: &str) -> GitResult<()> {
+async fn remove_untracked_worktree_path(repo: &Path, path: &str) -> GitResult<()> {
     let candidates = untracked_worktree_candidates(repo, path).await?;
     if candidates.iter().any(|candidate| candidate == path) {
-        return Ok(());
+        return remove_worktree_file(repo, path);
     }
     if is_untracked_directory_entry(repo, path, &candidates).await? {
-        return Ok(());
+        return remove_untracked_directory_candidates(repo, path, &candidates);
     }
     Err(GitError::parse(format!(
-        "not an untracked worktree file: {path}"
+        "not an untracked worktree path: {path}"
     )))
 }
 
@@ -225,6 +242,85 @@ async fn is_untracked_directory_entry(
     }
 
     Ok(true)
+}
+
+fn remove_untracked_directory_candidates(
+    repo: &Path,
+    path: &str,
+    candidates: &[String],
+) -> GitResult<()> {
+    let dir = path.trim_end_matches('/');
+    let dir_path = Path::new(dir);
+
+    for candidate in candidates {
+        validate_repo_relative(candidate)?;
+        let candidate_path = Path::new(candidate);
+        if !candidate_path.starts_with(dir_path) || candidate_path == dir_path {
+            return Err(GitError::parse(format!(
+                "not an untracked worktree path: {path}"
+            )));
+        }
+        remove_worktree_file(repo, candidate)?;
+    }
+
+    prune_empty_untracked_dirs(repo, dir_path, candidates)
+}
+
+fn prune_empty_untracked_dirs(
+    repo: &Path,
+    base_dir: &Path,
+    candidates: &[String],
+) -> GitResult<()> {
+    for candidate in candidates {
+        let mut current = Path::new(candidate).parent();
+        while let Some(dir) = current {
+            if dir.as_os_str().is_empty() || !dir.starts_with(base_dir) {
+                break;
+            }
+
+            remove_empty_repo_dir(repo, dir)?;
+            if dir == base_dir {
+                break;
+            }
+            current = dir.parent();
+        }
+    }
+    Ok(())
+}
+
+fn remove_empty_repo_dir(repo: &Path, path: &Path) -> GitResult<()> {
+    let display_path = path.to_string_lossy();
+    let full = repo_path(repo, &display_path)?;
+    let meta = match full.symlink_metadata() {
+        Ok(meta) => meta,
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(err) => return Err(err.into()),
+    };
+    if !meta.file_type().is_dir() {
+        return Ok(());
+    }
+
+    let repo = repo.canonicalize()?;
+    let dir = full.canonicalize()?;
+    if !dir.starts_with(&repo) {
+        return Err(GitError::parse(format!(
+            "unsafe repository path: {display_path}"
+        )));
+    }
+    ensure_removal_stays_in_repo(&repo, &full, &display_path)?;
+
+    match std::fs::remove_dir(full) {
+        Ok(()) => Ok(()),
+        Err(err)
+            if matches!(
+                err.kind(),
+                std::io::ErrorKind::NotFound | std::io::ErrorKind::DirectoryNotEmpty
+            ) =>
+        {
+            Ok(())
+        }
+        Err(err) => Err(err.into()),
+    }
 }
 
 async fn ensure_index_added_file(repo: &Path, path: &str) -> GitResult<()> {
@@ -311,8 +407,7 @@ pub async fn rollback_file(
             "Rollback for conflicted files is disabled in this version. Resolve or abort the in-progress operation first.",
         )),
         "untracked" => {
-            ensure_untracked_worktree_path(repo, path).await?;
-            remove_worktree_path(repo, path)
+            remove_untracked_worktree_path(repo, path).await
         }
         "added" => {
             ensure_index_added_file(repo, path).await?;
@@ -877,6 +972,25 @@ mod rollback_tests {
         rollback_file(dir.path(), "dir/", None, "untracked").await.unwrap();
 
         assert!(!dir.path().join("dir").exists());
+        assert_eq!(status(dir.path()), "");
+    }
+
+    #[tokio::test]
+    async fn rollback_untracked_directory_keeps_tracked_files_inside() {
+        let dir = clean_repo();
+        std::fs::create_dir(dir.path().join("dir")).unwrap();
+        std::fs::write(dir.path().join("dir/tracked.txt"), "tracked\n").unwrap();
+        git(dir.path(), &["add", "dir/tracked.txt"]);
+        git(dir.path(), &["commit", "-m", "track dir file"]);
+        std::fs::write(dir.path().join("dir/new.txt"), "new\n").unwrap();
+
+        rollback_file(dir.path(), "dir/", None, "untracked").await.unwrap();
+
+        assert_eq!(
+            std::fs::read_to_string(dir.path().join("dir/tracked.txt")).unwrap(),
+            "tracked\n"
+        );
+        assert!(!dir.path().join("dir/new.txt").exists());
         assert_eq!(status(dir.path()), "");
     }
 
