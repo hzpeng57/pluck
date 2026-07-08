@@ -62,6 +62,9 @@ const isConflictedDiff = computed(() => (diff.value?.status ?? target.value?.sta
 const canRollback = computed(() => isWorkingTreeTarget.value && !isConflictedDiff.value);
 const displayStatus = computed(() => diff.value?.status ?? target.value?.status ?? null);
 const displayPath = computed(() => formatPath(diff.value ?? target.value));
+const leftSplitPane = ref<HTMLElement | null>(null);
+const rightSplitPane = ref<HTMLElement | null>(null);
+let splitScrollSource: "left" | "right" | null = null;
 
 function rowClass(line: DiffLine) {
   return {
@@ -89,6 +92,17 @@ function cellClass(cell: SplitDiffCell) {
 function formatPath(file: FileDiff | DiffTarget | null) {
   if (!file) return "";
   return file.oldPath ? `${file.oldPath} -> ${file.path}` : file.path;
+}
+
+function syncSplitVerticalScroll(side: "left" | "right", event: Event) {
+  if (splitScrollSource && splitScrollSource !== side) return;
+  const source = event.currentTarget as HTMLElement | null;
+  const targetPane = side === "left" ? rightSplitPane.value : leftSplitPane.value;
+  if (!source || !targetPane || Math.abs(targetPane.scrollTop - source.scrollTop) < 1) return;
+
+  splitScrollSource = side;
+  targetPane.scrollTop = source.scrollTop;
+  requestAnimationFrame(() => { splitScrollSource = null; });
 }
 </script>
 
@@ -224,29 +238,46 @@ function formatPath(file: FileDiff | DiffTarget | null) {
           </tr>
         </tbody>
       </table>
-      <table v-else class="gl-diff-split-table">
-        <tbody v-for="(hunk, hunkIndex) in splitHunks" :key="`${hunk.header}:${hunkIndex}`">
-          <tr>
-            <td class="gl-diff-hunk px-3 py-1 gl-selectable" colspan="4">{{ hunk.header }}</td>
-          </tr>
-          <tr v-for="(row, rowIndex) in hunk.rows"
-              :key="`${hunk.header}:${hunkIndex}:${rowIndex}`"
-              class="gl-diff-split-row">
-            <td class="gl-diff-line-no">{{ row.left.number ?? "" }}</td>
-            <td class="gl-diff-split-code gl-selectable" :class="cellClass(row.left)">
-              <template v-for="segment in row.left.segments" :key="`${segment.changed}:${segment.text}`">
-                <span :class="{ 'gl-diff-inline-change': segment.changed }">{{ segment.text }}</span>
-              </template>
-            </td>
-            <td class="gl-diff-line-no">{{ row.right.number ?? "" }}</td>
-            <td class="gl-diff-split-code gl-selectable" :class="cellClass(row.right)">
-              <template v-for="segment in row.right.segments" :key="`${segment.changed}:${segment.text}`">
-                <span :class="{ 'gl-diff-inline-change': segment.changed }">{{ segment.text }}</span>
-              </template>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <div v-else class="gl-diff-split-panes">
+        <div ref="leftSplitPane" class="gl-diff-split-pane" @scroll.passive="syncSplitVerticalScroll('left', $event)">
+          <div class="gl-diff-split-pane-inner">
+            <template v-for="(hunk, hunkIndex) in splitHunks" :key="`left:${hunk.header}:${hunkIndex}`">
+              <div class="gl-diff-hunk gl-diff-split-hunk px-3 py-1 gl-selectable">{{ hunk.header }}</div>
+              <div v-for="(row, rowIndex) in hunk.rows"
+                   :key="`left:${hunk.header}:${hunkIndex}:${rowIndex}`"
+                   class="gl-diff-split-side-row">
+                <div class="gl-diff-line-no">{{ row.left.number ?? "" }}</div>
+                <div class="gl-diff-split-code gl-selectable" :class="cellClass(row.left)">
+                  <div class="gl-diff-split-code-inner">
+                    <template v-for="segment in row.left.segments" :key="`${segment.changed}:${segment.text}`">
+                      <span :class="{ 'gl-diff-inline-change': segment.changed }">{{ segment.text }}</span>
+                    </template>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+        <div ref="rightSplitPane" class="gl-diff-split-pane" @scroll.passive="syncSplitVerticalScroll('right', $event)">
+          <div class="gl-diff-split-pane-inner">
+            <template v-for="(hunk, hunkIndex) in splitHunks" :key="`right:${hunk.header}:${hunkIndex}`">
+              <div class="gl-diff-hunk gl-diff-split-hunk px-3 py-1 gl-selectable">{{ hunk.header }}</div>
+              <div v-for="(row, rowIndex) in hunk.rows"
+                   :key="`right:${hunk.header}:${hunkIndex}:${rowIndex}`"
+                   class="gl-diff-split-side-row">
+                <div class="gl-diff-line-no">{{ row.right.number ?? "" }}</div>
+                <div class="gl-diff-split-code gl-selectable" :class="cellClass(row.right)">
+                  <div class="gl-diff-split-code-inner">
+                    <template v-for="segment in row.right.segments" :key="`${segment.changed}:${segment.text}`">
+                      <span :class="{ 'gl-diff-inline-change': segment.changed }">{{ segment.text }}</span>
+                    </template>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 </template>

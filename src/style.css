@@ -551,32 +551,71 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
     overflow-wrap: anywhere;
   }
 
-  .gl-diff-split-table {
-    width: max-content;
-    min-width: 100%;
-    border-collapse: collapse;
-    table-layout: fixed;
+  .gl-diff-scroll.is-split {
+    overflow: hidden;
+  }
+
+  .gl-diff-split-panes {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    height: 100%;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
     font-family: var(--mono);
     font-size: 12.5px;
     line-height: 1.55;
   }
 
-  .gl-diff-split-row td {
-    white-space: pre;
-    vertical-align: top;
+  .gl-diff-split-pane {
+    min-width: 0;
+    min-height: 0;
+    overflow: auto;
+  }
+
+  .gl-diff-split-pane:first-child {
+    border-right: 1px solid var(--border-soft);
+  }
+
+  .gl-diff-split-pane-inner {
+    width: max-content;
+    min-width: 100%;
+  }
+
+  .gl-diff-split-hunk {
+    display: block;
+    min-width: 100%;
+  }
+
+  .gl-diff-split-side-row {
+    display: flex;
+    min-width: 100%;
+    align-items: stretch;
+  }
+
+  .gl-diff-split-side-row > .gl-diff-line-no {
+    flex: 0 0 54px;
   }
 
   .gl-diff-split-code {
-    min-width: 380px;
-    width: 50%;
-    padding: 0 14px 0 8px;
+    min-width: 0;
+    flex: 1 0 auto;
+    padding: 0;
     color: var(--fg-2);
+    overflow: visible;
+    white-space: normal;
     user-select: text;
     -webkit-user-select: text;
   }
 
-  .gl-diff-split-code:nth-child(2) {
-    border-right: 1px solid var(--border-soft);
+  .gl-diff-split-code-inner {
+    display: block;
+    min-width: 100%;
+    width: max-content;
+    padding: 0 14px 0 8px;
+    overflow: visible;
+    white-space: pre;
+    text-overflow: clip;
   }
 
   .gl-diff-split-code.is-added {
@@ -603,11 +642,17 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
     background: color-mix(in srgb, currentColor 18%, transparent);
   }
 
-  .gl-diff-scroll.is-wrap .gl-diff-split-table {
+  .gl-diff-scroll.is-wrap .gl-diff-split-panes {
     width: 100%;
+    min-width: 0;
   }
 
-  .gl-diff-scroll.is-wrap .gl-diff-split-code {
+  .gl-diff-scroll.is-wrap .gl-diff-split-pane {
+    overflow-x: hidden;
+  }
+
+  .gl-diff-scroll.is-wrap .gl-diff-split-code-inner {
+    width: auto;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
   }
