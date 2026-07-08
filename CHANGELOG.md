@@ -2,6 +2,20 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 规范，版本号采用 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [0.1.13] - 2026-07-08
+
+### Added
+- Diff Viewer 新增 Side-by-side 视图，支持左右并排查看变更，并对成对修改提供行内变化高亮。
+- Diff Review 工具栏新增上/下一个文件、复制路径、Reveal in Finder 和 Open file 等文件级操作。
+- Diff Viewer 新增忽略空白变更开关，便于审阅格式化或缩进调整较多的文件。
+
+### Changed
+- 文件列表与 diff 区域支持拖拽调整宽度，并在回滚文件后自动切换到下一个可审阅文件。
+- Side-by-side 视图在小屏和长行场景下固定左右栏宽度，左右代码区可分别横向滚动，保持纵向审阅同步。
+
+### Fixed
+- 修复 Side-by-side 视图长行将右侧内容挤出可视区域的问题。
+
 ## [0.1.12] - 2026-07-07
 
 ### Added
