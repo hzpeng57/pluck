@@ -1,6 +1,17 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { ArrowLeft, Columns2, PanelTopBottomDashed, RotateCcw, WrapText } from "lucide-vue-next";
+import {
+  ArrowDown,
+  ArrowLeft,
+  ArrowUp,
+  Columns2,
+  Copy,
+  ExternalLink,
+  FolderOpen,
+  PanelTopBottomDashed,
+  RotateCcw,
+  WrapText,
+} from "lucide-vue-next";
 import { useRepoStateStore } from "../stores/repoState";
 import type { DiffLine, DiffTarget, FileDiff } from "../types/git";
 import { toSplitDiffHunks, type SplitDiffCell } from "../lib/diffLayout";
@@ -8,7 +19,24 @@ import { toSplitDiffHunks, type SplitDiffCell } from "../lib/diffLayout";
 const emit = defineEmits<{
   back: [];
   rollback: [];
+  previousFile: [];
+  nextFile: [];
+  copyPath: [];
+  openFile: [];
+  revealFile: [];
 }>();
+
+const props = withDefaults(defineProps<{
+  canGoPrevious?: boolean;
+  canGoNext?: boolean;
+  canOpenFile?: boolean;
+  canRevealFile?: boolean;
+}>(), {
+  canGoPrevious: false,
+  canGoNext: false,
+  canOpenFile: false,
+  canRevealFile: false,
+});
 
 const state = useRepoStateStore();
 const wrap = ref(false);
@@ -81,6 +109,39 @@ function formatPath(file: FileDiff | DiffTarget | null) {
         </template>
       </template>
       <div v-else class="flex-1" />
+
+      <div class="gl-diff-action-group shrink-0">
+        <button class="gl-icon-btn h-7 w-7"
+                :disabled="!props.canGoPrevious"
+                title="Previous changed file"
+                @click="emit('previousFile')">
+          <ArrowUp :size="13" />
+        </button>
+        <button class="gl-icon-btn h-7 w-7"
+                :disabled="!props.canGoNext"
+                title="Next changed file"
+                @click="emit('nextFile')">
+          <ArrowDown :size="13" />
+        </button>
+        <button class="gl-icon-btn h-7 w-7"
+                :disabled="!displayPath"
+                title="Copy path"
+                @click="emit('copyPath')">
+          <Copy :size="13" />
+        </button>
+        <button class="gl-icon-btn h-7 w-7"
+                :disabled="!props.canRevealFile"
+                title="Reveal in Finder"
+                @click="emit('revealFile')">
+          <FolderOpen :size="13" />
+        </button>
+        <button class="gl-icon-btn h-7 w-7"
+                :disabled="!props.canOpenFile"
+                title="Open file"
+                @click="emit('openFile')">
+          <ExternalLink :size="13" />
+        </button>
+      </div>
 
       <div class="gl-segmented shrink-0" title="Diff layout">
         <button class="gl-segmented-btn"

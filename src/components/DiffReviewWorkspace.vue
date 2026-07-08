@@ -1,14 +1,41 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from "vue";
+import { openPath, revealItemInDir } from "@tauri-apps/plugin-opener";
 import { useReposStore } from "../stores/repos";
 import { useRepoStateStore } from "../stores/repoState";
 import CommitPanel from "./CommitPanel.vue";
 import CommitDetailPanel from "./CommitDetailPanel.vue";
 import DiffViewer from "./DiffViewer.vue";
+import type { ChangedFile, DiffTarget, WorkingFile } from "../types/git";
 
 const repos = useReposStore();
 const state = useRepoStateStore();
 const sourceIsCommit = computed(() => state.diffTarget?.kind === "commit");
+type ReviewFile = WorkingFile | ChangedFile;
+
+const reviewFiles = computed<ReviewFile[]>(() =>
+  sourceIsCommit.value ? (state.selectedCommit?.files ?? []) : (state.snapshot?.files ?? [])
+);
+
+const currentIndex = computed(() => {
+  const target = state.diffTarget;
+  if (!target) return -1;
+  return reviewFiles.value.findIndex(file =>
+    file.path === target.path &&
+    file.oldPath === target.oldPath &&
+    file.status === target.status
+  );
+});
+
+const canGoPrevious = computed(() => currentIndex.value > 0);
+const canGoNext = computed(() => currentIndex.value >= 0 && currentIndex.value < reviewFiles.value.length - 1);
+const canUseWorkingPath = computed(() => state.diffTarget?.kind === "workingTree" && !!repos.active);
+const canOpenFile = computed(() =>
+  canUseWorkingPath.value &&
+  state.diffTarget?.status !== "deleted" &&
+  state.diffTarget?.status !== "conflicted"
+);
+const canRevealFile = computed(() => canOpenFile.value);
 
 const SOURCE_KEY = "pluck:diffSourceWidth";
 const MIN_SOURCE_W = 280;
@@ -45,6 +72,73 @@ function startSourceDrag(e: MouseEvent) {
   e.preventDefault();
 }
 onBeforeUnmount(onSourceDragEnd);
+
+function joinRepoPath(path: string, rel: string) {
+  const cleanRoot = path.replace(/\/+$/, "");
+  const cleanRel = rel.replace(/^\/+/, "").replace(/\/+$/, "");
+  return `${cleanRoot}/${cleanRel}`;
+}
+
+function targetDisplayPath(target: DiffTarget | null) {
+  if (!target) return "";
+  return target.oldPath ? `${target.oldPath} -> ${target.path}` : target.path;
+}
+
+function targetFsPath(target: DiffTarget | null) {
+  if (!target || !repos.active) return null;
+  const rel = target.status === "deleted" && target.oldPath ? target.oldPath : target.path;
+  return joinRepoPath(repos.active.path, rel);
+}
+
+async function openReviewFileAt(index: number) {
+  if (!repos.activeId) return;
+  const file = reviewFiles.value[index];
+  if (!file) return;
+  if (sourceIsCommit.value && state.selectedCommit) {
+    await state.openCommitFileDiff(repos.activeId, state.selectedCommit, file as ChangedFile);
+  } else {
+    await state.openWorkingDiff(repos.activeId, file as WorkingFile);
+  }
+}
+
+async function previousFile() {
+  if (canGoPrevious.value) await openReviewFileAt(currentIndex.value - 1);
+}
+
+async function nextFile() {
+  if (canGoNext.value) await openReviewFileAt(currentIndex.value + 1);
+}
+
+async function copyPath() {
+  const path = targetDisplayPath(state.diffTarget);
+  if (!path) return;
+  try {
+    await navigator.clipboard.writeText(path);
+    state.pushToast("info", "Path copied");
+  } catch (e: any) {
+    state.pushToast("error", e?.message ?? String(e));
+  }
+}
+
+async function revealFile() {
+  const path = targetFsPath(state.diffTarget);
+  if (!path || !canRevealFile.value) return;
+  try {
+    await revealItemInDir(path);
+  } catch (e: any) {
+    state.pushToast("error", e?.message ?? String(e));
+  }
+}
+
+async function openFile() {
+  const path = targetFsPath(state.diffTarget);
+  if (!path || !canOpenFile.value) return;
+  try {
+    await openPath(path);
+  } catch (e: any) {
+    state.pushToast("error", e?.message ?? String(e));
+  }
+}
 
 async function rollback() {
   if (!repos.activeId || state.diffTarget?.kind !== "workingTree") return;
@@ -95,6 +189,18 @@ async function rollback() {
          title="Drag to resize file list · double-click to reset">
       <div class="gl-splitter-line" />
     </div>
-    <DiffViewer @back="state.closeReviewMode()" @rollback="rollback" />
+    <DiffViewer
+      :can-go-previous="canGoPrevious"
+      :can-go-next="canGoNext"
+      :can-open-file="canOpenFile"
+      :can-reveal-file="canRevealFile"
+      @back="state.closeReviewMode()"
+      @rollback="rollback"
+      @previous-file="previousFile"
+      @next-file="nextFile"
+      @copy-path="copyPath"
+      @open-file="openFile"
+      @reveal-file="revealFile"
+    />
   </div>
 </template>

@@ -400,6 +400,18 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
     color: var(--accent-2);
     transform: translateY(1px);
   }
+  .gl-icon-btn:disabled,
+  .gl-command-btn:disabled,
+  .gl-segmented-btn:disabled {
+    opacity: 0.42;
+    cursor: default;
+    transform: none;
+  }
+  .gl-icon-btn:disabled:hover {
+    background: transparent;
+    border-color: transparent;
+    color: var(--fg-3);
+  }
 
   .gl-spinner {
     display: inline-block;
@@ -473,6 +485,12 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
     padding: 8px 12px;
     border-bottom: 1px solid var(--border-soft);
     background: color-mix(in srgb, var(--panel) 88%, var(--bg));
+  }
+
+  .gl-diff-action-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
   }
 
   .gl-diff-scroll {
