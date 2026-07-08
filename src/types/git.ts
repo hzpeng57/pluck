@@ -58,6 +58,9 @@ export interface FileDiff {
   deletions: number;
   hunks: DiffHunk[];
 }
+export interface DiffOptions {
+  ignoreWhitespace: boolean;
+}
 export type DiffTarget =
   | { kind: "workingTree"; path: string; oldPath: string | null; status: FileStatus }
   | { kind: "commit"; hash: string; path: string; oldPath: string | null; status: ChangedFileStatus };

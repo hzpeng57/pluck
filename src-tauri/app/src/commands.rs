@@ -7,7 +7,7 @@ use crate::git::ops::cherry_pick::{cherry_pick, cherry_pick_abort, cherry_pick_c
 use crate::git::ops::commit::commit_files;
 use crate::git::ops::diff::{
     commit_file_diff as git_commit_file_diff, rollback_file as git_rollback_file,
-    working_file_diff as git_working_file_diff, FileDiff,
+    working_file_diff as git_working_file_diff, DiffOptions, FileDiff,
 };
 use crate::git::ops::fetch::fetch_all;
 use crate::git::ops::merge::{merge_abort, merge_continue, merge_into_current};
@@ -311,6 +311,7 @@ pub async fn working_file_diff(
     path: String,
     old_path: Option<String>,
     status: String,
+    ignore_whitespace: Option<bool>,
     state: State<'_, AppState>,
 ) -> GitResult<FileDiff> {
     let sess = state
@@ -318,7 +319,10 @@ pub async fn working_file_diff(
         .await
         .ok_or_else(|| GitError::parse("unknown repo id"))?;
     let repo = { sess.lock().await.path.clone() };
-    git_working_file_diff(&repo, &path, old_path.as_deref(), &status).await
+    let options = DiffOptions {
+        ignore_whitespace: ignore_whitespace.unwrap_or(false),
+    };
+    git_working_file_diff(&repo, &path, old_path.as_deref(), &status, options).await
 }
 
 #[tauri::command]
@@ -328,6 +332,7 @@ pub async fn commit_file_diff(
     path: String,
     old_path: Option<String>,
     status: String,
+    ignore_whitespace: Option<bool>,
     state: State<'_, AppState>,
 ) -> GitResult<FileDiff> {
     let sess = state
@@ -335,7 +340,10 @@ pub async fn commit_file_diff(
         .await
         .ok_or_else(|| GitError::parse("unknown repo id"))?;
     let repo = { sess.lock().await.path.clone() };
-    git_commit_file_diff(&repo, &hash, &path, old_path.as_deref(), &status).await
+    let options = DiffOptions {
+        ignore_whitespace: ignore_whitespace.unwrap_or(false),
+    };
+    git_commit_file_diff(&repo, &hash, &path, old_path.as_deref(), &status, options).await
 }
 
 #[tauri::command]

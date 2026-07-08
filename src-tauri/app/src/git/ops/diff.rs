@@ -18,6 +18,17 @@ pub struct DiffMeta {
     pub status: String,
 }
 
+#[derive(Debug, Clone, Copy, Default)]
+pub struct DiffOptions {
+    pub ignore_whitespace: bool,
+}
+
+fn push_diff_options(args: &mut Vec<&str>, options: DiffOptions) {
+    if options.ignore_whitespace {
+        args.push("--ignore-all-space");
+    }
+}
+
 #[derive(Debug, Clone, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub enum DiffLineKind {
@@ -481,6 +492,7 @@ pub async fn working_file_diff(
     path: &str,
     old_path: Option<&str>,
     status: &str,
+    options: DiffOptions,
 ) -> GitResult<FileDiff> {
     validate_repo_relative(path)?;
     if let Some(old) = old_path {
@@ -489,21 +501,10 @@ pub async fn working_file_diff(
 
     let raw = if status == "untracked" {
         ensure_untracked_worktree_file(repo, path).await?;
-        let (out, _) = run_git_allow_exit_codes(
-            repo,
-            &[
-                "diff",
-                "--no-ext-diff",
-                "--no-index",
-                "--no-color",
-                "-U3",
-                "--",
-                "/dev/null",
-                path,
-            ],
-            &[1],
-        )
-        .await?;
+        let mut args = vec!["diff", "--no-ext-diff"];
+        push_diff_options(&mut args, options);
+        args.extend(["--no-index", "--no-color", "-U3", "--", "/dev/null", path]);
+        let (out, _) = run_git_allow_exit_codes(repo, &args, &[1]).await?;
         out.stdout
     } else {
         let mut args = vec![
@@ -512,9 +513,9 @@ pub async fn working_file_diff(
             "--no-color",
             "--find-renames",
             "-U3",
-            "HEAD",
-            "--",
         ];
+        push_diff_options(&mut args, options);
+        args.extend(["HEAD", "--"]);
         let paths = diff_paths(path, old_path);
         for p in &paths {
             args.push(p);
@@ -539,6 +540,7 @@ pub async fn commit_file_diff(
     path: &str,
     old_path: Option<&str>,
     status: &str,
+    options: DiffOptions,
 ) -> GitResult<FileDiff> {
     validate_repo_relative(path)?;
     if let Some(old) = old_path {
@@ -558,9 +560,9 @@ pub async fn commit_file_diff(
         "--find-renames",
         "--no-color",
         "-U3",
-        oid.as_str(),
-        "--",
     ];
+    push_diff_options(&mut args, options);
+    args.extend([oid.as_str(), "--"]);
     let paths = diff_paths(path, old_path);
     for p in &paths {
         args.push(p);
@@ -806,7 +808,7 @@ mod integration_tests {
         git(dir.path(), &["add", "a.txt"]);
         std::fs::write(dir.path().join("a.txt"), "one\nthree\nfour\n").unwrap();
 
-        let diff = working_file_diff(dir.path(), "a.txt", None, "modified").await.unwrap();
+        let diff = working_file_diff(dir.path(), "a.txt", None, "modified", DiffOptions::default()).await.unwrap();
 
         assert_eq!(diff.path, "a.txt");
         assert_eq!(diff.additions, 2);
@@ -819,7 +821,7 @@ mod integration_tests {
         let dir = repo();
         std::fs::write(dir.path().join("new.txt"), "hello\n").unwrap();
 
-        let diff = working_file_diff(dir.path(), "new.txt", None, "untracked").await.unwrap();
+        let diff = working_file_diff(dir.path(), "new.txt", None, "untracked", DiffOptions::default()).await.unwrap();
 
         assert_eq!(diff.status, "untracked");
         assert_eq!(diff.additions, 1);
@@ -837,12 +839,13 @@ mod integration_tests {
                 absolute.to_str().unwrap(),
                 None,
                 "modified",
+                DiffOptions::default(),
             )
             .await,
             "unsafe repository path",
         );
         assert_parse_error(
-            working_file_diff(dir.path(), "../a.txt", None, "modified").await,
+            working_file_diff(dir.path(), "../a.txt", None, "modified", DiffOptions::default()).await,
             "unsafe repository path",
         );
     }
@@ -852,7 +855,7 @@ mod integration_tests {
         let dir = repo();
 
         assert_parse_error(
-            working_file_diff(dir.path(), ".git/config", None, "untracked").await,
+            working_file_diff(dir.path(), ".git/config", None, "untracked", DiffOptions::default()).await,
             "unsafe repository path",
         );
     }
@@ -862,7 +865,7 @@ mod integration_tests {
         let dir = repo();
 
         assert_parse_error(
-            working_file_diff(dir.path(), "a.txt", None, "untracked").await,
+            working_file_diff(dir.path(), "a.txt", None, "untracked", DiffOptions::default()).await,
             "not an untracked worktree file",
         );
     }
@@ -874,9 +877,34 @@ mod integration_tests {
         std::fs::write(dir.path().join("token.secret"), "hidden\n").unwrap();
 
         assert_parse_error(
-            working_file_diff(dir.path(), "token.secret", None, "untracked").await,
+            working_file_diff(dir.path(), "token.secret", None, "untracked", DiffOptions::default()).await,
             "not an untracked worktree file",
         );
+    }
+
+    #[tokio::test]
+    async fn working_file_diff_can_ignore_whitespace() {
+        let dir = repo();
+        std::fs::write(dir.path().join("a.txt"), "one\n  two\n").unwrap();
+
+        let normal =
+            working_file_diff(dir.path(), "a.txt", None, "modified", DiffOptions::default())
+                .await
+                .unwrap();
+        let ignored = working_file_diff(
+            dir.path(),
+            "a.txt",
+            None,
+            "modified",
+            DiffOptions { ignore_whitespace: true },
+        )
+        .await
+        .unwrap();
+
+        assert!(normal.additions > 0 || normal.deletions > 0);
+        assert_eq!(ignored.additions, 0);
+        assert_eq!(ignored.deletions, 0);
+        assert!(ignored.hunks.is_empty());
     }
 
     #[tokio::test]
@@ -891,7 +919,10 @@ mod integration_tests {
             .unwrap();
         let hash = String::from_utf8_lossy(&hash.stdout).trim().to_string();
 
-        let diff = commit_file_diff(dir.path(), &hash, "a.txt", None, "modified").await.unwrap();
+        let diff =
+            commit_file_diff(dir.path(), &hash, "a.txt", None, "modified", DiffOptions::default())
+                .await
+                .unwrap();
 
         assert_eq!(diff.kind, DiffKind::Commit);
         assert_eq!(diff.additions, 1);
@@ -903,7 +934,7 @@ mod integration_tests {
         let dir = repo();
 
         assert!(
-            commit_file_diff(dir.path(), "--help", "a.txt", None, "modified")
+            commit_file_diff(dir.path(), "--help", "a.txt", None, "modified", DiffOptions::default())
                 .await
                 .is_err(),
             "option-like hash should be rejected before diff-tree"

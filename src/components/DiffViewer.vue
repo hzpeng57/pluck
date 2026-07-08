@@ -8,11 +8,13 @@ import {
   Copy,
   ExternalLink,
   FolderOpen,
+  ListFilter,
   PanelTopBottomDashed,
   RotateCcw,
   WrapText,
 } from "lucide-vue-next";
 import { useRepoStateStore } from "../stores/repoState";
+import { useReposStore } from "../stores/repos";
 import type { DiffLine, DiffTarget, FileDiff } from "../types/git";
 import { toSplitDiffHunks, type SplitDiffCell } from "../lib/diffLayout";
 
@@ -39,6 +41,7 @@ const props = withDefaults(defineProps<{
 });
 
 const state = useRepoStateStore();
+const repos = useReposStore();
 const wrap = ref(false);
 type DiffViewMode = "unified" | "split";
 const MODE_KEY = "pluck:diffViewMode";
@@ -166,6 +169,14 @@ function formatPath(file: FileDiff | DiffTarget | null) {
               @click="wrap = !wrap">
         <WrapText :size="13" />
         Wrap
+      </button>
+      <button class="gl-command-btn h-7 px-2"
+              :class="{ 'gl-btn-primary': state.diffIgnoreWhitespace }"
+              :aria-pressed="state.diffIgnoreWhitespace"
+              title="Ignore whitespace changes"
+              @click="repos.activeId && state.setDiffIgnoreWhitespace(repos.activeId, !state.diffIgnoreWhitespace)">
+        <ListFilter :size="13" />
+        Whitespace
       </button>
       <button v-if="isWorkingTreeTarget"
               class="gl-command-btn gl-btn-danger h-7 px-2"

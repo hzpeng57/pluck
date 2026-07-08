@@ -8,6 +8,7 @@ import type {
   FileDiff,
   FileStatus,
   ChangedFileStatus,
+  DiffOptions,
 } from "../types/git";
 
 export const api = {
@@ -21,10 +22,10 @@ export const api = {
     invoke<Commit[]>("log_search_cmd", { id, branch, query, author, limit }),
   commitDetail: (id: string, hash: string) =>
     invoke<CommitDetail>("commit_detail", { id, hash }),
-  workingFileDiff: (id: string, path: string, oldPath: string | null, status: FileStatus) =>
-    invoke<FileDiff>("working_file_diff", { id, path, oldPath, status }),
-  commitFileDiff: (id: string, hash: string, path: string, oldPath: string | null, status: ChangedFileStatus) =>
-    invoke<FileDiff>("commit_file_diff", { id, hash, path, oldPath, status }),
+  workingFileDiff: (id: string, path: string, oldPath: string | null, status: FileStatus, options: DiffOptions) =>
+    invoke<FileDiff>("working_file_diff", { id, path, oldPath, status, ignoreWhitespace: options.ignoreWhitespace }),
+  commitFileDiff: (id: string, hash: string, path: string, oldPath: string | null, status: ChangedFileStatus, options: DiffOptions) =>
+    invoke<FileDiff>("commit_file_diff", { id, hash, path, oldPath, status, ignoreWhitespace: options.ignoreWhitespace }),
   rollbackFile: (id: string, path: string, oldPath: string | null, status: FileStatus) =>
     invoke<RepoSnapshot>("rollback_file", { id, path, oldPath, status }),
   cherryPick: (id: string, hashes: string[]) =>

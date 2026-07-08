@@ -4,6 +4,7 @@ import { api } from "../api/tauri";
 import type { RepoSnapshot, CommitDetail, Commit, WorkingFile, ChangedFile, FileDiff, DiffTarget } from "../types/git";
 
 const LOG_PAGE_SIZE = 200;
+const DIFF_IGNORE_WS_KEY = "pluck:diffIgnoreWhitespace";
 
 interface Toast { id: number; level: "error" | "info"; msg: string; loading?: boolean }
 interface ConfirmOptions {
@@ -30,6 +31,9 @@ export const useRepoStateStore = defineStore("repoState", () => {
   const selectedDiff = ref<FileDiff | null>(null);
   const loadingDiff = ref(false);
   const diffError = ref<string | null>(null);
+  const diffIgnoreWhitespace = ref(localStorage.getItem(DIFF_IGNORE_WS_KEY) === "1");
+  watch(diffIgnoreWhitespace, value => localStorage.setItem(DIFF_IGNORE_WS_KEY, value ? "1" : "0"));
+  const diffOptions = computed(() => ({ ignoreWhitespace: diffIgnoreWhitespace.value }));
   const selectedHashes = ref<Set<string>>(new Set());
   const anchorHash = ref<string | null>(null);
   const selectionCount = computed(() => selectedHashes.value.size);
@@ -201,7 +205,7 @@ export const useRepoStateStore = defineStore("repoState", () => {
     diffError.value = null;
     loadingDiff.value = true;
     try {
-      const diff = await api.workingFileDiff(repoId, file.path, file.oldPath, file.status);
+      const diff = await api.workingFileDiff(repoId, file.path, file.oldPath, file.status, diffOptions.value);
       if (activeRepoId !== repoId || diffRequestId !== requestId) return;
       selectedDiff.value = diff;
     }
@@ -221,7 +225,7 @@ export const useRepoStateStore = defineStore("repoState", () => {
     diffError.value = null;
     loadingDiff.value = true;
     try {
-      const diff = await api.commitFileDiff(repoId, commit.hash, file.path, file.oldPath, file.status);
+      const diff = await api.commitFileDiff(repoId, commit.hash, file.path, file.oldPath, file.status, diffOptions.value);
       if (activeRepoId !== repoId || diffRequestId !== requestId) return;
       selectedDiff.value = diff;
     }
@@ -253,6 +257,28 @@ export const useRepoStateStore = defineStore("repoState", () => {
     finally {
       if (activeRepoId === repoId) loading.value = false;
     }
+  }
+
+  async function reloadCurrentDiff(repoId: string) {
+    const target = diffTarget.value;
+    if (!target) return;
+    if (target.kind === "workingTree") {
+      await openWorkingDiff(repoId, { path: target.path, oldPath: target.oldPath, status: target.status });
+      return;
+    }
+    if (selectedCommit.value) {
+      await openCommitFileDiff(repoId, selectedCommit.value, {
+        path: target.path,
+        oldPath: target.oldPath,
+        status: target.status,
+      });
+    }
+  }
+
+  async function setDiffIgnoreWhitespace(repoId: string, value: boolean) {
+    if (diffIgnoreWhitespace.value === value) return;
+    diffIgnoreWhitespace.value = value;
+    await reloadCurrentDiff(repoId);
   }
 
   function dismissToast(id: number) {
@@ -341,14 +367,14 @@ export const useRepoStateStore = defineStore("repoState", () => {
 
   return {
     snapshot, loading, toasts, selectedLogBranch, selectedCommit, loadingCommit,
-    diffTarget, selectedDiff, loadingDiff, diffError,
+    diffTarget, selectedDiff, loadingDiff, diffError, diffIgnoreWhitespace,
     selectedHashes, anchorHash, selectionCount,
     editMessageDialog, resetDialog, branchCreateDialog, branchRenameDialog, branchDeleteDialog,
     confirmDialog,
     logEnd, logLoadingMore,
     open, refresh, setLogBranch, pushToast, pushLoadingToast, dismissToast,
     selectCommit, clearSelectedCommit,
-    openWorkingDiff, openCommitFileDiff, closeReviewMode, rollbackCurrentWorkingFile,
+    openWorkingDiff, openCommitFileDiff, closeReviewMode, rollbackCurrentWorkingFile, setDiffIgnoreWhitespace,
     setSingleSelection, toggleSelection, selectRange, clearSelection,
     openEditMessageDialog, closeEditMessageDialog, openResetDialog, closeResetDialog,
     openBranchCreateDialog, closeBranchCreateDialog,
