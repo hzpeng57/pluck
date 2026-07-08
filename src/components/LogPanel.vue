@@ -12,7 +12,7 @@ import { useReposStore } from "../stores/repos";
 import { api } from "../api/tauri";
 import { formatErr } from "../lib/errors";
 import { relativeTime } from "../lib/format";
-import type { Commit, RepoSnapshot } from "../types/git";
+import type { Commit, RebaseResult } from "../types/git";
 
 const state = useRepoStateStore();
 const repos = useReposStore();
@@ -184,8 +184,23 @@ async function interactiveRebase() {
   if (!menu.value || !repos.activeId || !onCurrentBranchLog.value) return;
   const id = repos.activeId; const from = menu.value.commit.hash;
   menu.value = null;
-  try { state.snapshot = await invoke<RepoSnapshot>("rebase_interactive_start", { id, fromCommit: from }); }
-  catch (e: any) { state.pushToast("error", formatErr(e)); }
+  const loadingToastId = state.pushLoadingToast("Rebasing…");
+  try {
+    const result = await invoke<RebaseResult>("rebase_interactive_start", { id, fromCommit: from });
+    if (repos.activeId !== id) return;
+    state.snapshot = result.snapshot;
+    if (!result.cancelled) {
+      state.pushToast("info", result.snapshot.inProgress?.type === "rebasing"
+        ? "Rebase paused; continue when ready"
+        : "Rebase successful");
+    }
+  }
+  catch (e: any) {
+    if (repos.activeId === id) state.pushToast("error", formatErr(e));
+  }
+  finally {
+    state.dismissToast(loadingToastId);
+  }
 }
 
 function authorInitial(name: string) {

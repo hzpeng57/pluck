@@ -7,7 +7,7 @@ pub async fn rebase_interactive(
     from_commit: &str,
     bridge_bin: &Path,
     sock: &Path,
-) -> GitResult<()> {
+) -> GitResult<bool> {
     let output = git_command(repo)
         .env("GIT_SEQUENCE_EDITOR", bridge_bin)
         .env("GIT_EDITOR", bridge_bin)
@@ -17,7 +17,7 @@ pub async fn rebase_interactive(
         .await
         .map_err(|e| GitError::spawn(e.to_string()))?;
     if output.status.success() {
-        return Ok(());
+        return Ok(false);
     }
     // Non-zero exit covers two benign cases the UI should not toast about:
     //   1. User aborted via the editor bridge (no rebase state left on disk).
@@ -29,8 +29,11 @@ pub async fn rebase_interactive(
         || repo.join(".git/rebase-apply").exists();
     let stderr = String::from_utf8_lossy(&output.stderr);
     let editor_aborted = stderr.contains("problem with the editor");
-    if rebase_state_present || editor_aborted {
-        return Ok(());
+    if rebase_state_present {
+        return Ok(false);
+    }
+    if editor_aborted {
+        return Ok(true);
     }
     Err(GitError::from_stderr(
         output.status.code().unwrap_or(-1),

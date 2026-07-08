@@ -35,6 +35,13 @@ pub struct RepoMeta {
     pub name: String,
 }
 
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct RebaseResult {
+    pub snapshot: RepoSnapshot,
+    pub cancelled: bool,
+}
+
 fn make_id(p: &std::path::Path) -> String {
     use std::collections::hash_map::DefaultHasher;
     use std::hash::{Hash, Hasher};
@@ -236,15 +243,16 @@ pub async fn rebase_interactive_start(
     id: String,
     from_commit: String,
     state: State<'_, AppState>,
-) -> GitResult<RepoSnapshot> {
+) -> GitResult<RebaseResult> {
     let sess = state
         .get(&id)
         .await
         .ok_or_else(|| GitError::parse("unknown repo id"))?;
     let path = { sess.lock().await.path.clone() };
     let bridge_bin = current_bridge_path()?;
-    rebase_interactive(&path, &from_commit, &bridge_bin, &socket_path()).await?;
-    refresh_session(&sess).await
+    let cancelled = rebase_interactive(&path, &from_commit, &bridge_bin, &socket_path()).await?;
+    let snapshot = refresh_session(&sess).await?;
+    Ok(RebaseResult { snapshot, cancelled })
 }
 
 #[tauri::command]

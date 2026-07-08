@@ -3,6 +3,8 @@ import { ref, onMounted, onBeforeUnmount } from "vue";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { ArrowDown, ArrowUp } from "lucide-vue-next";
+import { useRepoStateStore } from "../stores/repoState";
+import { formatErr } from "../lib/errors";
 
 interface TodoRow { action: string; hash: string; rest: string }
 
@@ -10,6 +12,8 @@ const visible = ref(false);
 const kind = ref<"sequence" | "commitMsg">("sequence");
 const rows = ref<TodoRow[]>([]);
 const message = ref("");
+const replyError = ref<string | null>(null);
+const state = useRepoStateStore();
 let unlisten: (() => void) | null = null;
 
 const ACTIONS = ["pick", "reword", "edit", "squash", "fixup", "drop"];
@@ -35,13 +39,25 @@ function serializeTodo(rs: TodoRow[]): string {
 
 async function save() {
   const content = kind.value === "sequence" ? serializeTodo(rows.value) : message.value;
-  await invoke("rebase_reply", { reply: { action: "save", content } });
-  visible.value = false;
+  replyError.value = null;
+  try {
+    await invoke("rebase_reply", { reply: { action: "save", content } });
+    visible.value = false;
+  } catch (e: any) {
+    replyError.value = formatErr(e);
+    state.pushToast("error", replyError.value);
+  }
 }
 
 async function abort() {
-  await invoke("rebase_reply", { reply: { action: "abort", content: null } });
-  visible.value = false;
+  replyError.value = null;
+  try {
+    await invoke("rebase_reply", { reply: { action: "abort", content: null } });
+    visible.value = false;
+  } catch (e: any) {
+    replyError.value = formatErr(e);
+    state.pushToast("error", replyError.value);
+  }
 }
 
 function moveUp(i: number) { if (i > 0) { const a = rows.value.splice(i, 1)[0]; rows.value.splice(i - 1, 0, a); } }
@@ -50,6 +66,7 @@ function moveDown(i: number) { if (i < rows.value.length - 1) { const a = rows.v
 onMounted(async () => {
   unlisten = await listen<{ kind: string; path?: string; content: string }>("rebase:edit", e => {
     kind.value = e.payload.kind as any;
+    replyError.value = null;
     if (e.payload.kind === "sequence") { rows.value = parseTodo(e.payload.content); }
     else { message.value = e.payload.content; }
     visible.value = true;
@@ -103,7 +120,10 @@ onBeforeUnmount(() => unlisten?.());
       </div>
 
       <div class="flex items-center gap-2 px-4 py-3 shrink-0" style="border-top: 1px solid var(--border-soft)">
-        <span class="text-[12px]" style="color: var(--fg-3)">
+        <span v-if="replyError" class="text-[12px] truncate" style="color: var(--danger)">
+          {{ replyError }}
+        </span>
+        <span v-else class="text-[12px]" style="color: var(--fg-3)">
           pick · reword · edit · squash · fixup · drop
         </span>
         <div class="flex-1" />

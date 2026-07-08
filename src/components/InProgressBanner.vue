@@ -17,8 +17,34 @@ const op = computed(() => state.snapshot?.inProgress ?? null);
 
 async function call(cmd: string) {
   if (!repos.activeId) return;
-  try { state.snapshot = await invoke<RepoSnapshot>(cmd, { id: repos.activeId }); }
-  catch (e: any) { state.pushToast("error", e?.data?.friendly ?? String(e)); }
+  const id = repos.activeId;
+  const isRebaseContinue = cmd === "rebase_continue_cmd";
+  const isRebaseAbort = cmd === "rebase_abort_cmd";
+  const loadingToastId = isRebaseContinue
+    ? state.pushLoadingToast("Continuing rebase…")
+    : isRebaseAbort
+      ? state.pushLoadingToast("Aborting rebase…")
+      : null;
+  try {
+    const snapshot = await invoke<RepoSnapshot>(cmd, { id });
+    if (repos.activeId !== id) return;
+    state.snapshot = snapshot;
+    if (isRebaseContinue) {
+      state.pushToast("info", snapshot.inProgress?.type === "rebasing"
+        ? "Rebase paused; continue when ready"
+        : "Rebase successful");
+    } else if (isRebaseAbort) {
+      state.pushToast("info", snapshot.inProgress?.type === "rebasing"
+        ? "Rebase is still in progress"
+        : "Rebase aborted");
+    }
+  }
+  catch (e: any) {
+    if (repos.activeId === id) state.pushToast("error", e?.data?.friendly ?? String(e));
+  }
+  finally {
+    if (loadingToastId !== null) state.dismissToast(loadingToastId);
+  }
 }
 </script>
 

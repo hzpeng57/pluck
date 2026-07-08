@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { X } from "lucide-vue-next";
 import { useRepoStateStore } from "../stores/repoState";
 const state = useRepoStateStore();
 </script>
@@ -7,10 +8,20 @@ const state = useRepoStateStore();
     <transition-group name="toast">
       <div v-for="t in state.toasts" :key="t.id"
            class="gl-toast flex items-start gap-2.5 px-3.5 py-2.5 rounded-lg text-[13px] max-w-md"
+           :role="t.level === 'error' ? 'alert' : 'status'"
+           :aria-busy="t.loading ? 'true' : undefined"
            :style="{ borderColor: t.level === 'error' ? 'var(--danger-ring)' : 'var(--border)' }">
-        <span class="mt-0.5 w-1.5 h-1.5 rounded-full shrink-0"
+        <span v-if="t.loading" class="gl-spinner mt-0.5 shrink-0" style="color: var(--accent)" />
+        <span v-else
+              class="mt-0.5 w-1.5 h-1.5 rounded-full shrink-0"
               :style="{ background: t.level === 'error' ? 'var(--danger)' : 'var(--info)' }" />
-        <span class="break-words whitespace-pre-wrap">{{ t.msg }}</span>
+        <span class="break-words whitespace-pre-wrap flex-1">{{ t.msg }}</span>
+        <button class="gl-icon-btn shrink-0 w-6 h-6"
+                title="Dismiss"
+                aria-label="Dismiss"
+                @click="state.dismissToast(t.id)">
+          <X :size="12" />
+        </button>
       </div>
     </transition-group>
   </div>

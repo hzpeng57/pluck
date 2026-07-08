@@ -5,7 +5,7 @@ import type { RepoSnapshot, CommitDetail, Commit, WorkingFile, ChangedFile, File
 
 const LOG_PAGE_SIZE = 200;
 
-interface Toast { id: number; level: "error" | "info"; msg: string }
+interface Toast { id: number; level: "error" | "info"; msg: string; loading?: boolean }
 interface ConfirmOptions {
   title: string;
   message: string;
@@ -46,6 +46,7 @@ export const useRepoStateStore = defineStore("repoState", () => {
   let snapshotRequestId = 0;
   let commitRequestId = 0;
   let diffRequestId = 0;
+  const toastTimers = new Map<number, number>();
 
   // 每次 snapshot 整体替换（首次 open / refresh / 任何 mutation 后回流），
   // 重置 log 分页游标。追加 (snapshot.log = [...]) 不会触发 ref 变化。
@@ -154,6 +155,7 @@ export const useRepoStateStore = defineStore("repoState", () => {
   }
 
   function clearRepoView() {
+    dismissLoadingToasts();
     snapshot.value = null;
     selectedLogBranch.value = null;
     clearSelectionState();
@@ -253,10 +255,32 @@ export const useRepoStateStore = defineStore("repoState", () => {
     }
   }
 
-  function pushToast(level: "error" | "info", msg: string) {
+  function dismissToast(id: number) {
+    const timer = toastTimers.get(id);
+    if (timer !== undefined) {
+      window.clearTimeout(timer);
+      toastTimers.delete(id);
+    }
+    toasts.value = toasts.value.filter(t => t.id !== id);
+  }
+
+  function dismissLoadingToasts() {
+    for (const id of toasts.value.filter(toast => toast.loading).map(toast => toast.id)) dismissToast(id);
+  }
+
+  function pushToast(level: "error" | "info", msg: string, options?: { loading?: boolean; durationMs?: number }) {
     const id = nextId++;
-    toasts.value.push({ id, level, msg });
-    setTimeout(() => { toasts.value = toasts.value.filter(t => t.id !== id); }, 6000);
+    toasts.value.push({ id, level, msg, loading: options?.loading });
+    if (!options?.loading) {
+      const durationMs = options?.durationMs ?? 6000;
+      const timer = window.setTimeout(() => { dismissToast(id); }, durationMs);
+      toastTimers.set(id, timer);
+    }
+    return id;
+  }
+
+  function pushLoadingToast(msg: string) {
+    return pushToast("info", msg, { loading: true });
   }
 
   async function open(id: string) {
@@ -322,7 +346,8 @@ export const useRepoStateStore = defineStore("repoState", () => {
     editMessageDialog, resetDialog, branchCreateDialog, branchRenameDialog, branchDeleteDialog,
     confirmDialog,
     logEnd, logLoadingMore,
-    open, refresh, setLogBranch, pushToast, selectCommit, clearSelectedCommit,
+    open, refresh, setLogBranch, pushToast, pushLoadingToast, dismissToast,
+    selectCommit, clearSelectedCommit,
     openWorkingDiff, openCommitFileDiff, closeReviewMode, rollbackCurrentWorkingFile,
     setSingleSelection, toggleSelection, selectRange, clearSelection,
     openEditMessageDialog, closeEditMessageDialog, openResetDialog, closeResetDialog,

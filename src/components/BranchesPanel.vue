@@ -157,8 +157,21 @@ async function mergeIntoCurrent() {
 async function pullIntoCurrentRebase() {
   if (!menu.value || !repos.activeId) return;
   const id = repos.activeId, source = menu.value.branch.name; menu.value = null;
-  try { state.snapshot = await invoke<RepoSnapshot>("pull_into_current_rebase", { id, source }); }
-  catch (e: any) { state.pushToast("error", e?.data?.friendly ?? String(e)); }
+  const loadingToastId = state.pushLoadingToast(`Rebasing onto ${source}…`);
+  try {
+    const snapshot = await invoke<RepoSnapshot>("pull_into_current_rebase", { id, source });
+    if (repos.activeId !== id) return;
+    state.snapshot = snapshot;
+    state.pushToast("info", snapshot.inProgress?.type === "rebasing"
+      ? "Rebase paused; continue when ready"
+      : "Rebase successful");
+  }
+  catch (e: any) {
+    if (repos.activeId === id) state.pushToast("error", e?.data?.friendly ?? String(e));
+  }
+  finally {
+    state.dismissToast(loadingToastId);
+  }
 }
 const currentBranchName = computed(() => state.snapshot?.head.branch ?? null);
 function toggleMenuPin() {

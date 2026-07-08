@@ -23,6 +23,7 @@ export interface RepoSnapshot {
   head: HeadInfo; files: WorkingFile[]; branches: BranchList; log: Commit[];
   remoteStatus: RemoteStatus; inProgress: GitOp | null; me: GitIdentity;
 }
+export interface RebaseResult { snapshot: RepoSnapshot; cancelled: boolean }
 export interface RepoMeta { id: string; path: string; name: string }
 export type ChangedFileStatus = "added" | "modified" | "deleted" | "renamed" | "copied" | "typechange";
 export interface ChangedFile { status: ChangedFileStatus; path: string; oldPath: string | null }
