@@ -426,6 +426,36 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .gl-splitter--h:hover > .gl-splitter-line { height: 2px; width: 100%; }
   .gl-splitter--h:active > .gl-splitter-line { height: 2px; width: 100%; }
 
+  .gl-segmented {
+    display: inline-flex;
+    align-items: center;
+    height: 28px;
+    padding: 2px;
+    border: 1px solid var(--border-soft);
+    border-radius: 7px;
+    background: color-mix(in srgb, var(--bg) 72%, var(--panel));
+  }
+
+  .gl-segmented-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 22px;
+    border-radius: 5px;
+    color: var(--fg-3);
+  }
+
+  .gl-segmented-btn:hover {
+    color: var(--fg);
+    background: var(--hover);
+  }
+
+  .gl-segmented-btn.is-active {
+    color: var(--accent-2);
+    background: var(--accent-soft);
+  }
+
   .gl-diff-shell {
     display: flex;
     flex-direction: column;
@@ -499,6 +529,67 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   }
 
   .gl-diff-scroll.is-wrap .gl-diff-code {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .gl-diff-split-table {
+    width: max-content;
+    min-width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.55;
+  }
+
+  .gl-diff-split-row td {
+    white-space: pre;
+    vertical-align: top;
+  }
+
+  .gl-diff-split-code {
+    min-width: 380px;
+    width: 50%;
+    padding: 0 14px 0 8px;
+    color: var(--fg-2);
+    user-select: text;
+    -webkit-user-select: text;
+  }
+
+  .gl-diff-split-code:nth-child(2) {
+    border-right: 1px solid var(--border-soft);
+  }
+
+  .gl-diff-split-code.is-added {
+    background: color-mix(in srgb, var(--success-soft) 72%, var(--diff-bg));
+    color: var(--success);
+  }
+
+  .gl-diff-split-code.is-deleted {
+    background: color-mix(in srgb, var(--danger-soft) 74%, var(--diff-bg));
+    color: var(--danger);
+  }
+
+  .gl-diff-split-code.is-empty {
+    background: color-mix(in srgb, var(--diff-gutter-bg) 52%, var(--diff-bg));
+  }
+
+  .gl-diff-split-code.is-notice {
+    color: var(--fg-3);
+    font-style: italic;
+  }
+
+  .gl-diff-inline-change {
+    border-radius: 3px;
+    background: color-mix(in srgb, currentColor 18%, transparent);
+  }
+
+  .gl-diff-scroll.is-wrap .gl-diff-split-table {
+    width: 100%;
+  }
+
+  .gl-diff-scroll.is-wrap .gl-diff-split-code {
     white-space: pre-wrap;
     overflow-wrap: anywhere;
   }

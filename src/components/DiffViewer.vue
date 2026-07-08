@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
-import { ArrowLeft, RotateCcw, WrapText } from "lucide-vue-next";
+import { computed, ref, watch } from "vue";
+import { ArrowLeft, Columns2, PanelTopBottomDashed, RotateCcw, WrapText } from "lucide-vue-next";
 import { useRepoStateStore } from "../stores/repoState";
 import type { DiffLine, DiffTarget, FileDiff } from "../types/git";
+import { toSplitDiffHunks, type SplitDiffCell } from "../lib/diffLayout";
 
 const emit = defineEmits<{
   back: [];
@@ -11,7 +12,19 @@ const emit = defineEmits<{
 
 const state = useRepoStateStore();
 const wrap = ref(false);
+type DiffViewMode = "unified" | "split";
+const MODE_KEY = "pluck:diffViewMode";
+const mode = ref<DiffViewMode>(loadMode());
+
+function loadMode(): DiffViewMode {
+  return localStorage.getItem(MODE_KEY) === "split" ? "split" : "unified";
+}
+
+watch(mode, value => localStorage.setItem(MODE_KEY, value));
+
 const diff = computed(() => state.selectedDiff);
+const splitHunks = computed(() => toSplitDiffHunks(diff.value));
+const showSplit = computed(() => mode.value === "split" && !!diff.value && !diff.value.binary && diff.value.hunks.length > 0);
 const target = computed(() => state.diffTarget);
 const isWorkingTreeTarget = computed(() => target.value?.kind === "workingTree");
 const isConflictedDiff = computed(() => (diff.value?.status ?? target.value?.status) === "conflicted");
@@ -31,6 +44,15 @@ function mark(line: DiffLine) {
   if (line.kind === "deleted") return "-";
   if (line.kind === "noNewline") return "\\";
   return "";
+}
+
+function cellClass(cell: SplitDiffCell) {
+  return {
+    "is-added": cell.kind === "added",
+    "is-deleted": cell.kind === "deleted",
+    "is-empty": cell.kind === "empty",
+    "is-notice": cell.kind === "notice",
+  };
 }
 
 function formatPath(file: FileDiff | DiffTarget | null) {
@@ -60,6 +82,22 @@ function formatPath(file: FileDiff | DiffTarget | null) {
       </template>
       <div v-else class="flex-1" />
 
+      <div class="gl-segmented shrink-0" title="Diff layout">
+        <button class="gl-segmented-btn"
+                :class="{ 'is-active': mode === 'unified' }"
+                :aria-pressed="mode === 'unified'"
+                title="Unified diff"
+                @click="mode = 'unified'">
+          <PanelTopBottomDashed :size="13" />
+        </button>
+        <button class="gl-segmented-btn"
+                :class="{ 'is-active': mode === 'split' }"
+                :aria-pressed="mode === 'split'"
+                title="Side-by-side diff"
+                @click="mode = 'split'">
+          <Columns2 :size="13" />
+        </button>
+      </div>
       <button class="gl-command-btn h-7 px-2"
               :class="{ 'gl-btn-primary': wrap }"
               :aria-pressed="wrap"
@@ -97,8 +135,8 @@ function formatPath(file: FileDiff | DiffTarget | null) {
       <span class="text-[13px]">No textual changes</span>
       <span class="text-[12.5px] gl-selectable">{{ diff.path }}</span>
     </div>
-    <div v-else class="gl-diff-scroll" :class="{ 'is-wrap': wrap }">
-      <table class="gl-diff-table">
+    <div v-else class="gl-diff-scroll" :class="{ 'is-wrap': wrap, 'is-split': showSplit }">
+      <table v-if="!showSplit" class="gl-diff-table">
         <tbody v-for="(hunk, hunkIndex) in diff.hunks" :key="`${hunk.header}:${hunkIndex}`">
           <tr>
             <td class="gl-diff-hunk px-3 py-1 gl-selectable" colspan="4">{{ hunk.header }}</td>
@@ -111,6 +149,29 @@ function formatPath(file: FileDiff | DiffTarget | null) {
             <td class="gl-diff-line-no">{{ line.newNumber ?? "" }}</td>
             <td class="gl-diff-mark">{{ mark(line) }}</td>
             <td class="gl-diff-code">{{ line.content }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <table v-else class="gl-diff-split-table">
+        <tbody v-for="(hunk, hunkIndex) in splitHunks" :key="`${hunk.header}:${hunkIndex}`">
+          <tr>
+            <td class="gl-diff-hunk px-3 py-1 gl-selectable" colspan="4">{{ hunk.header }}</td>
+          </tr>
+          <tr v-for="(row, rowIndex) in hunk.rows"
+              :key="`${hunk.header}:${hunkIndex}:${rowIndex}`"
+              class="gl-diff-split-row">
+            <td class="gl-diff-line-no">{{ row.left.number ?? "" }}</td>
+            <td class="gl-diff-split-code gl-selectable" :class="cellClass(row.left)">
+              <template v-for="segment in row.left.segments" :key="`${segment.changed}:${segment.text}`">
+                <span :class="{ 'gl-diff-inline-change': segment.changed }">{{ segment.text }}</span>
+              </template>
+            </td>
+            <td class="gl-diff-line-no">{{ row.right.number ?? "" }}</td>
+            <td class="gl-diff-split-code gl-selectable" :class="cellClass(row.right)">
+              <template v-for="segment in row.right.segments" :key="`${segment.changed}:${segment.text}`">
+                <span :class="{ 'gl-diff-inline-change': segment.changed }">{{ segment.text }}</span>
+              </template>
+            </td>
           </tr>
         </tbody>
       </table>
