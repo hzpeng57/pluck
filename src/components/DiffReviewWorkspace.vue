@@ -140,6 +140,13 @@ async function openFile() {
   }
 }
 
+function pickNextAfterRollback(beforeIndex: number): WorkingFile | null {
+  const files = state.snapshot?.files ?? [];
+  if (files.length === 0) return null;
+  const clamped = Math.min(beforeIndex >= 0 ? beforeIndex : 0, files.length - 1);
+  return files[clamped] ?? files[files.length - 1] ?? null;
+}
+
 async function rollback() {
   if (!repos.activeId || state.diffTarget?.kind !== "workingTree") return;
   const repoId = repos.activeId;
@@ -164,6 +171,7 @@ async function rollback() {
     current.oldPath !== target.oldPath ||
     current.status !== target.status
   ) return;
+  const beforeIndex = currentIndex.value;
   try {
     await state.rollbackCurrentWorkingFile(repoId);
     if (state.diffError) {
@@ -171,6 +179,10 @@ async function rollback() {
       return;
     }
     state.pushToast("info", `Rolled back ${target.path}`);
+    const next = pickNextAfterRollback(beforeIndex);
+    if (next && repos.activeId === repoId) {
+      await state.openWorkingDiff(repoId, next);
+    }
   } catch (e: any) {
     state.pushToast("error", e?.data?.friendly ?? e?.message ?? String(e));
   }
