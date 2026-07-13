@@ -10,6 +10,7 @@
     "tauri": "tauri",
     "website:dev": "vite --config website/vite.config.ts",
     "website:build": "tsc -p website/tsconfig.json --noEmit && vite build --config website/vite.config.ts",
+    "website:images": "node website/scripts/optimize-images.mjs /tmp/pluck-website-captures",
     "website:preview": "vite preview --config website/vite.config.ts",
     "website:test": "pnpm website:build && playwright test -c website/playwright.config.ts",
     "website:lighthouse:desktop": "lhci autorun --config=website/lighthouserc.desktop.cjs",
