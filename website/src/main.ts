@@ -3,7 +3,6 @@ import {
   Check,
   Download,
   ExternalLink,
-  GitFork as Github,
   Languages,
   Menu,
   X,
@@ -13,7 +12,7 @@ import {
 document.documentElement.classList.add("js");
 
 createIcons({
-  icons: { ArrowRight, Check, Download, ExternalLink, Github, Languages, Menu, X },
+  icons: { ArrowRight, Check, Download, ExternalLink, Languages, Menu, X },
   attrs: { "aria-hidden": "true", "stroke-width": "1.8" },
 });
 
@@ -23,6 +22,7 @@ const navigation = document.querySelector<HTMLElement>("[data-site-navigation]")
 function setMenu(open: boolean): void {
   if (!menuButton || !navigation) return;
   menuButton.setAttribute("aria-expanded", String(open));
+  menuButton.setAttribute("aria-label", menuButton.dataset[open ? "labelClose" : "labelOpen"] ?? "");
   navigation.toggleAttribute("data-open", open);
   document.body.toggleAttribute("data-menu-open", open);
 }
@@ -40,6 +40,11 @@ window.addEventListener("keydown", (event) => {
     setMenu(false);
     menuButton.focus();
   }
+});
+
+const wideNavigation = window.matchMedia("(min-width: 961px)");
+wideNavigation.addEventListener("change", (event) => {
+  if (event.matches) setMenu(false);
 });
 
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;

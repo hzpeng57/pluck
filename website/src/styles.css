@@ -376,7 +376,7 @@ h3 {
 }
 
 .hero-note svg {
-  color: var(--green);
+  color: var(--accent);
 }
 
 .hero-media {
@@ -424,13 +424,9 @@ h3 {
   opacity: 0.6;
 }
 
-.window-dots i:nth-child(1) { background: var(--danger); }
-.window-dots i:nth-child(2) { background: var(--yellow); }
-.window-dots i:nth-child(3) { background: var(--green); }
-
 .media-state {
   justify-self: end;
-  color: var(--green);
+  color: var(--accent);
 }
 
 .git-topology {
@@ -617,6 +613,7 @@ h3 {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--panel);
+  color: var(--accent);
   transition: border-color 140ms ease, background-color 140ms ease, transform 140ms ease;
 }
 
@@ -638,11 +635,6 @@ h3 {
   content: "";
 }
 
-.workflow-card:nth-child(1) { color: var(--blue); }
-.workflow-card:nth-child(2) { color: var(--pink); }
-.workflow-card:nth-child(3) { color: var(--yellow); }
-.workflow-card:nth-child(4) { color: var(--green); }
-
 .workflow-card h3 {
   margin: 42px 0 13px;
   color: var(--fg);
@@ -661,10 +653,10 @@ h3 {
   font-weight: 700;
 }
 
-.index-blue { color: var(--blue); }
-.index-pink { color: var(--pink); }
-.index-yellow { color: var(--yellow); }
-.index-green { color: var(--green); }
+.index-blue,
+.index-pink,
+.index-yellow,
+.index-green { color: var(--accent); }
 
 .principles-section {
   padding-block: 104px;
@@ -757,7 +749,7 @@ h3 {
 }
 
 .platform-list svg {
-  color: var(--green);
+  color: var(--accent);
 }
 
 .install-panel {
