@@ -25,3 +25,7 @@ dist-ssr
 
 # Controller scratch
 .superpowers/
+
+website/dist/
+website/test-results/
+website/.lighthouse/

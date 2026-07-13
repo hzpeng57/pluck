@@ -7,7 +7,13 @@
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "website:dev": "vite --config website/vite.config.ts",
+    "website:build": "tsc -p website/tsconfig.json --noEmit && vite build --config website/vite.config.ts",
+    "website:preview": "vite preview --config website/vite.config.ts",
+    "website:test": "pnpm website:build && playwright test -c website/playwright.config.ts",
+    "website:lighthouse:desktop": "lhci autorun --config=website/lighthouserc.desktop.cjs",
+    "website:lighthouse:mobile": "lhci autorun --config=website/lighthouserc.mobile.cjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
@@ -15,14 +21,19 @@
     "@tauri-apps/plugin-opener": "^2",
     "@tauri-apps/plugin-process": "~2.3.1",
     "@tauri-apps/plugin-updater": "~2.10.1",
+    "lucide": "^1.24.0",
     "lucide-vue-next": "^1.0.0",
     "pinia": "^2.2.6",
     "vue": "^3.5.13"
   },
   "devDependencies": {
+    "@lhci/cli": "^0.15.1",
+    "@playwright/test": "^1.61.1",
     "@tailwindcss/vite": "^4.0.0",
     "@tauri-apps/cli": "^2",
+    "@types/node": "^26.1.1",
     "@vitejs/plugin-vue": "^5.2.1",
+    "sharp": "^0.35.3",
     "tailwindcss": "^4.0.0",
     "typescript": "~5.6.2",
     "vite": "^6.0.3",
