@@ -42,22 +42,28 @@ test("mobile navigation unlocks the page above its breakpoint", async ({ page })
 
 test("mobile navigation activation does not shift the initial layout", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
+  let matchedScriptRequests = 0;
   let releaseScript!: () => void;
   const scriptBlocked = new Promise<void>((resolve) => {
     releaseScript = resolve;
   });
   await page.route("**/assets/*.js", async (route) => {
+    matchedScriptRequests += 1;
     await scriptBlocked;
     await route.continue();
   });
   const navigation = page.goto("./", { waitUntil: "domcontentloaded" });
   await page.waitForFunction(
-    () => getComputedStyle(document.querySelector(".site-header")!).position === "sticky",
+    () => {
+      const header = document.querySelector(".site-header");
+      return header !== null && getComputedStyle(header).position === "sticky";
+    },
   );
   const initialMainTop = await page.locator("main").evaluate((element) => element.getBoundingClientRect().top);
 
   releaseScript();
   await navigation;
+  expect(matchedScriptRequests).toBeGreaterThan(0);
 
   const finalMainTop = await page.locator("main").evaluate((element) => element.getBoundingClientRect().top);
   expect(Math.abs(finalMainTop - initialMainTop)).toBeLessThan(1);
