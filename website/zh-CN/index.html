@@ -49,106 +49,191 @@
     </script>
   </head>
   <body>
-    <header>
-      <a href="/pluck/" aria-label="Pluck 首页">Pluck</a>
-      <nav aria-label="主导航">
-        <a href="#features">功能</a>
-        <a href="#workflow">工作流</a>
-        <a href="#principles">设计原则</a>
-        <a href="#download">下载</a>
-        <a href="#open-source">开源</a>
-      </nav>
-      <nav aria-label="语言">
-        <a href="/pluck/" lang="en">English</a>
-        <a href="/pluck/zh-CN/" lang="zh-CN" aria-current="page">简体中文</a>
-      </nav>
+    <a class="skip-link" href="#main-content">跳到主要内容</a>
+    <header class="site-header">
+      <div class="nav-shell">
+        <a class="brand" href="/pluck/zh-CN/" aria-label="Pluck 首页">
+          <img src="/pluck/favicon.png" alt="" width="28" height="28" />
+          <span>Pluck</span>
+        </a>
+        <button class="menu-toggle" type="button" data-menu-toggle aria-controls="site-navigation"
+                aria-expanded="false" aria-label="打开导航">
+          <i data-lucide="menu" data-icon-open></i>
+          <i data-lucide="x" data-icon-close></i>
+        </button>
+        <nav id="site-navigation" data-site-navigation aria-label="主导航">
+          <div class="nav-links">
+            <a href="#features">功能</a>
+            <a href="#workflow">工作流</a>
+            <a href="#principles">设计原则</a>
+            <a href="#download">下载</a>
+            <a href="#open-source">开源</a>
+          </div>
+          <div class="nav-actions">
+            <a class="nav-icon-link" href="/pluck/" lang="en">
+              <i data-lucide="languages"></i><span>English</span>
+            </a>
+            <a class="nav-icon-link" href="https://github.com/hzpeng57/pluck">
+              <i data-lucide="github"></i><span>GitHub</span>
+            </a>
+          </div>
+        </nav>
+      </div>
     </header>
 
     <main id="main-content">
-      <section id="hero" aria-labelledby="hero-title">
-        <h1 id="hero-title">Pluck</h1>
-        <p>让熟悉的 Git 操作成为肌肉记忆。</p>
-        <p>一款专注于 macOS 的 Git 客户端，操作方式参考 JetBrains 系列 IDE 的 Git 工作流。</p>
-        <p>
-          <a href="https://github.com/hzpeng57/pluck/releases/latest">下载 Apple Silicon 版本</a>
-          <a href="https://github.com/hzpeng57/pluck">在 GitHub 查看</a>
-        </p>
+      <section id="hero" class="hero-section" aria-labelledby="hero-title">
+        <div class="hero-layout">
+          <div class="hero-copy" data-reveal>
+            <p class="section-kicker"><span class="status-dot"></span> 原生 macOS Git 客户端</p>
+            <h1 id="hero-title">Pluck</h1>
+            <p class="hero-tagline">让熟悉的 Git 操作成为肌肉记忆。</p>
+            <p class="hero-description">一款专注于 macOS 的 Git 客户端，操作方式参考 JetBrains 系列 IDE 的 Git 工作流。</p>
+            <div class="hero-actions">
+              <a class="button button-primary" href="https://github.com/hzpeng57/pluck/releases/latest">
+                <i data-lucide="download"></i><span>下载 Apple Silicon 版本</span>
+              </a>
+              <a class="button button-secondary" href="https://github.com/hzpeng57/pluck">
+                <i data-lucide="github"></i><span>在 GitHub 查看</span>
+              </a>
+            </div>
+            <p class="hero-note"><i data-lucide="check"></i> 个人使用 alpha 版本 · macOS · Apple Silicon</p>
+          </div>
+
+          <figure class="hero-media" data-media-slot data-reveal aria-label="Git 历史图谱">
+            <div class="media-toolbar" aria-hidden="true">
+              <span class="window-dots"><i></i><i></i><i></i></span>
+              <span>pluck / main</span>
+              <span class="media-state">working tree clean</span>
+            </div>
+            <div class="git-topology" aria-hidden="true">
+              <div class="topology-rail rail-main"></div>
+              <div class="topology-rail rail-branch"></div>
+              <div class="commit-row row-1"><span class="commit-node node-green"></span><b>main</b><code>v0.1.13</code></div>
+              <div class="commit-row row-2"><span class="commit-node node-blue"></span><b>feat(log)</b><code>side-by-side diff</code></div>
+              <div class="commit-row row-3"><span class="commit-node node-pink"></span><b>fix(rebase)</b><code>preserve commit order</code></div>
+              <div class="commit-row row-4"><span class="commit-node node-yellow"></span><b>chore</b><code>refresh snapshot</code></div>
+            </div>
+            <figcaption>清晰查看每个分支、提交与变更。</figcaption>
+          </figure>
+        </div>
       </section>
 
-      <section id="features" aria-labelledby="features-title">
-        <h2 id="features-title">熟悉的工作流，完整的上下文。</h2>
-        <p>
-          在一个专注的工作区中查看提交历史、工作区变更和分支操作。处理日常 Git 工作时，始终保留每项变更背后的上下文。
-        </p>
+      <section id="features" class="feature-band" aria-labelledby="features-title">
+        <div class="band-layout" data-reveal>
+          <div>
+            <p class="section-kicker">01 / 上下文优先</p>
+            <h2 id="features-title">熟悉的工作流，完整的上下文。</h2>
+          </div>
+          <p class="band-copy">
+            在一个专注的工作区中查看提交历史、工作区变更和分支操作。处理日常 Git 工作时，始终保留每项变更背后的上下文。
+          </p>
+        </div>
       </section>
 
-      <section id="workflow" aria-labelledby="workflow-title">
-        <h2 id="workflow-title">围绕仓库构建的工作流</h2>
-        <article>
-          <h3>可视化历史</h3>
-          <p>在清晰的历史记录中追踪分支与提交，无需打断当前流程即可打开并查看任意变更。</p>
-        </article>
-        <article>
-          <h3>为审阅而生的 Diff</h3>
-          <p>查看已暂存和未暂存的变更，同时保留相关文件与提交上下文，方便理解和审阅。</p>
-        </article>
-        <article>
-          <h3>交互式 Rebase</h3>
-          <p>通过引导式交互 rebase 流程，对提交进行重新排序、合并、编辑或丢弃。</p>
-        </article>
-        <article>
-          <h3>安全的分支操作</h3>
-          <p>创建、切换、重命名或删除分支前，先看清仓库当前状态再执行操作。</p>
-        </article>
+      <section id="workflow" class="workflow-section" aria-labelledby="workflow-title">
+        <div class="section-shell">
+          <div class="section-heading" data-reveal>
+            <p class="section-kicker">02 / 仓库工作流</p>
+            <h2 id="workflow-title">围绕仓库构建的工作流</h2>
+          </div>
+          <div class="workflow-grid" data-reveal>
+            <article class="workflow-card">
+              <span class="card-index index-blue">01</span>
+              <h3>可视化历史</h3>
+              <p>在清晰的历史记录中追踪分支与提交，无需打断当前流程即可打开并查看任意变更。</p>
+            </article>
+            <article class="workflow-card">
+              <span class="card-index index-pink">02</span>
+              <h3>为审阅而生的 Diff</h3>
+              <p>查看已暂存和未暂存的变更，同时保留相关文件与提交上下文，方便理解和审阅。</p>
+            </article>
+            <article class="workflow-card">
+              <span class="card-index index-yellow">03</span>
+              <h3>交互式 Rebase</h3>
+              <p>通过引导式交互 rebase 流程，对提交进行重新排序、合并、编辑或丢弃。</p>
+            </article>
+            <article class="workflow-card">
+              <span class="card-index index-green">04</span>
+              <h3>安全的分支操作</h3>
+              <p>创建、切换、重命名或删除分支前，先看清仓库当前状态再执行操作。</p>
+            </article>
+          </div>
+        </div>
       </section>
 
-      <section id="principles" aria-labelledby="principles-title">
-        <h2 id="principles-title">Pluck 的构建原则</h2>
-        <article>
-          <h3>熟悉的设计</h3>
-          <p>常用 Git 操作沿用开发者在 JetBrains 系列 IDE 中熟悉的交互方式。</p>
-        </article>
-        <article>
-          <h3>Git 作为底层</h3>
-          <p>Pluck 通过 Git CLI 执行仓库操作，让 Git 本身始终作为事实来源。</p>
-        </article>
-        <article>
-          <h3>专注于工作本身</h3>
-          <p>界面始终围绕理解代码变更和完成下一步仓库操作展开。</p>
-        </article>
+      <section id="principles" class="principles-section" aria-labelledby="principles-title">
+        <div class="section-shell" data-reveal>
+          <div class="section-heading principles-heading">
+            <p class="section-kicker">03 / 底层逻辑</p>
+            <h2 id="principles-title">Pluck 的构建原则</h2>
+          </div>
+          <div class="principles-list">
+            <article>
+              <span>01</span>
+              <div><h3>熟悉的设计</h3><p>常用 Git 操作沿用开发者在 JetBrains 系列 IDE 中熟悉的交互方式。</p></div>
+            </article>
+            <article>
+              <span>02</span>
+              <div><h3>Git 作为底层</h3><p>Pluck 通过 Git CLI 执行仓库操作，让 Git 本身始终作为事实来源。</p></div>
+            </article>
+            <article>
+              <span>03</span>
+              <div><h3>专注于工作本身</h3><p>界面始终围绕理解代码变更和完成下一步仓库操作展开。</p></div>
+            </article>
+          </div>
+        </div>
       </section>
 
-      <section id="download" aria-labelledby="download-title">
-        <h2 id="download-title">为 Apple Silicon 构建</h2>
-        <p>Pluck <strong>__PLUCK_VERSION__</strong> 是面向个人使用的 alpha 版本，支持搭载 Apple Silicon 的 macOS。</p>
-        <ul>
-          <li>个人使用 alpha 版本</li>
-          <li>macOS</li>
-          <li>Apple Silicon</li>
-        </ul>
-        <a href="https://github.com/hzpeng57/pluck/releases/latest">下载 Apple Silicon 版本</a>
-        <h3>通过 DMG 安装</h3>
-        <ol>
-          <li>从最新 Release 下载 DMG 文件。</li>
-          <li>打开 DMG，将 Pluck 拖入“应用程序”文件夹。</li>
-          <li>如果 macOS 阻止打开应用，请打开“终端”并运行：</li>
-        </ol>
-        <pre><code>xattr -dr com.apple.quarantine /Applications/Pluck.app</code></pre>
+      <section id="download" class="download-section" aria-labelledby="download-title">
+        <div class="download-layout" data-reveal>
+          <div class="download-copy">
+            <p class="section-kicker">04 / 获取 Pluck</p>
+            <h2 id="download-title">为 Apple Silicon 构建</h2>
+            <p>Pluck <strong>__PLUCK_VERSION__</strong> 是面向个人使用的 alpha 版本，支持搭载 Apple Silicon 的 macOS。</p>
+            <ul class="platform-list">
+              <li><i data-lucide="check"></i> 个人使用 alpha 版本</li>
+              <li><i data-lucide="check"></i> macOS</li>
+              <li><i data-lucide="check"></i> Apple Silicon</li>
+            </ul>
+            <a class="button button-primary" href="https://github.com/hzpeng57/pluck/releases/latest">
+              <i data-lucide="download"></i><span>下载最新 Release</span>
+            </a>
+          </div>
+          <div class="install-panel">
+            <h3>通过 DMG 安装</h3>
+            <ol>
+              <li><span>1</span>从最新 Release 下载 DMG 文件。</li>
+              <li><span>2</span>打开 DMG，将 Pluck 拖入“应用程序”文件夹。</li>
+              <li><span>3</span>如果 macOS 阻止打开应用，请打开“终端”并运行：</li>
+            </ol>
+            <pre><code>xattr -dr com.apple.quarantine /Applications/Pluck.app</code></pre>
+          </div>
+        </div>
       </section>
 
-      <section id="open-source" aria-labelledby="open-source-title">
-        <h2 id="open-source-title">开放开发</h2>
-        <p>
-          Pluck 是开源项目。你可以在
-          <a href="https://github.com/hzpeng57/pluck">GitHub 仓库</a>中阅读代码、关注开发进度并报告问题。
-        </p>
-        <p><a href="https://github.com/hzpeng57/pluck/releases/latest">查看最新 Release</a></p>
-        <p>Pluck 是独立项目，与 JetBrains 无关联，亦未获得 JetBrains 的认可或赞助。</p>
+      <section id="open-source" class="open-source-section" aria-labelledby="open-source-title">
+        <div class="open-source-layout" data-reveal>
+          <div>
+            <p class="section-kicker">05 / 开源</p>
+            <h2 id="open-source-title">开放开发</h2>
+          </div>
+          <div class="open-source-copy">
+            <p>
+              Pluck 是开源项目。你可以在
+              <a class="text-link" href="https://github.com/hzpeng57/pluck">GitHub 仓库 <i data-lucide="external-link"></i></a>中阅读代码、关注开发进度并报告问题。
+            </p>
+            <a class="arrow-link" href="https://github.com/hzpeng57/pluck/releases/latest">
+              查看最新 Release <i data-lucide="arrow-right"></i>
+            </a>
+          </div>
+        </div>
+        <p class="disclaimer">Pluck 是独立项目，与 JetBrains 无关联，亦未获得 JetBrains 的认可或赞助。</p>
       </section>
     </main>
 
-    <footer>
-      <p>Pluck，一款专注于 macOS 的 Git 客户端。</p>
+    <footer class="site-footer">
+      <p><strong>Pluck</strong> · 一款专注于 macOS 的 Git 客户端。</p>
       <nav aria-label="页脚导航">
         <a href="https://github.com/hzpeng57/pluck">GitHub</a>
         <a href="/pluck/" lang="en">English</a>
