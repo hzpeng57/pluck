@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://hzpeng57.github.io/pluck/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://hzpeng57.github.io/pluck/" />
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://hzpeng57.github.io/pluck/zh-CN/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://hzpeng57.github.io/pluck/" />
+  </url>
+  <url>
+    <loc>https://hzpeng57.github.io/pluck/zh-CN/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://hzpeng57.github.io/pluck/" />
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://hzpeng57.github.io/pluck/zh-CN/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://hzpeng57.github.io/pluck/" />
+  </url>
+</urlset>

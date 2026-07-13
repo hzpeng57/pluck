@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://hzpeng57.github.io/pluck/sitemap.xml

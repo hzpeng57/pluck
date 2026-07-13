@@ -3,17 +3,30 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Pluck __PLUCK_VERSION__</title>
+    <meta name="robots" content="noindex" />
+    <title>Page not found - Pluck</title>
+    <link rel="icon" type="image/png" href="/pluck/favicon.png" />
+    <link rel="icon" type="image/x-icon" href="/pluck/favicon.ico" />
     <link rel="stylesheet" href="/src/styles.css" />
   </head>
   <body>
     <main id="main-content">
-      <h1>Page not found / 页面未找到</h1>
-      <nav aria-label="Language">
-        <a href="/pluck/">English</a>
-        <a href="/pluck/zh-CN/">简体中文</a>
-      </nav>
-      <a href="https://github.com/hzpeng57/pluck/releases/latest">Download / 下载</a>
+      <section aria-labelledby="not-found-title">
+        <h1 id="not-found-title">Page not found</h1>
+        <p>The page you requested does not exist. Return to the Pluck website or visit the project on GitHub.</p>
+        <nav aria-label="English destinations">
+          <a href="/pluck/">Pluck in English</a>
+          <a href="https://github.com/hzpeng57/pluck">View on GitHub</a>
+        </nav>
+      </section>
+      <section lang="zh-CN" aria-labelledby="not-found-title-zh">
+        <h2 id="not-found-title-zh">页面未找到</h2>
+        <p>你访问的页面不存在。请返回 Pluck 官网，或前往 GitHub 查看项目。</p>
+        <nav aria-label="中文链接">
+          <a href="/pluck/zh-CN/">Pluck 简体中文</a>
+          <a href="https://github.com/hzpeng57/pluck">在 GitHub 查看</a>
+        </nav>
+      </section>
     </main>
     <script type="module" src="/src/main.ts"></script>
   </body>

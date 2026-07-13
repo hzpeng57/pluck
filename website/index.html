@@ -3,14 +3,159 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Pluck __PLUCK_VERSION__</title>
+    <title>Pluck - A focused Git client for macOS</title>
+    <meta
+      name="description"
+      content="Pluck is a focused macOS Git client inspired by the Git workflows in JetBrains IDEs."
+    />
+    <link rel="canonical" href="https://hzpeng57.github.io/pluck/" />
+    <link rel="alternate" hreflang="en" href="https://hzpeng57.github.io/pluck/" />
+    <link rel="alternate" hreflang="zh-CN" href="https://hzpeng57.github.io/pluck/zh-CN/" />
+    <link rel="alternate" hreflang="x-default" href="https://hzpeng57.github.io/pluck/" />
+    <link rel="icon" type="image/png" href="/pluck/favicon.png" />
+    <link rel="icon" type="image/x-icon" href="/pluck/favicon.ico" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Pluck" />
+    <meta property="og:title" content="Pluck - A focused Git client for macOS" />
+    <meta
+      property="og:description"
+      content="A focused macOS Git client, inspired by the Git workflows in JetBrains IDEs."
+    />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:url" content="https://hzpeng57.github.io/pluck/" />
+    <meta property="og:image" content="https://hzpeng57.github.io/pluck/og/pluck-cover.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Pluck - A focused Git client for macOS" />
+    <meta
+      name="twitter:description"
+      content="A focused macOS Git client, inspired by the Git workflows in JetBrains IDEs."
+    />
+    <meta name="twitter:image" content="https://hzpeng57.github.io/pluck/og/pluck-cover.png" />
     <link rel="stylesheet" href="/src/styles.css" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Pluck",
+        "description": "A focused macOS Git client, inspired by the Git workflows in JetBrains IDEs.",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "macOS",
+        "softwareVersion": "__PLUCK_VERSION__",
+        "isAccessibleForFree": true,
+        "url": "https://hzpeng57.github.io/pluck/",
+        "downloadUrl": "https://github.com/hzpeng57/pluck/releases/latest",
+        "sameAs": "https://github.com/hzpeng57/pluck"
+      }
+    </script>
   </head>
   <body>
+    <header>
+      <a href="/pluck/" aria-label="Pluck home">Pluck</a>
+      <nav aria-label="Primary navigation">
+        <a href="#features">Features</a>
+        <a href="#workflow">Workflow</a>
+        <a href="#principles">Principles</a>
+        <a href="#download">Download</a>
+        <a href="#open-source">Open source</a>
+      </nav>
+      <nav aria-label="Language">
+        <a href="/pluck/" lang="en" aria-current="page">English</a>
+        <a href="/pluck/zh-CN/" lang="zh-CN">简体中文</a>
+      </nav>
+    </header>
+
     <main id="main-content">
-      <h1>Pluck</h1>
-      <a href="https://github.com/hzpeng57/pluck/releases/latest">Download</a>
+      <section id="hero" aria-labelledby="hero-title">
+        <h1 id="hero-title">Pluck</h1>
+        <p>Git with developer muscle memory.</p>
+        <p>A focused macOS Git client, inspired by the Git workflows in JetBrains IDEs.</p>
+        <p>
+          <a href="https://github.com/hzpeng57/pluck/releases/latest">Download for Apple Silicon</a>
+          <a href="https://github.com/hzpeng57/pluck">View on GitHub</a>
+        </p>
+      </section>
+
+      <section id="features" aria-labelledby="features-title">
+        <h2 id="features-title">Familiar workflows. Full context.</h2>
+        <p>
+          Keep history, working-tree changes, and branch actions together in one focused workspace. Move through
+          everyday Git work while keeping the context behind each change in view.
+        </p>
+      </section>
+
+      <section id="workflow" aria-labelledby="workflow-title">
+        <h2 id="workflow-title">A workflow built around your repository</h2>
+        <article>
+          <h3>Visual history</h3>
+          <p>Follow branches and commits in a readable history, then open any change without leaving the flow.</p>
+        </article>
+        <article>
+          <h3>Review-ready diff</h3>
+          <p>Inspect staged and unstaged changes with the surrounding file and commit context close at hand.</p>
+        </article>
+        <article>
+          <h3>Interactive rebase</h3>
+          <p>Reorder, squash, edit, and drop commits through a guided interactive rebase workflow.</p>
+        </article>
+        <article>
+          <h3>Safe branch actions</h3>
+          <p>Create, switch, rename, and delete branches with the current repository state visible before you act.</p>
+        </article>
+      </section>
+
+      <section id="principles" aria-labelledby="principles-title">
+        <h2 id="principles-title">How Pluck is built</h2>
+        <article>
+          <h3>Familiar by design</h3>
+          <p>Common Git actions follow interaction patterns familiar to developers who work in JetBrains IDEs.</p>
+        </article>
+        <article>
+          <h3>Git underneath</h3>
+          <p>Pluck uses the Git CLI for repository operations, so the source of truth stays with Git itself.</p>
+        </article>
+        <article>
+          <h3>Focused on the work</h3>
+          <p>The interface stays centered on understanding changes and completing the next repository action.</p>
+        </article>
+      </section>
+
+      <section id="download" aria-labelledby="download-title">
+        <h2 id="download-title">Built for Apple Silicon</h2>
+        <p>Pluck <strong>__PLUCK_VERSION__</strong> is a personal-use alpha for macOS on Apple Silicon.</p>
+        <ul>
+          <li>Personal-use alpha</li>
+          <li>macOS</li>
+          <li>Apple Silicon</li>
+        </ul>
+        <a href="https://github.com/hzpeng57/pluck/releases/latest">Download for Apple Silicon</a>
+        <h3>Install from the DMG</h3>
+        <ol>
+          <li>Download the latest DMG from the latest release.</li>
+          <li>Open the DMG and drag Pluck into the Applications folder.</li>
+          <li>If macOS blocks the app, open Terminal and run:</li>
+        </ol>
+        <pre><code>xattr -dr com.apple.quarantine /Applications/Pluck.app</code></pre>
+      </section>
+
+      <section id="open-source" aria-labelledby="open-source-title">
+        <h2 id="open-source-title">Built in the open</h2>
+        <p>
+          Pluck is open source. Read the code, follow development, and report issues in the
+          <a href="https://github.com/hzpeng57/pluck">GitHub repository</a>.
+        </p>
+        <p><a href="https://github.com/hzpeng57/pluck/releases/latest">View the latest release</a></p>
+        <p>Pluck is an independent project and is not affiliated with, endorsed by, or sponsored by JetBrains.</p>
+      </section>
     </main>
+
+    <footer>
+      <p>Pluck, a focused Git client for macOS.</p>
+      <nav aria-label="Footer navigation">
+        <a href="https://github.com/hzpeng57/pluck">GitHub</a>
+        <a href="/pluck/zh-CN/" lang="zh-CN">简体中文</a>
+      </nav>
+    </footer>
+
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
