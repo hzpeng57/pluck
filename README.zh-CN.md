@@ -7,7 +7,7 @@
 <p align="center">一个轻量的 macOS git 客户端，参考 JetBrains 系列 IDE 的 git 体验。</p>
 
 <p align="center">
-  <a href="README.md">English</a> · <strong>简体中文</strong>
+  <a href="README.md">English</a> · <strong>简体中文</strong> · <a href="https://hzpeng57.github.io/pluck/">官网</a>
 </p>
 
 ---

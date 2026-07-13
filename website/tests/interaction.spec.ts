@@ -40,6 +40,29 @@ test("mobile navigation unlocks the page above its breakpoint", async ({ page })
   await expect(page.locator("body")).not.toHaveAttribute("data-menu-open", "");
 });
 
+test("mobile navigation activation does not shift the initial layout", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  let releaseScript!: () => void;
+  const scriptBlocked = new Promise<void>((resolve) => {
+    releaseScript = resolve;
+  });
+  await page.route("**/assets/*.js", async (route) => {
+    await scriptBlocked;
+    await route.continue();
+  });
+  const navigation = page.goto("./", { waitUntil: "domcontentloaded" });
+  await page.waitForFunction(
+    () => getComputedStyle(document.querySelector(".site-header")!).position === "sticky",
+  );
+  const initialMainTop = await page.locator("main").evaluate((element) => element.getBoundingClientRect().top);
+
+  releaseScript();
+  await navigation;
+
+  const finalMainTop = await page.locator("main").evaluate((element) => element.getBoundingClientRect().top);
+  expect(Math.abs(finalMainTop - initialMainTop)).toBeLessThan(1);
+});
+
 test("keyboard users can reach primary actions", async ({ page }) => {
   await page.goto("./");
   await page.keyboard.press("Tab");

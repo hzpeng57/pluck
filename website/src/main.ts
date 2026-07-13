@@ -9,8 +9,6 @@ import {
   createIcons,
 } from "lucide";
 
-document.documentElement.classList.add("js");
-
 createIcons({
   icons: { ArrowRight, Check, Download, ExternalLink, Languages, Menu, X },
   attrs: { "aria-hidden": "true", "stroke-width": "1.8" },

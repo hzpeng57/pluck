@@ -7,7 +7,7 @@
 <p align="center">A lightweight macOS git client, inspired by the git tooling in JetBrains IDEs.</p>
 
 <p align="center">
-  <strong>English</strong> · <a href="README.zh-CN.md">简体中文</a>
+  <strong>English</strong> · <a href="README.zh-CN.md">简体中文</a> · <a href="https://hzpeng57.github.io/pluck/">Website</a>
 </p>
 
 ---

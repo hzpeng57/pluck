@@ -29,3 +29,4 @@ dist-ssr
 website/dist/
 website/test-results/
 website/.lighthouse/
+.lighthouseci/
