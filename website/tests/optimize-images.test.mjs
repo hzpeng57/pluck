@@ -38,9 +38,18 @@ async function createFixture(t) {
 
 async function writeCapture(path, format = "png") {
   const image = sharp({
-    create: { width: 1920, height: 1080, channels: 4, background: "#1a1d1b" },
+    create: { width: 1979, height: 1135, channels: 4, background: "#1a1d1b" },
   });
   await (format === "png" ? image.png() : image.jpeg()).toFile(path);
+}
+
+async function writeMarkedCapture(path) {
+  const safeArea = await sharp({
+    create: { width: 1924, height: 1135, channels: 4, background: "#00ff00" },
+  }).png().toBuffer();
+  await sharp({
+    create: { width: 1979, height: 1135, channels: 4, background: "#ff0000" },
+  }).composite([{ input: safeArea, left: 55, top: 0 }]).png().toFile(path);
 }
 
 async function snapshotFiles(root, relative = "") {
@@ -113,7 +122,7 @@ test("publishes exactly 18 responsive variants and one OG image", async t => {
       for (const format of formats) {
         const metadata = await sharp(join(publicDir, "images", `${name}-${width}.${format}`)).metadata();
         assert.equal(metadata.width, width);
-        assert.equal(metadata.height, width === 1280 ? 720 : 1080);
+        assert.equal(metadata.height, width === 1280 ? 755 : 1133);
         assert.equal(metadata.format, format === "avif" ? "heif" : format);
       }
     }
@@ -124,4 +133,26 @@ test("publishes exactly 18 responsive variants and one OG image", async t => {
     { format: "png", width: 1200, height: 630 },
   );
   await assertNoTransientDirectories(publicDir);
+});
+
+test("removes the 55px private repository rail before responsive and OG processing", async t => {
+  const optimizeProductImages = await loadOptimizer();
+  const { inputDir, publicDir } = await createFixture(t);
+  await Promise.all(names.map(name => writeMarkedCapture(join(inputDir, `${name}.png`))));
+
+  await optimizeProductImages({ inputDir, publicDir, log: () => {} });
+
+  for (const name of names) {
+    const { data, info } = await sharp(join(publicDir, "images", `${name}-1920.png`))
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    assert.deepEqual({ width: info.width, height: info.height }, { width: 1920, height: 1133 });
+    assert.ok(data[1] > data[0], `${name} responsive output must start in the green safe area`);
+  }
+
+  const { data: ogData } = await sharp(join(publicDir, "og", "pluck-cover.png"))
+    .extract({ left: 8, top: 315, width: 1, height: 1 })
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  assert.ok(ogData[1] > ogData[0], "OG output must start in the green safe area");
 });

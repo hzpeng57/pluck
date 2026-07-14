@@ -102,20 +102,17 @@
             <p class="hero-note"><i data-lucide="check"></i> 个人使用 alpha 版本 · macOS · Apple Silicon</p>
           </div>
 
-          <figure class="hero-media" data-media-slot data-reveal aria-label="Git 历史图谱">
+          <figure class="hero-media" data-media-slot data-reveal>
             <div class="media-toolbar" aria-hidden="true">
               <span class="window-dots"><i></i><i></i><i></i></span>
               <span>pluck / main</span>
               <span class="media-state">working tree clean</span>
             </div>
-            <div class="git-topology" aria-hidden="true">
-              <div class="topology-rail rail-main"></div>
-              <div class="topology-rail rail-branch"></div>
-              <div class="commit-row row-1"><span class="commit-node node-green"></span><b>main</b><code>v0.1.13</code></div>
-              <div class="commit-row row-2"><span class="commit-node node-blue"></span><b>feat(log)</b><code>side-by-side diff</code></div>
-              <div class="commit-row row-3"><span class="commit-node node-pink"></span><b>fix(rebase)</b><code>preserve commit order</code></div>
-              <div class="commit-row row-4"><span class="commit-node node-yellow"></span><b>chore</b><code>refresh snapshot</code></div>
-            </div>
+            <picture class="product-picture" data-product-media>
+              <source type="image/avif" srcset="/pluck/images/workspace-1280.avif 1280w, /pluck/images/workspace-1920.avif 1920w" sizes="(max-width: 960px) calc(100vw - 56px), 54vw" />
+              <source type="image/webp" srcset="/pluck/images/workspace-1280.webp 1280w, /pluck/images/workspace-1920.webp 1920w" sizes="(max-width: 960px) calc(100vw - 56px), 54vw" />
+              <img src="/pluck/images/workspace-1920.png" width="1920" height="1133" alt="Pluck 仓库工作区，展示分支、提交历史和提交详情" loading="eager" fetchpriority="high" />
+            </picture>
             <figcaption>清晰查看每个分支、提交与变更。</figcaption>
           </figure>
         </div>
@@ -160,6 +157,24 @@
               <h3>安全的分支操作</h3>
               <p>创建、切换、重命名或删除分支前，先看清仓库当前状态再执行操作。</p>
             </article>
+          </div>
+          <div class="workflow-media">
+            <figure class="product-showcase">
+              <picture class="product-picture" data-product-media>
+                <source type="image/avif" srcset="/pluck/images/diff-1280.avif 1280w, /pluck/images/diff-1920.avif 1920w" sizes="(max-width: 640px) calc(100vw - 32px), 50vw" />
+                <source type="image/webp" srcset="/pluck/images/diff-1280.webp 1280w, /pluck/images/diff-1920.webp 1920w" sizes="(max-width: 640px) calc(100vw - 32px), 50vw" />
+                <img src="/pluck/images/diff-1920.png" width="1920" height="1133" alt="Pluck 并排 Diff 视图，展示提交中新增的仓库切换组件" loading="lazy" decoding="async" />
+              </picture>
+              <figcaption><span>为审阅而生的 Diff</span><span>文件和提交上下文始终保持可见。</span></figcaption>
+            </figure>
+            <figure class="product-showcase">
+              <picture class="product-picture" data-product-media>
+                <source type="image/avif" srcset="/pluck/images/rebase-1280.avif 1280w, /pluck/images/rebase-1920.avif 1920w" sizes="(max-width: 640px) calc(100vw - 32px), 50vw" />
+                <source type="image/webp" srcset="/pluck/images/rebase-1280.webp 1280w, /pluck/images/rebase-1920.webp 1920w" sizes="(max-width: 640px) calc(100vw - 32px), 50vw" />
+                <img src="/pluck/images/rebase-1920.png" width="1920" height="1133" alt="Pluck 交互式 Rebase 对话框，展示三个提交的 pick 与 fixup 操作" loading="lazy" decoding="async" />
+              </picture>
+              <figcaption><span>交互式 Rebase</span><span>执行前清楚确认每个提交操作。</span></figcaption>
+            </figure>
           </div>
         </div>
       </section>

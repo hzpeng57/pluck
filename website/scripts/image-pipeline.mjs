@@ -5,6 +5,7 @@ import sharp from "sharp";
 const names = ["workspace", "diff", "rebase"];
 const widths = [1280, 1920];
 const formats = ["avif", "webp", "png"];
+export const SAFE_LEFT_CROP_PX = 55;
 
 async function inspectCapture(input) {
   let metadata;
@@ -19,15 +20,21 @@ async function inspectCapture(input) {
   if (metadata.format !== "png") {
     throw new Error(`${input} must contain PNG data; detected ${metadata.format ?? "unknown"}`);
   }
-  if (!Number.isInteger(metadata.width) || metadata.width < 1920 ||
+  if (!Number.isInteger(metadata.width) || metadata.width - SAFE_LEFT_CROP_PX < 1920 ||
       !Number.isInteger(metadata.height) || metadata.height <= 0) {
-    throw new Error(`${input} must be a valid PNG screenshot at least 1920px wide`);
+    throw new Error(`${input} must be a valid PNG screenshot at least ${1920 + SAFE_LEFT_CROP_PX}px wide`);
   }
-  return input;
+  return { input, width: metadata.width, height: metadata.height };
 }
 
 async function preflightCaptures(inputDir) {
   return Promise.all(names.map(name => inspectCapture(resolve(inputDir, `${name}.png`))));
+}
+
+function safeCapture({ input, width, height }) {
+  return sharp(input)
+    .rotate()
+    .extract({ left: SAFE_LEFT_CROP_PX, top: 0, width: width - SAFE_LEFT_CROP_PX, height });
 }
 
 function overlaySvg() {
@@ -43,10 +50,10 @@ function overlaySvg() {
 }
 
 async function generateStagedOutputs({ captures, publicDir, imageDir, ogDir }) {
-  await Promise.all(captures.map(async (input, index) => {
+  await Promise.all(captures.map(async (capture, index) => {
     const name = names[index];
     for (const width of widths) {
-      const base = sharp(input).rotate().resize({ width, withoutEnlargement: true });
+      const base = safeCapture(capture).resize({ width, withoutEnlargement: true });
       await Promise.all([
         base.clone().avif({ quality: 62 }).toFile(resolve(imageDir, `${name}-${width}.avif`)),
         base.clone().webp({ quality: 82 }).toFile(resolve(imageDir, `${name}-${width}.webp`)),
@@ -56,8 +63,7 @@ async function generateStagedOutputs({ captures, publicDir, imageDir, ogDir }) {
   }));
 
   const icon = await sharp(resolve(publicDir, "favicon.png")).resize(72, 72).png().toBuffer();
-  await sharp(captures[0])
-    .rotate()
+  await safeCapture(captures[0])
     .resize(1200, 630, { fit: "cover", position: "centre" })
     .composite([
       { input: overlaySvg(), top: 0, left: 0 },

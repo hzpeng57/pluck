@@ -390,15 +390,6 @@ h3 {
   box-shadow: 0 20px 60px rgb(0 0 0 / 24%), 0 0 0 1px rgb(255 255 255 / 2%);
 }
 
-.hero-media::before {
-  position: absolute;
-  inset: 42px 0 0;
-  z-index: 0;
-  border-top: 1px solid rgb(255 255 255 / 2%);
-  content: "";
-  pointer-events: none;
-}
-
 .media-toolbar {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
@@ -429,113 +420,20 @@ h3 {
   color: var(--accent);
 }
 
-.git-topology {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  grid-template-rows: repeat(4, minmax(46px, 1fr));
-  min-height: 274px;
-  padding: 26px 20px;
-  background-color: var(--panel);
-}
-
-.git-topology::after {
-  position: absolute;
-  right: 24px;
-  bottom: 22px;
-  left: 24px;
-  height: 1px;
-  background: var(--border-soft);
-  content: "";
-}
-
-.topology-rail {
-  position: absolute;
-  z-index: 0;
-  width: 1px;
-  background: var(--border);
-}
-
-.rail-main {
-  top: 46px;
-  bottom: 47px;
-  left: 51px;
-}
-
-.rail-branch {
-  top: 93px;
-  bottom: 93px;
-  left: 73px;
-  background: var(--pink);
-}
-
-.rail-branch::before,
-.rail-branch::after {
-  position: absolute;
-  right: 0;
-  width: 22px;
-  height: 18px;
-  border-left: 1px solid var(--pink);
-  content: "";
-}
-
-.rail-branch::before {
-  top: -18px;
-  border-top: 1px solid var(--pink);
-}
-
-.rail-branch::after {
-  bottom: -18px;
-  border-bottom: 1px solid var(--pink);
-}
-
-.commit-row {
-  position: relative;
-  z-index: 2;
-  display: grid;
-  grid-template-columns: minmax(92px, auto) minmax(0, 1fr);
-  align-items: center;
-  gap: 18px;
-  min-width: 0;
-  padding-left: 76px;
-  border-bottom: 1px solid var(--border-soft);
-  font-family: var(--mono);
-  font-size: 11px;
-}
-
-.commit-row b {
-  color: var(--fg);
-  font-weight: 650;
-}
-
-.commit-row code {
+.product-picture {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1920 / 1133;
   overflow: hidden;
-  color: var(--fg-3);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  background: #0b0d0c;
 }
 
-.commit-node {
-  position: absolute;
-  top: 50%;
-  left: 25px;
-  width: 11px;
-  height: 11px;
-  border: 2px solid var(--panel);
-  border-radius: 50%;
-  box-shadow: 0 0 0 1px currentColor;
-  transform: translateY(-50%);
+.product-picture img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
-
-.row-2 .commit-node,
-.row-3 .commit-node {
-  left: 47px;
-}
-
-.node-blue { color: var(--blue); background: var(--blue); }
-.node-pink { color: var(--pink); background: var(--pink); }
-.node-yellow { color: var(--yellow); background: var(--yellow); }
-.node-green { color: var(--green); background: var(--green); }
 
 .hero-media figcaption {
   padding: 13px 20px;
@@ -604,6 +502,45 @@ h3 {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+
+.workflow-media {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.product-showcase {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+
+.product-showcase figcaption {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 18px;
+  min-height: 64px;
+  padding: 16px 18px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.product-showcase figcaption span:first-child {
+  color: var(--fg);
+  font-size: 14px;
+  font-weight: 680;
+}
+
+.product-showcase figcaption span:last-child {
+  color: var(--fg-3);
+  font-family: var(--mono);
+  font-size: 10px;
+  text-align: right;
 }
 
 .workflow-card {
@@ -977,9 +914,9 @@ h3 {
 
   .hero-layout {
     grid-template-columns: minmax(0, 1fr);
-    gap: 42px;
+    gap: 32px;
     min-height: auto;
-    padding-block: 64px 68px;
+    padding-block: 42px 46px;
   }
 
   .hero-copy {
@@ -988,10 +925,6 @@ h3 {
 
   .hero-media {
     width: min(100%, 700px);
-  }
-
-  .git-topology {
-    min-height: 240px;
   }
 
   .band-layout {
@@ -1053,8 +986,8 @@ h3 {
   }
 
   .hero-layout {
-    gap: 34px;
-    padding-block: 34px 38px;
+    gap: 22px;
+    padding-block: 26px;
   }
 
   .section-kicker {
@@ -1100,43 +1033,6 @@ h3 {
     display: none;
   }
 
-  .git-topology {
-    grid-template-rows: repeat(4, minmax(34px, 1fr));
-    min-height: 156px;
-    padding: 10px 12px;
-  }
-
-  .rail-main {
-    top: 28px;
-    bottom: 28px;
-    left: 33px;
-  }
-
-  .rail-branch {
-    top: 62px;
-    bottom: 62px;
-    left: 52px;
-  }
-
-  .commit-row {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0;
-    padding-left: 58px;
-  }
-
-  .commit-row code {
-    display: none;
-  }
-
-  .commit-node {
-    left: 15px;
-  }
-
-  .row-2 .commit-node,
-  .row-3 .commit-node {
-    left: 34px;
-  }
-
   .hero-media figcaption {
     padding-inline: 14px;
     text-align: left;
@@ -1165,6 +1061,20 @@ h3 {
 
   .workflow-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .workflow-media {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .product-showcase figcaption {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .product-showcase figcaption span:last-child {
+    text-align: left;
   }
 
   .workflow-card {

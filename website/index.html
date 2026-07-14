@@ -104,20 +104,17 @@
             <p class="hero-note"><i data-lucide="check"></i> Personal-use alpha · macOS · Apple Silicon</p>
           </div>
 
-          <figure class="hero-media" data-media-slot data-reveal aria-label="Git history visualization">
+          <figure class="hero-media" data-media-slot data-reveal>
             <div class="media-toolbar" aria-hidden="true">
               <span class="window-dots"><i></i><i></i><i></i></span>
               <span>pluck / main</span>
               <span class="media-state">working tree clean</span>
             </div>
-            <div class="git-topology" aria-hidden="true">
-              <div class="topology-rail rail-main"></div>
-              <div class="topology-rail rail-branch"></div>
-              <div class="commit-row row-1"><span class="commit-node node-green"></span><b>main</b><code>v0.1.13</code></div>
-              <div class="commit-row row-2"><span class="commit-node node-blue"></span><b>feat(log)</b><code>side-by-side diff</code></div>
-              <div class="commit-row row-3"><span class="commit-node node-pink"></span><b>fix(rebase)</b><code>preserve commit order</code></div>
-              <div class="commit-row row-4"><span class="commit-node node-yellow"></span><b>chore</b><code>refresh snapshot</code></div>
-            </div>
+            <picture class="product-picture" data-product-media>
+              <source type="image/avif" srcset="/pluck/images/workspace-1280.avif 1280w, /pluck/images/workspace-1920.avif 1920w" sizes="(max-width: 960px) calc(100vw - 56px), 54vw" />
+              <source type="image/webp" srcset="/pluck/images/workspace-1280.webp 1280w, /pluck/images/workspace-1920.webp 1920w" sizes="(max-width: 960px) calc(100vw - 56px), 54vw" />
+              <img src="/pluck/images/workspace-1920.png" width="1920" height="1133" alt="Pluck repository workspace showing branches, commit history, and commit details" loading="eager" fetchpriority="high" />
+            </picture>
             <figcaption>A clear view of every branch, commit, and change.</figcaption>
           </figure>
         </div>
@@ -163,6 +160,24 @@
               <h3>Safe branch actions</h3>
               <p>Create, switch, rename, and delete branches with the current repository state visible before you act.</p>
             </article>
+          </div>
+          <div class="workflow-media">
+            <figure class="product-showcase">
+              <picture class="product-picture" data-product-media>
+                <source type="image/avif" srcset="/pluck/images/diff-1280.avif 1280w, /pluck/images/diff-1920.avif 1920w" sizes="(max-width: 640px) calc(100vw - 32px), 50vw" />
+                <source type="image/webp" srcset="/pluck/images/diff-1280.webp 1280w, /pluck/images/diff-1920.webp 1920w" sizes="(max-width: 640px) calc(100vw - 32px), 50vw" />
+                <img src="/pluck/images/diff-1920.png" width="1920" height="1133" alt="Pluck side-by-side diff showing a repository switcher component added in a commit" loading="lazy" decoding="async" />
+              </picture>
+              <figcaption><span>Review-ready diff</span><span>File and commit context stay in view.</span></figcaption>
+            </figure>
+            <figure class="product-showcase">
+              <picture class="product-picture" data-product-media>
+                <source type="image/avif" srcset="/pluck/images/rebase-1280.avif 1280w, /pluck/images/rebase-1920.avif 1920w" sizes="(max-width: 640px) calc(100vw - 32px), 50vw" />
+                <source type="image/webp" srcset="/pluck/images/rebase-1280.webp 1280w, /pluck/images/rebase-1920.webp 1920w" sizes="(max-width: 640px) calc(100vw - 32px), 50vw" />
+                <img src="/pluck/images/rebase-1920.png" width="1920" height="1133" alt="Pluck interactive rebase dialog with pick and fixup actions for three commits" loading="lazy" decoding="async" />
+              </picture>
+              <figcaption><span>Interactive rebase</span><span>Commit actions stay explicit before execution.</span></figcaption>
+            </figure>
           </div>
         </div>
       </section>
