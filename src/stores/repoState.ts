@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 import { ref, computed, watch } from "vue";
 import { api } from "../api/tauri";
-import type { RepoSnapshot, CommitDetail, Commit, WorkingFile, ChangedFile, FileDiff, DiffTarget } from "../types/git";
+import type { RepoSnapshot, CommitDetail, Commit, WorkingFile, ChangedFile, FileDiff, DiffTarget, BranchKind } from "../types/git";
 
 const LOG_PAGE_SIZE = 200;
 const DIFF_IGNORE_WS_KEY = "pluck:diffIgnoreWhitespace";
@@ -41,7 +41,7 @@ export const useRepoStateStore = defineStore("repoState", () => {
   const resetDialog = ref<{ hash: string; short: string; subject: string } | null>(null);
   const branchCreateDialog = ref<{ from: string } | null>(null);
   const branchRenameDialog = ref<{ name: string; upstream: string | null } | null>(null);
-  const branchDeleteDialog = ref<{ name: string } | null>(null);
+  const branchDeleteDialog = ref<{ name: string; kind: BranchKind } | null>(null);
   const confirmDialog = ref<ConfirmDialog | null>(null);
   const logEnd = ref(false);
   const logLoadingMore = ref(false);
@@ -82,7 +82,7 @@ export const useRepoStateStore = defineStore("repoState", () => {
   function closeBranchCreateDialog() { branchCreateDialog.value = null; }
   function openBranchRenameDialog(name: string, upstream: string | null) { branchRenameDialog.value = { name, upstream }; }
   function closeBranchRenameDialog() { branchRenameDialog.value = null; }
-  function openBranchDeleteDialog(name: string) { branchDeleteDialog.value = { name }; }
+  function openBranchDeleteDialog(name: string, kind: BranchKind) { branchDeleteDialog.value = { name, kind }; }
   function closeBranchDeleteDialog() { branchDeleteDialog.value = null; }
   function confirmAction(options: ConfirmOptions): Promise<boolean> {
     return new Promise(resolve => {

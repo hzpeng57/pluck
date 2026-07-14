@@ -9,6 +9,7 @@ import type {
   FileStatus,
   ChangedFileStatus,
   DiffOptions,
+  BranchKind,
 } from "../types/git";
 
 export const api = {
@@ -47,10 +48,10 @@ export const ops = {
     invoke<RepoSnapshot>("branch_create", { id, name, from }),
   branchRename: (id: string, oldName: string, newName: string, unsetUpstream: boolean) =>
     invoke<RepoSnapshot>("branch_rename", { id, oldName, newName, unsetUpstream }),
-  branchDelete: (id: string, name: string, force: boolean) =>
-    invoke<RepoSnapshot>("branch_delete", { id, name, force }),
-  branchDeletePrecheck: (id: string, name: string) =>
-    invoke<DeletePrecheck>("branch_delete_precheck", { id, name }),
+  branchDelete: (id: string, name: string, kind: BranchKind, force: boolean) =>
+    invoke<RepoSnapshot>("branch_delete", { id, name, kind, force }),
+  branchDeletePrecheck: (id: string, name: string, kind: BranchKind) =>
+    invoke<DeletePrecheck>("branch_delete_precheck", { id, name, kind }),
   commit: (id: string, files: string[], message: string, skipHooks: boolean) =>
     invoke<RepoSnapshot>("commit", { id, files, message, skipHooks }),
   merge: (id: string, branch: string) => invoke<RepoSnapshot>("merge", { id, branch }),

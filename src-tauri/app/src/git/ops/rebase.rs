@@ -1,5 +1,6 @@
 use crate::error::{GitError, GitResult};
 use crate::git::cmd::{git_command, run_git};
+use crate::git::git_dir;
 use std::path::Path;
 
 pub async fn rebase_interactive(
@@ -25,8 +26,9 @@ pub async fn rebase_interactive(
     // In both cases the upcoming refresh_session call rebuilds the snapshot and
     // the UI tells the right story. Only surface genuine setup failures
     // (bad ref, unknown commit, etc.) where no rebase ever started.
-    let rebase_state_present = repo.join(".git/rebase-merge").exists()
-        || repo.join(".git/rebase-apply").exists();
+    let git_dir = git_dir(repo);
+    let rebase_state_present = git_dir.join("rebase-merge").exists()
+        || git_dir.join("rebase-apply").exists();
     let stderr = String::from_utf8_lossy(&output.stderr);
     let editor_aborted = stderr.contains("problem with the editor");
     if rebase_state_present {

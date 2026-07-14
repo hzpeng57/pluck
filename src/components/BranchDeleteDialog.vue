@@ -15,6 +15,13 @@ const loading = ref(false);
 const submitting = ref(false);
 const forceChecked = ref(false);
 const confirmBtn = ref<HTMLButtonElement | null>(null);
+const isRemote = computed(() => dialog.value?.kind === "remote");
+const remoteTarget = computed(() => {
+  const name = dialog.value?.name ?? "";
+  const sep = name.indexOf("/");
+  if (sep <= 0) return null;
+  return { remote: name.slice(0, sep), branch: name.slice(sep + 1) };
+});
 
 watch(visible, async (v) => {
   if (!v) {
@@ -24,14 +31,16 @@ watch(visible, async (v) => {
     return;
   }
   if (!repos.activeId || !dialog.value) return;
+  const id = repos.activeId;
+  const target = dialog.value;
   loading.value = true;
   try {
-    const result = await ops.branchDeletePrecheck(repos.activeId, dialog.value.name);
+    const result = await ops.branchDeletePrecheck(id, target.name, target.kind);
     if (!result.exists) {
       // 分支不存在：刷新快照后静默关闭，给个友好 toast
-      try { state.snapshot = await api.repoRefresh(repos.activeId); }
+      try { state.snapshot = await api.repoRefresh(id); }
       catch { /* ignore */ }
-      state.pushToast("info", `Branch "${dialog.value.name}" no longer exists`);
+      state.pushToast("info", `Branch "${target.name}" no longer exists`);
       state.closeBranchDeleteDialog();
       return;
     }
@@ -47,6 +56,7 @@ watch(visible, async (v) => {
 
 const canDelete = computed(() => {
   if (!precheck.value || precheck.value.isCurrent) return false;
+  if (isRemote.value) return forceChecked.value;
   if (precheck.value.isMerged) return true;
   return forceChecked.value;
 });
@@ -54,11 +64,12 @@ const canDelete = computed(() => {
 async function submit() {
   if (!repos.activeId || !dialog.value || !precheck.value || submitting.value) return;
   if (!canDelete.value) return;
+  const target = dialog.value;
   submitting.value = true;
-  const force = !precheck.value.isMerged;
+  const force = target.kind === "remote" ? false : !precheck.value.isMerged;
   try {
-    state.snapshot = await ops.branchDelete(repos.activeId, dialog.value.name, force);
-    state.pushToast("info", `Deleted branch "${dialog.value.name}"`);
+    state.snapshot = await ops.branchDelete(repos.activeId, target.name, target.kind, force);
+    state.pushToast("info", `Deleted ${target.kind === "remote" ? "remote branch" : "branch"} "${target.name}"`);
     state.closeBranchDeleteDialog();
   } catch (e: any) {
     state.pushToast("error", e?.data?.friendly ?? String(e));
@@ -80,7 +91,7 @@ function onKey(e: KeyboardEvent) {
     <div class="gl-dialog-shell w-[480px] flex flex-col">
       <div class="flex items-center gap-2 px-4 h-12 shrink-0" style="border-bottom: 1px solid var(--border-soft)">
         <span class="w-2 h-2 rounded-full" style="background: var(--danger)" />
-        <span class="font-semibold text-[13.5px]">Delete Branch</span>
+        <span class="font-semibold text-[13.5px]">{{ isRemote ? "Delete Remote Branch" : "Delete Branch" }}</span>
         <span class="gl-mono text-[12px] px-1.5 py-0.5 rounded ml-1"
               style="background: var(--hover); color: var(--fg-2)">
           {{ dialog.name }}
@@ -96,6 +107,24 @@ function onKey(e: KeyboardEvent) {
                class="rounded px-3 py-2"
                style="background: var(--danger-soft-weak); color: var(--danger); border: 1px solid var(--danger-ring)">
             Cannot delete the branch currently checked out. Switch to another branch first.
+          </div>
+
+          <!-- 远程分支 -->
+          <div v-else-if="isRemote">
+            <p>
+              This will delete
+              <span class="gl-mono">{{ remoteTarget?.branch ?? dialog.name }}</span>
+              from remote
+              <span class="gl-mono">{{ remoteTarget?.remote ?? "remote" }}</span>.
+            </p>
+            <p class="mt-2 text-[12px]" style="color: var(--fg-3)">
+              Pluck will also remove the local remote-tracking ref
+              <span class="gl-mono">{{ dialog.name }}</span>.
+            </p>
+            <label class="flex items-center gap-2 mt-3 cursor-pointer select-none">
+              <input type="checkbox" v-model="forceChecked" class="cursor-pointer" />
+              <span>I understand — delete remote branch</span>
+            </label>
           </div>
 
           <!-- 已完全合并 -->
@@ -125,16 +154,16 @@ function onKey(e: KeyboardEvent) {
 
       <div class="flex items-center gap-2 px-4 py-3 shrink-0" style="border-top: 1px solid var(--border-soft)">
         <span class="text-[12px]" style="color: var(--fg-3)">
-          {{ canDelete ? "↩ Delete · Esc Cancel" : "Esc Cancel" }}
+          {{ canDelete ? (isRemote ? "↩ Delete remote · Esc Cancel" : "↩ Delete · Esc Cancel") : "Esc Cancel" }}
         </span>
         <div class="flex-1" />
         <button class="gl-command-btn" :disabled="submitting" @click="cancel">Cancel</button>
         <button ref="confirmBtn"
                 class="gl-command-btn"
-                :class="precheck && !precheck.isMerged ? 'gl-btn-danger' : 'gl-btn-primary'"
+                :class="isRemote || (precheck && !precheck.isMerged) ? 'gl-btn-danger' : 'gl-btn-primary'"
                 :disabled="!canDelete || submitting"
                 @click="submit">
-          {{ submitting ? "Deleting…" : (precheck && !precheck.isMerged ? "Force Delete" : "Delete") }}
+          {{ submitting ? "Deleting…" : (isRemote ? "Delete Remote Branch" : (precheck && !precheck.isMerged ? "Force Delete" : "Delete")) }}
         </button>
       </div>
     </div>

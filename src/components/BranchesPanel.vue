@@ -145,8 +145,8 @@ function rename() {
 }
 function del() {
   if (!menu.value || !repos.activeId) return;
-  const name = menu.value.branch.name; menu.value = null;
-  state.openBranchDeleteDialog(name);
+  const branch = menu.value.branch; menu.value = null;
+  state.openBranchDeleteDialog(branch.name, branch.kind);
 }
 async function mergeIntoCurrent() {
   if (!menu.value || !repos.activeId) return;

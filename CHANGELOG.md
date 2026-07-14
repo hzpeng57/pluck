@@ -2,6 +2,16 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 规范，版本号采用 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [0.1.14] - 2026-07-14
+
+### Added
+- 远程分支右键菜单支持 Delete，可删除远端分支并同步清理本地 remote-tracking ref。
+- 删除远程分支新增专用确认弹窗，明确展示目标 remote 和分支名，降低误删风险。
+
+### Fixed
+- 修复 rebase 冲突后在 linked worktree / gitfile 场景下漏判 rebase 中态，导致 toast 误提示成功的问题。
+- 统一 merge / rebase 中态检测使用真实 gitdir，避免 `.git` 为指针文件时读取错误目录。
+
 ## [0.1.13] - 2026-07-08
 
 ### Added
@@ -155,6 +165,8 @@
 - 快捷键：⌘K commit / ⌘⇧K push / ⌘T fetch / ⌘R refresh。
 - Toast tray 替代内联 lastError。
 
+[0.1.14]: https://github.com/hzpeng57/pluck/compare/v0.1.13...v0.1.14
+[0.1.13]: https://github.com/hzpeng57/pluck/compare/v0.1.12...v0.1.13
 [0.1.12]: https://github.com/hzpeng57/pluck/compare/v0.1.11...v0.1.12
 [0.1.11]: https://github.com/hzpeng57/pluck/compare/v0.1.10...v0.1.11
 [0.1.10]: https://github.com/hzpeng57/pluck/compare/v0.1.9...v0.1.10

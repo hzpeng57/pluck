@@ -1,3 +1,4 @@
+use crate::git::git_dir;
 use serde::Serialize;
 use std::path::Path;
 use tokio::fs;
@@ -12,7 +13,7 @@ pub enum GitOp {
 }
 
 pub async fn detect_in_progress(repo: &Path) -> Option<GitOp> {
-    let gd = repo.join(".git");
+    let gd = git_dir(repo);
     if let Ok(s) = fs::read_to_string(gd.join("MERGE_MSG")).await {
         let from = s.lines().find_map(|l| l.strip_prefix("Merge branch '").and_then(|x| x.split('\'').next())).unwrap_or("").to_string();
         return Some(GitOp::Merging { from });
@@ -60,6 +61,28 @@ mod tests {
         std::fs::write(dir.path().join(".git/rebase-merge/head-name"), "refs/heads/main\n").unwrap();
         match detect_in_progress(dir.path()).await.unwrap() {
             GitOp::Rebasing { onto, head } => { assert_eq!(onto, "abc123"); assert_eq!(head, "refs/heads/main"); }
+            other => panic!("expected Rebasing, got {:?}", other),
+        }
+    }
+
+    #[tokio::test]
+    async fn detects_rebasing_when_dot_git_points_to_real_gitdir() {
+        let dir = tempdir().unwrap();
+        let gitdir = dir.path().join("real-gitdir");
+        std::fs::create_dir_all(gitdir.join("rebase-merge")).unwrap();
+        std::fs::write(
+            dir.path().join(".git"),
+            format!("gitdir: {}\n", gitdir.display()),
+        )
+        .unwrap();
+        std::fs::write(gitdir.join("rebase-merge/onto"), "abc123\n").unwrap();
+        std::fs::write(gitdir.join("rebase-merge/head-name"), "refs/heads/feature\n").unwrap();
+
+        match detect_in_progress(dir.path()).await.unwrap() {
+            GitOp::Rebasing { onto, head } => {
+                assert_eq!(onto, "abc123");
+                assert_eq!(head, "refs/heads/feature");
+            }
             other => panic!("expected Rebasing, got {:?}", other),
         }
     }

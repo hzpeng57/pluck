@@ -1,6 +1,6 @@
 use crate::error::{GitError, GitResult};
 use crate::git::ops::branch::{
-    create_branch, delete_branch, delete_precheck, rename_branch, DeletePrecheck,
+    create_branch, delete_branch, delete_precheck, rename_branch, BranchDeleteKind, DeletePrecheck,
 };
 use crate::git::ops::checkout::checkout_branch;
 use crate::git::ops::cherry_pick::{cherry_pick, cherry_pick_abort, cherry_pick_continue};
@@ -141,6 +141,7 @@ pub async fn branch_rename(
 pub async fn branch_delete(
     id: String,
     name: String,
+    kind: BranchDeleteKind,
     force: bool,
     state: State<'_, AppState>,
 ) -> GitResult<RepoSnapshot> {
@@ -149,7 +150,7 @@ pub async fn branch_delete(
         .await
         .ok_or_else(|| GitError::parse("unknown repo id"))?;
     let path = { sess.lock().await.path.clone() };
-    let res = delete_branch(&path, &name, force).await;
+    let res = delete_branch(&path, &name, kind, force).await;
     // 不论成败都刷新一次：失败时也让 UI 拿到真实快照，避免 stale 状态
     let snapshot = refresh_session(&sess).await;
     res?;
@@ -160,6 +161,7 @@ pub async fn branch_delete(
 pub async fn branch_delete_precheck(
     id: String,
     name: String,
+    kind: BranchDeleteKind,
     state: State<'_, AppState>,
 ) -> GitResult<DeletePrecheck> {
     let sess = state
@@ -167,7 +169,7 @@ pub async fn branch_delete_precheck(
         .await
         .ok_or_else(|| GitError::parse("unknown repo id"))?;
     let path = { sess.lock().await.path.clone() };
-    delete_precheck(&path, &name).await
+    delete_precheck(&path, &name, kind).await
 }
 
 #[tauri::command]

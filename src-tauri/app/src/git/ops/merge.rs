@@ -1,6 +1,7 @@
 use crate::error::{GitError, GitResult};
 use crate::git::cmd::{git_command, run_git};
-use std::path::{Path, PathBuf};
+use crate::git::git_dir;
+use std::path::Path;
 
 pub async fn merge_into_current(repo: &Path, branch: &str) -> GitResult<()> {
     let output = git_command(repo)
@@ -25,22 +26,6 @@ pub fn merge_in_progress(repo: &Path) -> bool {
 pub fn rebase_in_progress(repo: &Path) -> bool {
     let git_dir = git_dir(repo);
     git_dir.join("rebase-merge").exists() || git_dir.join("rebase-apply").exists()
-}
-
-fn git_dir(repo: &Path) -> PathBuf {
-    let dot_git = repo.join(".git");
-    let Ok(contents) = std::fs::read_to_string(&dot_git) else {
-        return dot_git;
-    };
-    let Some(path) = contents.trim().strip_prefix("gitdir:") else {
-        return dot_git;
-    };
-    let path = PathBuf::from(path.trim());
-    if path.is_absolute() {
-        path
-    } else {
-        repo.join(path)
-    }
 }
 
 pub async fn merge_abort(repo: &Path) -> GitResult<()> {
