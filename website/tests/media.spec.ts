@@ -1,4 +1,6 @@
 import { expect, test } from "@playwright/test";
+import { resolve } from "node:path";
+import { createServer } from "vite";
 
 const media = [
   {
@@ -83,4 +85,45 @@ test("all responsive variants and the social image are published", async ({ requ
   const social = await request.get("http://127.0.0.1:4173/pluck/og/pluck-cover.png");
   expect(social.status()).toBe(200);
   expect(social.headers()["content-type"]).toContain("image/png");
+});
+
+test("product media resolves under the configured base in Vite dev", async ({ page }) => {
+  const server = await createServer({
+    configFile: resolve(import.meta.dirname, "../vite.config.ts"),
+    server: { host: "127.0.0.1", port: 0 },
+  });
+
+  try {
+    await server.listen();
+    const address = server.httpServer?.address();
+    if (!address || typeof address === "string") throw new Error("Vite dev server did not expose a TCP port");
+
+    for (const locale of ["", "zh-CN/"]) {
+      await page.goto(`http://127.0.0.1:${address.port}/pluck/${locale}`);
+      const images = page.locator("picture[data-product-media] img");
+      await expect(images).toHaveCount(3);
+
+      for (const image of await images.all()) {
+        await image.scrollIntoViewIfNeeded();
+        await expect.poll(() => image.evaluate((node) => {
+          const element = node as HTMLImageElement;
+          return {
+            currentSrc: element.currentSrc,
+            decoded: element.complete && element.naturalWidth > 0,
+          };
+        })).toEqual({
+          currentSrc: expect.not.stringContaining("/pluck/pluck/"),
+          decoded: true,
+        });
+      }
+
+      const faviconUrl = await page.locator('link[rel="icon"][type="image/png"]').getAttribute("href");
+      expect(faviconUrl).toBe("/pluck/favicon.png");
+      const favicon = await page.request.get(`http://127.0.0.1:${address.port}${faviconUrl}`);
+      expect(favicon.status()).toBe(200);
+      expect(favicon.headers()["content-type"]).toContain("image/png");
+    }
+  } finally {
+    await server.close();
+  }
 });
