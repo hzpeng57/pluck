@@ -25,6 +25,25 @@ for (const locale of ["./", "zh-CN/"] as const) {
       )).toBe(true);
 
       if (testInfo.project.name === "desktop") {
+        await page.locator("picture[data-product-media]").evaluateAll((pictures) => {
+          const observer = new IntersectionObserver((entries) => {
+            for (const entry of entries) {
+              if (entry.isIntersecting) (entry.target as HTMLElement).dataset.screenshotVisited = "";
+            }
+          });
+          pictures.forEach((picture) => observer.observe(picture));
+        });
+        const productImages = page.locator("picture[data-product-media] img");
+        for (const image of await productImages.all()) {
+          await image.scrollIntoViewIfNeeded();
+          await expect.poll(() => image.evaluate((node) => {
+            const element = node as HTMLImageElement;
+            return element.complete && element.naturalWidth > 0;
+          })).toBe(true);
+        }
+        await expect.poll(() => page.locator('picture[data-product-media][data-screenshot-visited]').count()).toBe(3);
+        await page.evaluate(() => window.scrollTo(0, 0));
+        await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
         await page.screenshot({
           path: testInfo.outputPath(`${viewport.name}.png`),
           fullPage: true,

@@ -9,6 +9,15 @@ const moduleUrl = new URL("../scripts/image-pipeline.mjs", import.meta.url);
 const names = ["workspace", "diff", "rebase"];
 const widths = [1280, 1920];
 const formats = ["avif", "webp", "png"];
+const embeddedMetadataFields = ["exif", "icc", "iptc", "xmp"];
+
+function assertMetadataStripped(metadata, file) {
+  assert.deepEqual(
+    embeddedMetadataFields.filter(field => metadata[field] !== undefined),
+    [],
+    `${file} must not contain EXIF, ICC, IPTC, or XMP metadata`,
+  );
+}
 
 async function loadOptimizer() {
   try {
@@ -124,6 +133,7 @@ test("publishes exactly 18 responsive variants and one OG image", async t => {
         assert.equal(metadata.width, width);
         assert.equal(metadata.height, width === 1280 ? 755 : 1133);
         assert.equal(metadata.format, format === "avif" ? "heif" : format);
+        assertMetadataStripped(metadata, `${name}-${width}.${format}`);
       }
     }
   }
@@ -132,6 +142,7 @@ test("publishes exactly 18 responsive variants and one OG image", async t => {
     { format: ogMetadata.format, width: ogMetadata.width, height: ogMetadata.height },
     { format: "png", width: 1200, height: 630 },
   );
+  assertMetadataStripped(ogMetadata, "pluck-cover.png");
   await assertNoTransientDirectories(publicDir);
 });
 
