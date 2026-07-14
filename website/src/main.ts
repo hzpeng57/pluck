@@ -55,6 +55,7 @@ if (!reduceMotion && "IntersectionObserver" in window) {
     }
   }, { rootMargin: "0px 0px -8%", threshold: 0.12 });
   document.querySelectorAll("[data-reveal]").forEach((element) => observer.observe(element));
+  document.documentElement.classList.add("reveal-ready");
 } else {
   document.querySelectorAll("[data-reveal]").forEach((element) => element.setAttribute("data-visible", ""));
 }

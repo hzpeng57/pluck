@@ -744,6 +744,12 @@ h3 {
   -webkit-overflow-scrolling: touch;
 }
 
+.install-disclosure {
+  margin: 16px 0 0;
+  color: var(--fg-3);
+  font-size: 13px;
+}
+
 .open-source-section {
   padding-block: 100px 28px;
 }
@@ -832,13 +838,13 @@ h3 {
   text-decoration: none;
 }
 
-.js [data-reveal] {
+.reveal-ready [data-reveal] {
   opacity: 0;
   transform: translateY(14px);
   transition: opacity 540ms ease, transform 540ms ease;
 }
 
-.js [data-reveal][data-visible] {
+.reveal-ready [data-reveal][data-visible] {
   opacity: 1;
   transform: translateY(0);
 }

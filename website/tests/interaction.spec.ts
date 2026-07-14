@@ -88,6 +88,28 @@ test("reduced motion disables reveal transitions", async ({ page }) => {
   expect(duration).toBe("0s");
 });
 
+for (const entry of [
+  { path: "./", languageLink: "\u7b80\u4f53\u4e2d\u6587", downloadLink: "Download the latest release" },
+  { path: "zh-CN/", languageLink: "English", downloadLink: "\u4e0b\u8f7d\u6700\u65b0 Release" },
+] as const) {
+  test(`${entry.path} content stays visible when the main module fails to load`, async ({ page }) => {
+    await page.route("**/assets/*.js", (route) => route.abort());
+    await page.goto(entry.path, { waitUntil: "domcontentloaded" });
+
+    await expect(page.locator("html")).toHaveClass(/\bjs\b/);
+    await expect(page.locator("html")).not.toHaveClass(/\breveal-ready\b/);
+
+    const reveals = page.locator("[data-reveal]");
+    await expect(reveals).toHaveCount(8);
+    expect(await reveals.evaluateAll((elements) => (
+      elements.every((element) => getComputedStyle(element).opacity === "1")
+    ))).toBe(true);
+
+    await expect(page.locator(".site-footer").getByRole("link", { name: entry.languageLink })).toBeVisible();
+    await expect(page.locator("#download").getByRole("link", { name: entry.downloadLink })).toBeVisible();
+  });
+}
+
 test("mobile hero leaves the next section visible", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto("./");

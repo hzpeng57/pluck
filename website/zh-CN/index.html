@@ -222,9 +222,10 @@
             <ol>
               <li><span>1</span>从最新 Release 下载 DMG 文件。</li>
               <li><span>2</span>打开 DMG，将 Pluck 拖入“应用程序”文件夹。</li>
-              <li><span>3</span>如果 macOS 阻止打开应用，请打开“终端”并运行：</li>
+              <li><span>3</span>Pluck 尚未使用 Apple Developer ID 签名，因此 macOS Gatekeeper 首次启动时可能提示“应用已损坏”。请打开“终端”，运行以下命令移除隔离属性：</li>
             </ol>
             <pre><code>xattr -dr com.apple.quarantine /Applications/Pluck.app</code></pre>
+            <p class="install-disclosure">Developer ID 签名与公证在规划中；完成后将不再需要 xattr 步骤。</p>
           </div>
         </div>
       </section>
@@ -239,6 +240,7 @@
             <p>
               Pluck 是开源项目。你可以在
               <a class="text-link" href="https://github.com/hzpeng57/pluck">GitHub 仓库 <i data-lucide="external-link"></i></a>中阅读代码、关注开发进度并报告问题。
+              Pluck 采用 <a class="text-link" href="https://github.com/hzpeng57/pluck/blob/main/LICENSE">MIT 许可证</a>。
             </p>
             <a class="arrow-link" href="https://github.com/hzpeng57/pluck/releases/latest">
               查看最新 Release <i data-lucide="arrow-right"></i>
@@ -253,6 +255,7 @@
       <p><strong>Pluck</strong> · 一款专注于 macOS 的 Git 客户端。</p>
       <nav aria-label="页脚导航">
         <a href="https://github.com/hzpeng57/pluck">GitHub</a>
+        <a href="https://github.com/hzpeng57/pluck/blob/main/LICENSE">许可证</a>
         <a href="/pluck/" lang="en">English</a>
       </nav>
     </footer>
