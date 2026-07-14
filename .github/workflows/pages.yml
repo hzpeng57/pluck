@@ -1,5 +1,6 @@
 name: Pages
 
+# Repository Settings > Pages must use GitHub Actions as the source.
 on:
   push:
     branches: [main]
