@@ -432,6 +432,7 @@ export const useRepoStateStore = defineStore("repoState", () => {
     const operation = snapshot.value?.inProgress;
     if (!operation) return;
     const requestId = ++snapshotRequestId;
+    const workspaceGeneration = conflictWorkspaceGeneration;
     loading.value = true;
     conflictError.value = null;
     try {
@@ -445,8 +446,9 @@ export const useRepoStateStore = defineStore("repoState", () => {
       })();
       if (!isCurrentSnapshotRequest(repoId, requestId)) return;
       snapshot.value = next;
-      if (!next.inProgress) closeConflictWorkspace();
-      else await refreshConflicts(repoId);
+      if (isCurrentConflictWorkspace(repoId, workspaceGeneration)) {
+        await refreshConflictWorkspaceAfterSnapshot(repoId, next, requestId, workspaceGeneration);
+      }
     }
     catch (e: any) {
       if (isCurrentSnapshotRequest(repoId, requestId)) conflictError.value = formatErr(e);
@@ -613,13 +615,15 @@ export const useRepoStateStore = defineStore("repoState", () => {
   async function refresh(id: string) {
     if (activeRepoId !== id) return;
     const requestId = ++snapshotRequestId;
+    const workspaceWasOpen = conflictWorkspaceOpen.value;
+    const workspaceGeneration = conflictWorkspaceGeneration;
     loading.value = true;
     try {
       const next = await api.repoRefresh(id, selectedLogBranch.value ?? undefined);
       if (!isCurrentSnapshotRequest(id, requestId)) return;
       snapshot.value = next;
-      if (conflictWorkspaceOpen.value) {
-        await refreshConflictWorkspaceAfterSnapshot(id, next, requestId, conflictWorkspaceGeneration);
+      if (workspaceWasOpen && isCurrentConflictWorkspace(id, workspaceGeneration)) {
+        await refreshConflictWorkspaceAfterSnapshot(id, next, requestId, workspaceGeneration);
       }
     }
     catch (e: any) {
