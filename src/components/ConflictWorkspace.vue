@@ -81,7 +81,7 @@ function deletePath() {
   void state.deleteConflictPath(activeRepoId.value, detail.value.path);
 }
 function refresh() {
-  if (activeRepoId.value) void state.refreshConflicts(activeRepoId.value);
+  if (activeRepoId.value) void state.refreshConflictWorkspace(activeRepoId.value);
 }
 function abort() {
   if (activeRepoId.value) void state.abortInProgress(activeRepoId.value);
@@ -133,8 +133,8 @@ function continueOperation() {
           <div>
             <div class="gl-segmented" role="tablist" aria-label="Conflict sources">
               <button class="gl-segmented-btn px-2 w-auto" :class="{ 'is-active': sourceTab === 'base' }" @click="sourceTab = 'base'">Common base</button>
-              <button v-if="detail.stage2" class="gl-segmented-btn px-2 w-auto" :class="{ 'is-active': sourceTab === 2 }" @click="sourceTab = 2">{{ labels[2] }}</button>
-              <button v-if="detail.stage3" class="gl-segmented-btn px-2 w-auto" :class="{ 'is-active': sourceTab === 3 }" @click="sourceTab = 3">{{ labels[3] }}</button>
+              <button class="gl-segmented-btn px-2 w-auto" :class="{ 'is-active': sourceTab === 2 }" @click="sourceTab = 2">{{ labels[2] }}</button>
+              <button class="gl-segmented-btn px-2 w-auto" :class="{ 'is-active': sourceTab === 3 }" @click="sourceTab = 3">{{ labels[3] }}</button>
             </div>
             <div class="gl-conflict-source mt-2">
               <pre v-if="isTextual(selectedBlob)">{{ selectedBlob.content }}</pre>

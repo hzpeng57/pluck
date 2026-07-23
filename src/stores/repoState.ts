@@ -170,6 +170,12 @@ export const useRepoStateStore = defineStore("repoState", () => {
     conflictError.value = null;
   }
 
+  function isCurrentConflictWorkspace(repoId: string, workspaceGeneration: number) {
+    return activeRepoId === repoId
+      && conflictWorkspaceOpen.value
+      && conflictWorkspaceGeneration === workspaceGeneration;
+  }
+
   function sameWorkingTarget(target: DiffTarget, file: WorkingFile) {
     return target.kind === "workingTree"
       && target.path === file.path
@@ -209,11 +215,12 @@ export const useRepoStateStore = defineStore("repoState", () => {
     const workspaceGeneration = ++conflictWorkspaceGeneration;
     conflictWorkspaceOpen.value = true;
     conflictError.value = null;
-    await refreshConflicts(repoId);
+    const refreshed = await refreshConflicts(repoId);
     if (
       activeRepoId !== repoId
       || !conflictWorkspaceOpen.value
       || conflictWorkspaceGeneration !== workspaceGeneration
+      || !refreshed
     ) return;
     if (conflictFiles.value.length > 0) await selectConflict(repoId, conflictFiles.value[0].path);
   }
@@ -222,21 +229,26 @@ export const useRepoStateStore = defineStore("repoState", () => {
     clearConflictWorkspace();
   }
 
-  async function refreshConflicts(repoId: string) {
-    if (activeRepoId !== repoId) return;
+  async function refreshConflicts(repoId: string): Promise<boolean> {
+    if (activeRepoId !== repoId || !conflictWorkspaceOpen.value) return false;
+    const workspaceGeneration = conflictWorkspaceGeneration;
     const requestId = ++conflictListRequestId;
     loadingConflicts.value = true;
     conflictError.value = null;
     try {
       const files = await api.conflictList(repoId);
-      if (activeRepoId !== repoId || conflictListRequestId !== requestId) return;
+      if (!isCurrentConflictWorkspace(repoId, workspaceGeneration) || conflictListRequestId !== requestId) return false;
       conflictFiles.value = files;
       if (selectedConflictPath.value && !files.some(file => file.path === selectedConflictPath.value)) {
         clearConflictSelection();
       }
+      return true;
     }
     catch (e: any) {
-      if (activeRepoId === repoId && conflictListRequestId === requestId) conflictError.value = formatErr(e);
+      if (isCurrentConflictWorkspace(repoId, workspaceGeneration) && conflictListRequestId === requestId) {
+        conflictError.value = formatErr(e);
+      }
+      return false;
     }
     finally {
       if (activeRepoId === repoId && conflictListRequestId === requestId) loadingConflicts.value = false;
@@ -244,7 +256,8 @@ export const useRepoStateStore = defineStore("repoState", () => {
   }
 
   async function selectConflict(repoId: string, path: string) {
-    if (activeRepoId !== repoId || !conflictFiles.value.some(file => file.path === path)) return;
+    const workspaceGeneration = conflictWorkspaceGeneration;
+    if (!isCurrentConflictWorkspace(repoId, workspaceGeneration) || !conflictFiles.value.some(file => file.path === path)) return;
     const requestId = ++conflictDetailRequestId;
     selectedConflictPath.value = path;
     selectedConflict.value = null;
@@ -252,18 +265,59 @@ export const useRepoStateStore = defineStore("repoState", () => {
     conflictError.value = null;
     try {
       const detail = await api.conflictDetail(repoId, path);
-      if (activeRepoId !== repoId || conflictDetailRequestId !== requestId || selectedConflictPath.value !== path) return;
+      if (
+        !isCurrentConflictWorkspace(repoId, workspaceGeneration)
+        || conflictDetailRequestId !== requestId
+        || selectedConflictPath.value !== path
+      ) return;
       selectedConflict.value = detail;
     }
     catch (e: any) {
-      if (activeRepoId === repoId && conflictDetailRequestId === requestId && selectedConflictPath.value === path) {
+      if (
+        isCurrentConflictWorkspace(repoId, workspaceGeneration)
+        && conflictDetailRequestId === requestId
+        && selectedConflictPath.value === path
+      ) {
         conflictError.value = formatErr(e);
       }
     }
     finally {
-      if (activeRepoId === repoId && conflictDetailRequestId === requestId && selectedConflictPath.value === path) {
+      if (
+        isCurrentConflictWorkspace(repoId, workspaceGeneration)
+        && conflictDetailRequestId === requestId
+        && selectedConflictPath.value === path
+      ) {
         loadingConflictDetail.value = false;
       }
+    }
+  }
+
+  async function refreshConflictWorkspace(repoId: string) {
+    if (activeRepoId !== repoId || !conflictWorkspaceOpen.value) return;
+    const workspaceGeneration = conflictWorkspaceGeneration;
+    const selectedPath = selectedConflictPath.value;
+    const requestId = ++snapshotRequestId;
+    loading.value = true;
+    conflictError.value = null;
+    try {
+      const next = await api.repoRefresh(repoId, selectedLogBranch.value ?? undefined);
+      if (!isCurrentSnapshotRequest(repoId, requestId) || !isCurrentConflictWorkspace(repoId, workspaceGeneration)) return;
+      snapshot.value = next;
+      if (!await refreshConflicts(repoId)) return;
+      if (!isCurrentSnapshotRequest(repoId, requestId) || !isCurrentConflictWorkspace(repoId, workspaceGeneration)) return;
+      const path = selectedPath && conflictFiles.value.some(file => file.path === selectedPath)
+        ? selectedPath
+        : conflictFiles.value[0]?.path;
+      if (path) await selectConflict(repoId, path);
+      else clearConflictSelection();
+    }
+    catch (e: any) {
+      if (isCurrentSnapshotRequest(repoId, requestId) && isCurrentConflictWorkspace(repoId, workspaceGeneration)) {
+        conflictError.value = formatErr(e);
+      }
+    }
+    finally {
+      if (isCurrentSnapshotRequest(repoId, requestId)) loading.value = false;
     }
   }
 
@@ -287,7 +341,7 @@ export const useRepoStateStore = defineStore("repoState", () => {
       if (!isCurrentSnapshotRequest(repoId, requestId)) return;
       snapshot.value = next;
       if (!conflictWorkspaceOpen.value || conflictWorkspaceGeneration !== workspaceGeneration) return;
-      await refreshConflicts(repoId);
+      if (!await refreshConflicts(repoId)) return;
       if (
         activeRepoId !== repoId
         || !isCurrentSnapshotRequest(repoId, requestId)
@@ -584,7 +638,7 @@ export const useRepoStateStore = defineStore("repoState", () => {
     open, refresh, setLogBranch, pushToast, pushLoadingToast, dismissToast,
     selectCommit, clearSelectedCommit,
     openWorkingDiff, openCommitFileDiff, closeReviewMode, rollbackCurrentWorkingFile, setDiffIgnoreWhitespace,
-    openConflictWorkspace, closeConflictWorkspace, refreshConflicts, selectConflict,
+    openConflictWorkspace, closeConflictWorkspace, refreshConflicts, refreshConflictWorkspace, selectConflict,
     resolveConflictText, takeConflictStage, deleteConflictPath, continueInProgress, abortInProgress,
     setSingleSelection, toggleSelection, selectRange, clearSelection,
     openEditMessageDialog, closeEditMessageDialog, openResetDialog, closeResetDialog,
