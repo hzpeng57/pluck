@@ -78,15 +78,22 @@ pub async fn resolve_conflict_text(repo: &Path, path: &str, content: &str) -> Gi
 
 pub async fn take_conflict_stage(repo: &Path, path: &str, stage: u8) -> GitResult<()> {
     let conflict = unresolved_conflict(repo, path).await?;
-    let flag = match stage {
-        2 if conflict.stage2.is_some() => "--ours",
-        3 if conflict.stage3.is_some() => "--theirs",
-        2 | 3 => return Err(GitError::parse(format!("conflict stage {stage} is absent: {path}"))),
+    let selected = match stage {
+        2 => conflict.stage2,
+        3 => conflict.stage3,
         _ => return Err(GitError::parse("conflict stage must be 2 or 3")),
     };
+    let selected = selected
+        .ok_or_else(|| GitError::parse(format!("conflict stage {stage} is absent: {path}")))?;
 
-    run_git(repo, &["checkout", flag, "--", path]).await?;
-    run_git(repo, &["add", "--", path]).await?;
+    if selected.mode == "160000" {
+        let cache_info = format!("{},{},{}", selected.mode, selected.oid, path);
+        run_git(repo, &["update-index", "--add", "--cacheinfo", &cache_info]).await?;
+    } else {
+        let flag = if stage == 2 { "--ours" } else { "--theirs" };
+        run_git(repo, &["checkout", flag, "--", path]).await?;
+        run_git(repo, &["add", "--", path]).await?;
+    }
     Ok(())
 }
 
@@ -184,6 +191,14 @@ async fn load_stage(
     let Some(stage) = stage else {
         return Ok(None);
     };
+    if stage.mode == "160000" {
+        return Ok(Some(ConflictBlob {
+            stage,
+            content: None,
+            binary: true,
+            too_large: false,
+        }));
+    }
     let spec = format!(":{stage_number}:{path}");
     let output = run_git_bytes(repo, &["show", &spec]).await?;
     let (content, binary, too_large) = safe_content(output.stdout);
@@ -220,7 +235,7 @@ fn parse_hash_object_oid(raw: &[u8]) -> GitResult<&str> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::{path::Path, process::Command};
+    use std::{io::Write, path::Path, process::{Command, Stdio}};
     use tempfile::tempdir;
 
     fn git(repo: &Path, args: &[&str]) {
@@ -238,6 +253,16 @@ mod tests {
             !output.status.success(),
             "git {args:?} unexpectedly succeeded"
         );
+    }
+
+    fn git_output(repo: &Path, args: &[&str]) -> String {
+        let output = Command::new("git").current_dir(repo).args(args).output().unwrap();
+        assert!(
+            output.status.success(),
+            "git {args:?} failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        String::from_utf8(output.stdout).unwrap()
     }
 
     fn merge_conflict(main: &[u8], feature: &[u8]) -> tempfile::TempDir {
@@ -262,6 +287,34 @@ mod tests {
 
     fn text_conflict() -> tempfile::TempDir {
         merge_conflict(b"main\n", b"feature\n")
+    }
+
+    fn gitlink_conflict() -> tempfile::TempDir {
+        let repo = tempdir().unwrap();
+        git(repo.path(), &["init", "-b", "main"]);
+        git(repo.path(), &["config", "user.email", "t@t.t"]);
+        git(repo.path(), &["config", "user.name", "t"]);
+        std::fs::write(repo.path().join("seed.txt"), b"seed\n").unwrap();
+        git(repo.path(), &["add", "seed.txt"]);
+        git(repo.path(), &["commit", "-m", "base"]);
+        let oid = git_output(repo.path(), &["rev-parse", "HEAD"]).trim().to_string();
+        let index_info = format!(
+            "160000 {oid} 1\tmodule\n160000 {oid} 2\tmodule\n160000 {oid} 3\tmodule\n"
+        );
+        let mut child = Command::new("git")
+            .current_dir(repo.path())
+            .args(["update-index", "--index-info"])
+            .stdin(Stdio::piped())
+            .spawn()
+            .unwrap();
+        child.stdin.take().unwrap().write_all(index_info.as_bytes()).unwrap();
+        let output = child.wait_with_output().unwrap();
+        assert!(
+            output.status.success(),
+            "git update-index --index-info failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        repo
     }
 
     #[tokio::test]
@@ -359,6 +412,42 @@ mod tests {
         assert_eq!(stage3.content, None);
         assert!(!stage3.binary);
         assert!(stage3.too_large);
+    }
+
+    #[tokio::test]
+    async fn loads_and_takes_gitlink_conflict_stage_through_index_metadata() {
+        let repo = gitlink_conflict();
+
+        let detail = conflict_detail(repo.path(), "module").await.unwrap();
+        let stage2 = detail.stage2.unwrap();
+        assert_eq!(stage2.stage.mode, "160000");
+        assert_eq!(stage2.content, None);
+        assert!(stage2.binary);
+        assert!(!stage2.too_large);
+
+        take_conflict_stage(repo.path(), "module", 2).await.unwrap();
+        assert!(list_conflicts(repo.path()).await.unwrap().is_empty());
+        let staged = run_git_bytes(repo.path(), &["ls-files", "--stage", "--", "module"])
+            .await
+            .unwrap();
+        let staged = String::from_utf8(staged.stdout).unwrap();
+        assert!(staged.starts_with("160000 "));
+        assert!(staged.contains(" 0\tmodule\n"));
+    }
+
+    #[tokio::test]
+    async fn deletes_gitlink_conflict_path_without_materializing_submodule() {
+        let repo = gitlink_conflict();
+
+        delete_conflict_path(repo.path(), "module").await.unwrap();
+        assert!(list_conflicts(repo.path()).await.unwrap().is_empty());
+        assert!(
+            run_git_bytes(repo.path(), &["ls-files", "--stage", "--", "module"])
+                .await
+                .unwrap()
+                .stdout
+                .is_empty()
+        );
     }
 
     #[tokio::test]

@@ -213,7 +213,7 @@ pub async fn merge_abort_cmd(id: String, state: State<'_, AppState>) -> GitResul
     let sess = state.get(&id).await.ok_or_else(|| GitError::parse("unknown repo id"))?;
     let path = { sess.lock().await.path.clone() };
     merge_abort(&path).await?;
-    refresh_session(&sess).await
+    refresh_session_force(&sess).await
 }
 
 #[tauri::command]
@@ -221,7 +221,7 @@ pub async fn merge_continue_cmd(id: String, state: State<'_, AppState>) -> GitRe
     let sess = state.get(&id).await.ok_or_else(|| GitError::parse("unknown repo id"))?;
     let path = { sess.lock().await.path.clone() };
     merge_continue(&path).await?;
-    refresh_session(&sess).await
+    refresh_session_force(&sess).await
 }
 
 #[tauri::command]
@@ -280,7 +280,7 @@ pub async fn rebase_continue_cmd(
         .ok_or_else(|| GitError::parse("unknown repo id"))?;
     let path = { sess.lock().await.path.clone() };
     rebase_continue(&path).await?;
-    refresh_session(&sess).await
+    refresh_session_force(&sess).await
 }
 
 #[tauri::command]
@@ -294,7 +294,7 @@ pub async fn rebase_abort_cmd(
         .ok_or_else(|| GitError::parse("unknown repo id"))?;
     let path = { sess.lock().await.path.clone() };
     rebase_abort(&path).await?;
-    refresh_session(&sess).await
+    refresh_session_force(&sess).await
 }
 
 #[tauri::command]
@@ -460,7 +460,7 @@ pub async fn cherry_pick_continue_cmd(id: String, state: State<'_, AppState>) ->
     let sess = state.get(&id).await.ok_or_else(|| GitError::parse("unknown repo id"))?;
     let path = { sess.lock().await.path.clone() };
     cherry_pick_continue(&path).await?;
-    refresh_session(&sess).await
+    refresh_session_force(&sess).await
 }
 
 #[tauri::command]
@@ -468,7 +468,7 @@ pub async fn cherry_pick_abort_cmd(id: String, state: State<'_, AppState>) -> Gi
     let sess = state.get(&id).await.ok_or_else(|| GitError::parse("unknown repo id"))?;
     let path = { sess.lock().await.path.clone() };
     cherry_pick_abort(&path).await?;
-    refresh_session(&sess).await
+    refresh_session_force(&sess).await
 }
 
 #[tauri::command]
@@ -488,7 +488,7 @@ pub async fn revert_continue_cmd(id: String, state: State<'_, AppState>) -> GitR
     let sess = state.get(&id).await.ok_or_else(|| GitError::parse("unknown repo id"))?;
     let path = { sess.lock().await.path.clone() };
     revert_continue(&path).await?;
-    refresh_session(&sess).await
+    refresh_session_force(&sess).await
 }
 
 #[tauri::command]
@@ -496,7 +496,7 @@ pub async fn revert_abort_cmd(id: String, state: State<'_, AppState>) -> GitResu
     let sess = state.get(&id).await.ok_or_else(|| GitError::parse("unknown repo id"))?;
     let path = { sess.lock().await.path.clone() };
     revert_abort(&path).await?;
-    refresh_session(&sess).await
+    refresh_session_force(&sess).await
 }
 
 #[tauri::command]

@@ -98,8 +98,8 @@ function continueOperation() {
         <span class="font-semibold">Conflicts</span>
         <span class="gl-badge ml-auto">{{ unresolvedCount }}</span>
       </div>
+      <div v-if="state.conflictError" class="gl-conflict-empty" style="color: var(--danger)">{{ state.conflictError }}</div>
       <div v-if="state.loadingConflicts" class="gl-conflict-empty"><span class="gl-spinner" /> Loading conflicts</div>
-      <div v-else-if="state.conflictError && state.conflictFiles.length === 0" class="gl-conflict-empty" style="color: var(--danger)">{{ state.conflictError }}</div>
       <div v-else-if="state.conflictFiles.length === 0" class="gl-conflict-empty">No unresolved conflicts</div>
       <div v-else class="p-2 space-y-1">
         <button v-for="file in state.conflictFiles" :key="file.path"
