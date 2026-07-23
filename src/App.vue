@@ -12,6 +12,7 @@ import BranchesPanel from "./components/BranchesPanel.vue";
 import CommitPanel from "./components/CommitPanel.vue";
 import CommitDetailPanel from "./components/CommitDetailPanel.vue";
 import DiffReviewWorkspace from "./components/DiffReviewWorkspace.vue";
+import ConflictWorkspace from "./components/ConflictWorkspace.vue";
 import LogPanel from "./components/LogPanel.vue";
 import InProgressBanner from "./components/InProgressBanner.vue";
 import ToastTray from "./components/ToastTray.vue";
@@ -46,8 +47,11 @@ function loadInspectorWidth(): number {
 }
 watch(inspectorWidth, v => localStorage.setItem(INSPECTOR_KEY, String(v)));
 const reviewMode = computed(() => state.diffTarget !== null);
+const conflictMode = computed(() => state.conflictWorkspaceOpen);
 const gridCols = computed(() =>
-  reviewMode.value
+  conflictMode.value
+    ? `${sideWidth.value}px 6px minmax(620px, 1fr)`
+    : reviewMode.value
     ? `${sideWidth.value}px 6px minmax(920px, 1fr)`
     : `${sideWidth.value}px 6px minmax(380px, 1fr) 6px ${inspectorWidth.value}px`
 );
@@ -178,7 +182,12 @@ onBeforeUnmount(() => {
              title="Drag to resize · double-click to reset">
           <div class="gl-splitter-line" />
         </div>
-        <template v-if="reviewMode">
+        <template v-if="conflictMode">
+          <div class="gl-panel overflow-hidden min-h-0 min-w-0">
+            <ConflictWorkspace />
+          </div>
+        </template>
+        <template v-else-if="reviewMode">
           <div class="gl-panel overflow-hidden min-h-0 min-w-0">
             <DiffReviewWorkspace />
           </div>
