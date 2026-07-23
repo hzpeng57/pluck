@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { EditorState, Compartment } from "@codemirror/state";
+import { Annotation, EditorState, Compartment } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { basicSetup } from "codemirror";
 
@@ -10,6 +10,7 @@ const emit = defineEmits<{ "update:modelValue": [value: string] }>();
 const host = ref<HTMLElement | null>(null);
 let view: EditorView | null = null;
 const readOnlyCompartment = new Compartment();
+const programmaticUpdate = Annotation.define<boolean>();
 
 const editorTheme = EditorView.theme({
   "&": {
@@ -41,10 +42,8 @@ onMounted(() => {
       ]),
       EditorView.updateListener.of(update => {
         if (!update.docChanged) return;
-        const userEdit = update.transactions.some(transaction =>
-          transaction.isUserEvent("input") || transaction.isUserEvent("delete"),
-        );
-        if (userEdit) emit("update:modelValue", update.state.doc.toString());
+        const isProgrammatic = update.transactions.some(transaction => transaction.annotation(programmaticUpdate));
+        if (!isProgrammatic) emit("update:modelValue", update.state.doc.toString());
       }),
     ],
   });
@@ -53,7 +52,10 @@ onMounted(() => {
 
 watch(() => props.modelValue, value => {
   if (!view || value === view.state.doc.toString()) return;
-  view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: value } });
+  view.dispatch({
+    changes: { from: 0, to: view.state.doc.length, insert: value },
+    annotations: programmaticUpdate.of(true),
+  });
 });
 
 watch(() => props.readOnly, value => {

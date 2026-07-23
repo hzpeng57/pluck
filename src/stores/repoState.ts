@@ -295,7 +295,6 @@ export const useRepoStateStore = defineStore("repoState", () => {
   async function refreshConflictWorkspace(repoId: string) {
     if (activeRepoId !== repoId || !conflictWorkspaceOpen.value) return;
     const workspaceGeneration = conflictWorkspaceGeneration;
-    const selectedPath = selectedConflictPath.value;
     const requestId = ++snapshotRequestId;
     loading.value = true;
     conflictError.value = null;
@@ -303,13 +302,7 @@ export const useRepoStateStore = defineStore("repoState", () => {
       const next = await api.repoRefresh(repoId, selectedLogBranch.value ?? undefined);
       if (!isCurrentSnapshotRequest(repoId, requestId) || !isCurrentConflictWorkspace(repoId, workspaceGeneration)) return;
       snapshot.value = next;
-      if (!await refreshConflicts(repoId)) return;
-      if (!isCurrentSnapshotRequest(repoId, requestId) || !isCurrentConflictWorkspace(repoId, workspaceGeneration)) return;
-      const path = selectedPath && conflictFiles.value.some(file => file.path === selectedPath)
-        ? selectedPath
-        : conflictFiles.value[0]?.path;
-      if (path) await selectConflict(repoId, path);
-      else clearConflictSelection();
+      await refreshConflictWorkspaceAfterSnapshot(repoId, next, requestId, workspaceGeneration);
     }
     catch (e: any) {
       if (isCurrentSnapshotRequest(repoId, requestId) && isCurrentConflictWorkspace(repoId, workspaceGeneration)) {
@@ -319,6 +312,29 @@ export const useRepoStateStore = defineStore("repoState", () => {
     finally {
       if (isCurrentSnapshotRequest(repoId, requestId)) loading.value = false;
     }
+  }
+
+  async function refreshConflictWorkspaceAfterSnapshot(
+    repoId: string,
+    next: RepoSnapshot,
+    requestId: number,
+    workspaceGeneration: number,
+  ) {
+    const isCurrent = () =>
+      isCurrentSnapshotRequest(repoId, requestId)
+      && isCurrentConflictWorkspace(repoId, workspaceGeneration);
+    if (!isCurrent()) return;
+    if (!next.inProgress) {
+      closeConflictWorkspace();
+      return;
+    }
+    if (!await refreshConflicts(repoId) || !isCurrent()) return;
+    const currentPath = selectedConflictPath.value;
+    const path = currentPath && conflictFiles.value.some(file => file.path === currentPath)
+      ? currentPath
+      : conflictFiles.value[0]?.path;
+    if (path && isCurrent()) await selectConflict(repoId, path);
+    else if (isCurrent()) clearConflictSelection();
   }
 
   async function selectNextConflict(repoId: string) {
@@ -375,6 +391,7 @@ export const useRepoStateStore = defineStore("repoState", () => {
     const operation = snapshot.value?.inProgress;
     if (!operation) return;
     const requestId = ++snapshotRequestId;
+    const workspaceGeneration = conflictWorkspaceGeneration;
     loading.value = true;
     conflictError.value = null;
     try {
@@ -388,8 +405,13 @@ export const useRepoStateStore = defineStore("repoState", () => {
       })();
       if (!isCurrentSnapshotRequest(repoId, requestId)) return;
       snapshot.value = next;
-      if (!next.inProgress) closeConflictWorkspace();
-      else await refreshConflicts(repoId);
+      if (!next.inProgress) {
+        if (conflictWorkspaceOpen.value && conflictWorkspaceGeneration === workspaceGeneration) {
+          closeConflictWorkspace();
+        }
+      } else {
+        await refreshConflictWorkspaceAfterSnapshot(repoId, next, requestId, workspaceGeneration);
+      }
     }
     catch (e: any) {
       if (isCurrentSnapshotRequest(repoId, requestId)) conflictError.value = formatErr(e);
@@ -596,6 +618,9 @@ export const useRepoStateStore = defineStore("repoState", () => {
       const next = await api.repoRefresh(id, selectedLogBranch.value ?? undefined);
       if (!isCurrentSnapshotRequest(id, requestId)) return;
       snapshot.value = next;
+      if (conflictWorkspaceOpen.value) {
+        await refreshConflictWorkspaceAfterSnapshot(id, next, requestId, conflictWorkspaceGeneration);
+      }
     }
     catch (e: any) {
       if (isCurrentSnapshotRequest(id, requestId)) pushToast("error", formatErr(e));
