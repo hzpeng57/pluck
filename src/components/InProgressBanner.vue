@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { invoke } from "@tauri-apps/api/core";
 import {
   AlertTriangle,
   GitMerge,
@@ -9,42 +8,24 @@ import {
 } from "lucide-vue-next";
 import { useRepoStateStore } from "../stores/repoState";
 import { useReposStore } from "../stores/repos";
-import type { RepoSnapshot } from "../types/git";
 
 const state = useRepoStateStore();
 const repos = useReposStore();
 const op = computed(() => state.snapshot?.inProgress ?? null);
+const unresolvedCount = computed(() =>
+  state.snapshot?.files.filter(file => file.status === "conflicted").length ?? 0,
+);
 
-async function call(cmd: string) {
-  if (!repos.activeId) return;
-  const id = repos.activeId;
-  const isRebaseContinue = cmd === "rebase_continue_cmd";
-  const isRebaseAbort = cmd === "rebase_abort_cmd";
-  const loadingToastId = isRebaseContinue
-    ? state.pushLoadingToast("Continuing rebase…")
-    : isRebaseAbort
-      ? state.pushLoadingToast("Aborting rebase…")
-      : null;
-  try {
-    const snapshot = await invoke<RepoSnapshot>(cmd, { id });
-    if (repos.activeId !== id) return;
-    state.snapshot = snapshot;
-    if (isRebaseContinue) {
-      state.pushToast("info", snapshot.inProgress?.type === "rebasing"
-        ? "Rebase paused; continue when ready"
-        : "Rebase successful");
-    } else if (isRebaseAbort) {
-      state.pushToast("info", snapshot.inProgress?.type === "rebasing"
-        ? "Rebase is still in progress"
-        : "Rebase aborted");
-    }
-  }
-  catch (e: any) {
-    if (repos.activeId === id) state.pushToast("error", e?.data?.friendly ?? String(e));
-  }
-  finally {
-    if (loadingToastId !== null) state.dismissToast(loadingToastId);
-  }
+function resolveConflicts() {
+  if (repos.activeId) void state.openConflictWorkspace(repos.activeId);
+}
+
+function continueOperation() {
+  if (repos.activeId) void state.continueInProgress(repos.activeId);
+}
+
+function abortOperation() {
+  if (repos.activeId) void state.abortInProgress(repos.activeId);
 }
 </script>
 
@@ -77,21 +58,10 @@ async function call(cmd: string) {
       <span style="color: var(--fg-3)"> — resolve conflicts then continue</span>
     </span>
     <div class="flex-1" />
-    <template v-if="op.type === 'merging'">
-      <button class="gl-command-btn" @click="call('merge_abort_cmd')">Abort</button>
-      <button class="gl-command-btn gl-btn-primary" @click="call('merge_continue_cmd')">Continue</button>
-    </template>
-    <template v-else-if="op.type === 'rebasing'">
-      <button class="gl-command-btn" @click="call('rebase_abort_cmd')">Abort</button>
-      <button class="gl-command-btn gl-btn-primary" @click="call('rebase_continue_cmd')">Continue</button>
-    </template>
-    <template v-else-if="op.type === 'cherryPicking'">
-      <button class="gl-command-btn" @click="call('cherry_pick_abort_cmd')">Abort</button>
-      <button class="gl-command-btn gl-btn-primary" @click="call('cherry_pick_continue_cmd')">Continue</button>
-    </template>
-    <template v-else-if="op.type === 'reverting'">
-      <button class="gl-command-btn" @click="call('revert_abort_cmd')">Abort</button>
-      <button class="gl-command-btn gl-btn-primary" @click="call('revert_continue_cmd')">Continue</button>
-    </template>
+    <button v-if="unresolvedCount > 0" class="gl-command-btn" @click="resolveConflicts">
+      Resolve {{ unresolvedCount }} {{ unresolvedCount === 1 ? "conflict" : "conflicts" }}
+    </button>
+    <button class="gl-command-btn" @click="abortOperation">Abort</button>
+    <button class="gl-command-btn gl-btn-primary" :disabled="unresolvedCount > 0" @click="continueOperation">Continue</button>
   </div>
 </template>

@@ -1,7 +1,10 @@
 import { defineStore } from "pinia";
 import { ref, computed, watch } from "vue";
-import { api } from "../api/tauri";
-import type { RepoSnapshot, CommitDetail, Commit, WorkingFile, ChangedFile, FileDiff, DiffTarget, BranchKind } from "../types/git";
+import { api, ops } from "../api/tauri";
+import type {
+  RepoSnapshot, CommitDetail, Commit, WorkingFile, ChangedFile, FileDiff, DiffTarget, BranchKind,
+  ConflictFile, ConflictFileDetail, ConflictStageChoice,
+} from "../types/git";
 
 const LOG_PAGE_SIZE = 200;
 const DIFF_IGNORE_WS_KEY = "pluck:diffIgnoreWhitespace";
@@ -31,6 +34,13 @@ export const useRepoStateStore = defineStore("repoState", () => {
   const selectedDiff = ref<FileDiff | null>(null);
   const loadingDiff = ref(false);
   const diffError = ref<string | null>(null);
+  const conflictWorkspaceOpen = ref(false);
+  const conflictFiles = ref<ConflictFile[]>([]);
+  const selectedConflictPath = ref<string | null>(null);
+  const selectedConflict = ref<ConflictFileDetail | null>(null);
+  const loadingConflicts = ref(false);
+  const loadingConflictDetail = ref(false);
+  const conflictError = ref<string | null>(null);
   const diffIgnoreWhitespace = ref(localStorage.getItem(DIFF_IGNORE_WS_KEY) === "1");
   watch(diffIgnoreWhitespace, value => localStorage.setItem(DIFF_IGNORE_WS_KEY, value ? "1" : "0"));
   const diffOptions = computed(() => ({ ignoreWhitespace: diffIgnoreWhitespace.value }));
@@ -50,6 +60,8 @@ export const useRepoStateStore = defineStore("repoState", () => {
   let snapshotRequestId = 0;
   let commitRequestId = 0;
   let diffRequestId = 0;
+  let conflictListRequestId = 0;
+  let conflictDetailRequestId = 0;
   const toastTimers = new Map<number, number>();
 
   // 每次 snapshot 整体替换（首次 open / refresh / 任何 mutation 后回流），
@@ -140,6 +152,22 @@ export const useRepoStateStore = defineStore("repoState", () => {
     diffError.value = null;
   }
 
+  function clearConflictSelection() {
+    conflictDetailRequestId++;
+    selectedConflictPath.value = null;
+    selectedConflict.value = null;
+    loadingConflictDetail.value = false;
+  }
+
+  function clearConflictWorkspace() {
+    conflictListRequestId++;
+    clearConflictSelection();
+    conflictWorkspaceOpen.value = false;
+    conflictFiles.value = [];
+    loadingConflicts.value = false;
+    conflictError.value = null;
+  }
+
   function sameWorkingTarget(target: DiffTarget, file: WorkingFile) {
     return target.kind === "workingTree"
       && target.path === file.path
@@ -164,6 +192,7 @@ export const useRepoStateStore = defineStore("repoState", () => {
     selectedLogBranch.value = null;
     clearSelectionState();
     closeReviewMode();
+    clearConflictWorkspace();
     editMessageDialog.value = null;
     resetDialog.value = null;
     branchCreateDialog.value = null;
@@ -171,6 +200,170 @@ export const useRepoStateStore = defineStore("repoState", () => {
     branchDeleteDialog.value = null;
     logEnd.value = false;
     logLoadingMore.value = false;
+  }
+
+  async function openConflictWorkspace(repoId: string) {
+    if (activeRepoId !== repoId) return;
+    conflictWorkspaceOpen.value = true;
+    conflictError.value = null;
+    await refreshConflicts(repoId);
+    if (activeRepoId !== repoId || !conflictWorkspaceOpen.value) return;
+    if (conflictFiles.value.length > 0) await selectConflict(repoId, conflictFiles.value[0].path);
+  }
+
+  function closeConflictWorkspace() {
+    clearConflictWorkspace();
+  }
+
+  async function refreshConflicts(repoId: string) {
+    if (activeRepoId !== repoId) return;
+    const requestId = ++conflictListRequestId;
+    loadingConflicts.value = true;
+    conflictError.value = null;
+    try {
+      const files = await api.conflictList(repoId);
+      if (activeRepoId !== repoId || conflictListRequestId !== requestId) return;
+      conflictFiles.value = files;
+      if (selectedConflictPath.value && !files.some(file => file.path === selectedConflictPath.value)) {
+        clearConflictSelection();
+      }
+    }
+    catch (e: any) {
+      if (activeRepoId === repoId && conflictListRequestId === requestId) conflictError.value = formatErr(e);
+    }
+    finally {
+      if (activeRepoId === repoId && conflictListRequestId === requestId) loadingConflicts.value = false;
+    }
+  }
+
+  async function selectConflict(repoId: string, path: string) {
+    if (activeRepoId !== repoId || !conflictFiles.value.some(file => file.path === path)) return;
+    const requestId = ++conflictDetailRequestId;
+    selectedConflictPath.value = path;
+    selectedConflict.value = null;
+    loadingConflictDetail.value = true;
+    conflictError.value = null;
+    try {
+      const detail = await api.conflictDetail(repoId, path);
+      if (activeRepoId !== repoId || conflictDetailRequestId !== requestId || selectedConflictPath.value !== path) return;
+      selectedConflict.value = detail;
+    }
+    catch (e: any) {
+      if (activeRepoId === repoId && conflictDetailRequestId === requestId && selectedConflictPath.value === path) {
+        conflictError.value = formatErr(e);
+      }
+    }
+    finally {
+      if (activeRepoId === repoId && conflictDetailRequestId === requestId && selectedConflictPath.value === path) {
+        loadingConflictDetail.value = false;
+      }
+    }
+  }
+
+  async function selectNextConflict(repoId: string) {
+    const next = conflictFiles.value[0];
+    if (next) await selectConflict(repoId, next.path);
+    else clearConflictSelection();
+  }
+
+  async function applyConflictResolution(
+    repoId: string,
+    action: () => Promise<RepoSnapshot>,
+  ) {
+    if (activeRepoId !== repoId) return;
+    const requestId = ++snapshotRequestId;
+    loading.value = true;
+    conflictError.value = null;
+    try {
+      const next = await action();
+      if (!isCurrentSnapshotRequest(repoId, requestId)) return;
+      snapshot.value = next;
+      await refreshConflicts(repoId);
+      if (activeRepoId !== repoId || !isCurrentSnapshotRequest(repoId, requestId)) return;
+      await selectNextConflict(repoId);
+    }
+    catch (e: any) {
+      if (isCurrentSnapshotRequest(repoId, requestId)) conflictError.value = formatErr(e);
+    }
+    finally {
+      if (isCurrentSnapshotRequest(repoId, requestId)) loading.value = false;
+    }
+  }
+
+  async function resolveConflictText(repoId: string, path: string, content: string) {
+    await applyConflictResolution(repoId, () => api.conflictResolveText(repoId, path, content));
+  }
+
+  async function takeConflictStage(repoId: string, path: string, stage: ConflictStageChoice) {
+    await applyConflictResolution(repoId, () => api.conflictTakeStage(repoId, path, stage));
+  }
+
+  async function deleteConflictPath(repoId: string, path: string) {
+    await applyConflictResolution(repoId, () => api.conflictDeletePath(repoId, path));
+  }
+
+  async function continueInProgress(repoId: string) {
+    if (activeRepoId !== repoId) return;
+    const operation = snapshot.value?.inProgress;
+    if (!operation) return;
+    const requestId = ++snapshotRequestId;
+    loading.value = true;
+    conflictError.value = null;
+    try {
+      const next = await (async () => {
+        switch (operation.type) {
+          case "merging": return ops.mergeContinue(repoId);
+          case "rebasing": return ops.rebaseContinue(repoId);
+          case "cherryPicking": return ops.cherryPickContinue(repoId);
+          case "reverting": return ops.revertContinue(repoId);
+        }
+      })();
+      if (!isCurrentSnapshotRequest(repoId, requestId)) return;
+      snapshot.value = next;
+      if (!next.inProgress) closeConflictWorkspace();
+      else await refreshConflicts(repoId);
+    }
+    catch (e: any) {
+      if (isCurrentSnapshotRequest(repoId, requestId)) conflictError.value = formatErr(e);
+    }
+    finally {
+      if (isCurrentSnapshotRequest(repoId, requestId)) loading.value = false;
+    }
+  }
+
+  async function abortInProgress(repoId: string) {
+    const confirmed = await confirmAction({
+      title: "Abort Git Operation",
+      message: "Abort discards the in-progress operation and every conflict resolution made for it.",
+      confirmLabel: "Abort",
+      tone: "danger",
+    });
+    if (!confirmed || activeRepoId !== repoId) return;
+    const operation = snapshot.value?.inProgress;
+    if (!operation) return;
+    const requestId = ++snapshotRequestId;
+    loading.value = true;
+    conflictError.value = null;
+    try {
+      const next = await (async () => {
+        switch (operation.type) {
+          case "merging": return ops.mergeAbort(repoId);
+          case "rebasing": return ops.rebaseAbort(repoId);
+          case "cherryPicking": return ops.cherryPickAbort(repoId);
+          case "reverting": return ops.revertAbort(repoId);
+        }
+      })();
+      if (!isCurrentSnapshotRequest(repoId, requestId)) return;
+      snapshot.value = next;
+      if (!next.inProgress) closeConflictWorkspace();
+      else await refreshConflicts(repoId);
+    }
+    catch (e: any) {
+      if (isCurrentSnapshotRequest(repoId, requestId)) conflictError.value = formatErr(e);
+    }
+    finally {
+      if (isCurrentSnapshotRequest(repoId, requestId)) loading.value = false;
+    }
   }
 
   function isCurrentSnapshotRequest(repoId: string, requestId: number) {
@@ -368,6 +561,8 @@ export const useRepoStateStore = defineStore("repoState", () => {
   return {
     snapshot, loading, toasts, selectedLogBranch, selectedCommit, loadingCommit,
     diffTarget, selectedDiff, loadingDiff, diffError, diffIgnoreWhitespace,
+    conflictWorkspaceOpen, conflictFiles, selectedConflictPath, selectedConflict,
+    loadingConflicts, loadingConflictDetail, conflictError,
     selectedHashes, anchorHash, selectionCount,
     editMessageDialog, resetDialog, branchCreateDialog, branchRenameDialog, branchDeleteDialog,
     confirmDialog,
@@ -375,6 +570,8 @@ export const useRepoStateStore = defineStore("repoState", () => {
     open, refresh, setLogBranch, pushToast, pushLoadingToast, dismissToast,
     selectCommit, clearSelectedCommit,
     openWorkingDiff, openCommitFileDiff, closeReviewMode, rollbackCurrentWorkingFile, setDiffIgnoreWhitespace,
+    openConflictWorkspace, closeConflictWorkspace, refreshConflicts, selectConflict,
+    resolveConflictText, takeConflictStage, deleteConflictPath, continueInProgress, abortInProgress,
     setSingleSelection, toggleSelection, selectRange, clearSelection,
     openEditMessageDialog, closeEditMessageDialog, openResetDialog, closeResetDialog,
     openBranchCreateDialog, closeBranchCreateDialog,
