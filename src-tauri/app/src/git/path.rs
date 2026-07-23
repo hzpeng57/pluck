@@ -6,6 +6,7 @@ pub(crate) fn validate_repo_relative(path: &str) -> GitResult<()> {
     if path.is_empty()
         || path.contains('\0')
         || p.is_absolute()
+        || path.split('/').any(|component| component == ".")
         || p.components().any(|c| {
             matches!(
                 c,
@@ -32,6 +33,7 @@ mod tests {
         assert!(validate_repo_relative("../outside").is_err());
         assert!(validate_repo_relative("/tmp/outside").is_err());
         assert!(validate_repo_relative(".git/config").is_err());
+        assert!(validate_repo_relative("a/./b").is_err());
         assert!(validate_repo_relative("a\0b").is_err());
     }
 }

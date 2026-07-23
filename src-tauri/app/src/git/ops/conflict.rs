@@ -33,20 +33,11 @@ pub struct ConflictBlob {
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct ConflictWorktreeContent {
-    pub content: Option<String>,
-    pub binary: bool,
-    pub too_large: bool,
-}
-
-#[derive(Debug, Clone, Serialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
 pub struct ConflictFileDetail {
     pub path: String,
     pub base: Option<ConflictBlob>,
     pub stage2: Option<ConflictBlob>,
     pub stage3: Option<ConflictBlob>,
-    pub worktree: ConflictWorktreeContent,
 }
 
 pub async fn list_conflicts(repo: &Path) -> GitResult<Vec<ConflictFile>> {
@@ -59,14 +50,12 @@ pub async fn conflict_detail(repo: &Path, path: &str) -> GitResult<ConflictFileD
     let base = load_stage(repo, path, 1, conflict.base).await?;
     let stage2 = load_stage(repo, path, 2, conflict.stage2).await?;
     let stage3 = load_stage(repo, path, 3, conflict.stage3).await?;
-    let worktree = read_worktree_content(repo, path)?;
 
     Ok(ConflictFileDetail {
         path: path.to_string(),
         base,
         stage2,
         stage3,
-        worktree,
     })
 }
 
@@ -206,33 +195,6 @@ async fn load_stage(
     }))
 }
 
-fn read_worktree_content(repo: &Path, path: &str) -> GitResult<ConflictWorktreeContent> {
-    let worktree_path = repo.join(path);
-    let metadata = match worktree_path.symlink_metadata() {
-        Ok(metadata) => metadata,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(empty_worktree_content()),
-        Err(error) => return Err(error.into()),
-    };
-    if !metadata.file_type().is_file() {
-        return Ok(empty_worktree_content());
-    }
-    let bytes = std::fs::read(worktree_path)?;
-    let (content, binary, too_large) = safe_content(bytes);
-    Ok(ConflictWorktreeContent {
-        content,
-        binary,
-        too_large,
-    })
-}
-
-fn empty_worktree_content() -> ConflictWorktreeContent {
-    ConflictWorktreeContent {
-        content: None,
-        binary: false,
-        too_large: false,
-    }
-}
-
 fn safe_content(bytes: Vec<u8>) -> (Option<String>, bool, bool) {
     if bytes.len() > MAX_CONFLICT_BYTES {
         return (None, false, true);
@@ -303,7 +265,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn lists_conflicts_and_loads_lazy_stage_and_worktree_content() {
+    async fn lists_conflicts_and_loads_lazy_stage_content() {
         let repo = text_conflict();
 
         let files = list_conflicts(repo.path()).await.unwrap();
@@ -316,12 +278,6 @@ mod tests {
         let detail = conflict_detail(repo.path(), "conflict.txt").await.unwrap();
         assert_eq!(detail.stage2.unwrap().content.as_deref(), Some("main\n"));
         assert_eq!(detail.stage3.unwrap().content.as_deref(), Some("feature\n"));
-        assert!(detail
-            .worktree
-            .content
-            .as_deref()
-            .unwrap()
-            .contains("<<<<<<<"));
     }
 
     #[tokio::test]
@@ -364,7 +320,6 @@ mod tests {
             .unwrap();
 
         assert!(list_conflicts(repo.path()).await.unwrap().is_empty());
-        assert_eq!(std::fs::read_to_string(repo.path().join("conflict.txt")).unwrap(), "resolved\n");
         assert_eq!(
             run_git_bytes(repo.path(), &["show", ":0:conflict.txt"])
                 .await
