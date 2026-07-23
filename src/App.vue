@@ -50,7 +50,7 @@ const reviewMode = computed(() => state.diffTarget !== null);
 const conflictMode = computed(() => state.conflictWorkspaceOpen);
 const gridCols = computed(() =>
   conflictMode.value
-    ? `${sideWidth.value}px 6px minmax(620px, 1fr)`
+    ? "minmax(0, 1fr)"
     : reviewMode.value
     ? `${sideWidth.value}px 6px minmax(920px, 1fr)`
     : `${sideWidth.value}px 6px minmax(380px, 1fr) 6px ${inspectorWidth.value}px`
@@ -173,39 +173,41 @@ onBeforeUnmount(() => {
       <InProgressBanner v-if="state.snapshot?.inProgress" />
       <div class="flex-1 grid gap-0 px-3 py-3 overflow-hidden"
            :style="{ gridTemplateColumns: gridCols }">
-        <div class="gl-panel overflow-auto min-h-0">
-          <BranchesPanel />
-        </div>
-        <div class="cursor-col-resize gl-splitter flex justify-center"
-             @mousedown="startDrag"
-             @dblclick="sideWidth = 292"
-             title="Drag to resize · double-click to reset">
-          <div class="gl-splitter-line" />
-        </div>
         <template v-if="conflictMode">
           <div class="gl-panel overflow-hidden min-h-0 min-w-0">
             <ConflictWorkspace />
           </div>
         </template>
-        <template v-else-if="reviewMode">
-          <div class="gl-panel overflow-hidden min-h-0 min-w-0">
-            <DiffReviewWorkspace />
-          </div>
-        </template>
         <template v-else>
-          <div class="gl-panel overflow-auto min-h-0 min-w-0">
-            <LogPanel />
+          <div class="gl-panel overflow-auto min-h-0">
+            <BranchesPanel />
           </div>
           <div class="cursor-col-resize gl-splitter flex justify-center"
-               @mousedown="startInspectorDrag"
-               @dblclick="inspectorWidth = 390"
-               title="Drag to resize inspector · double-click to reset">
+               @mousedown="startDrag"
+               @dblclick="sideWidth = 292"
+               title="Drag to resize · double-click to reset">
             <div class="gl-splitter-line" />
           </div>
-          <div class="gl-panel overflow-auto min-h-0 min-w-0">
-            <CommitDetailPanel v-if="state.selectedCommit" />
-            <CommitPanel v-else />
-          </div>
+          <template v-if="reviewMode">
+            <div class="gl-panel overflow-hidden min-h-0 min-w-0">
+              <DiffReviewWorkspace />
+            </div>
+          </template>
+          <template v-else>
+            <div class="gl-panel overflow-auto min-h-0 min-w-0">
+              <LogPanel />
+            </div>
+            <div class="cursor-col-resize gl-splitter flex justify-center"
+                 @mousedown="startInspectorDrag"
+                 @dblclick="inspectorWidth = 390"
+                 title="Drag to resize inspector · double-click to reset">
+              <div class="gl-splitter-line" />
+            </div>
+            <div class="gl-panel overflow-auto min-h-0 min-w-0">
+              <CommitDetailPanel v-if="state.selectedCommit" />
+              <CommitPanel v-else />
+            </div>
+          </template>
         </template>
       </div>
       <StatusBar />

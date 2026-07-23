@@ -25,6 +25,9 @@ const emit = defineEmits<{
 }>();
 
 const editor = ref<InstanceType<typeof MergeResultEditor> | null>(null);
+const currentSource = ref<HTMLElement | null>(null);
+const incomingSource = ref<HTMLElement | null>(null);
+let sourceScrollOwner: MergeSourceSide | null = null;
 const model = ref<ThreeWayMergeModel>(createModel());
 const result = ref(model.value.initialResult);
 const ranges = ref<ResultRange[]>(makeRanges(model.value.conflicts));
@@ -97,6 +100,16 @@ function updateRanges(value: ResultRange[]) {
   emit("update:unresolved", value.filter(range => range.resolution === "unresolved").length);
 }
 
+function syncSourceScroll(side: MergeSourceSide, event: Event) {
+  if (sourceScrollOwner && sourceScrollOwner !== side) return;
+  const source = event.currentTarget as HTMLElement | null;
+  const target = side === "current" ? incomingSource.value : currentSource.value;
+  if (!source || !target || Math.abs(target.scrollTop - source.scrollTop) < 1) return;
+  sourceScrollOwner = side;
+  target.scrollTop = source.scrollTop;
+  requestAnimationFrame(() => { sourceScrollOwner = null; });
+}
+
 watch(
   () => [props.base, props.current, props.incoming],
   () => reset(),
@@ -118,7 +131,8 @@ onMounted(() => {
     <div class="gl-merge-grid">
       <section class="gl-merge-pane">
         <header class="gl-merge-pane-header">{{ currentLabel }}</header>
-        <div class="gl-merge-source" aria-label="Current version">
+        <div ref="currentSource" class="gl-merge-source" aria-label="Current version"
+             @scroll.passive="syncSourceScroll('current', $event)">
           <div v-for="(row, index) in currentRows" :key="`current:${index}:${row.conflictId ?? ''}`"
                class="gl-merge-source-row"
                :class="{
@@ -165,7 +179,8 @@ onMounted(() => {
 
       <section class="gl-merge-pane">
         <header class="gl-merge-pane-header">{{ incomingLabel }}</header>
-        <div class="gl-merge-source" aria-label="Incoming version">
+        <div ref="incomingSource" class="gl-merge-source" aria-label="Incoming version"
+             @scroll.passive="syncSourceScroll('incoming', $event)">
           <div v-for="(row, index) in incomingRows" :key="`incoming:${index}:${row.conflictId ?? ''}`"
                class="gl-merge-source-row"
                :class="{
