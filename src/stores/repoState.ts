@@ -206,11 +206,15 @@ export const useRepoStateStore = defineStore("repoState", () => {
 
   async function openConflictWorkspace(repoId: string) {
     if (activeRepoId !== repoId) return;
-    conflictWorkspaceGeneration++;
+    const workspaceGeneration = ++conflictWorkspaceGeneration;
     conflictWorkspaceOpen.value = true;
     conflictError.value = null;
     await refreshConflicts(repoId);
-    if (activeRepoId !== repoId || !conflictWorkspaceOpen.value) return;
+    if (
+      activeRepoId !== repoId
+      || !conflictWorkspaceOpen.value
+      || conflictWorkspaceGeneration !== workspaceGeneration
+    ) return;
     if (conflictFiles.value.length > 0) await selectConflict(repoId, conflictFiles.value[0].path);
   }
 

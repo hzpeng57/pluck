@@ -51,3 +51,15 @@
 - The repository still has no frontend component test harness, so the
   close-during-resolution race is covered by the store guards and build check,
   not an automated interaction test.
+
+## Review Follow-up Fix
+
+- `openConflictWorkspace()` now captures the generation created for its own
+  open operation and verifies the active repository, open state, and matching
+  generation after refreshing conflicts. A superseded open can no longer
+  select the first file from a newer workspace list.
+
+## Follow-up Verification
+
+- `pnpm build` - PASS
+- `git diff --check` - PASS
