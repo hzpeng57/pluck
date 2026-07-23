@@ -62,6 +62,7 @@ export const useRepoStateStore = defineStore("repoState", () => {
   let diffRequestId = 0;
   let conflictListRequestId = 0;
   let conflictDetailRequestId = 0;
+  let conflictWorkspaceGeneration = 0;
   const toastTimers = new Map<number, number>();
 
   // 每次 snapshot 整体替换（首次 open / refresh / 任何 mutation 后回流），
@@ -160,6 +161,7 @@ export const useRepoStateStore = defineStore("repoState", () => {
   }
 
   function clearConflictWorkspace() {
+    conflictWorkspaceGeneration++;
     conflictListRequestId++;
     clearConflictSelection();
     conflictWorkspaceOpen.value = false;
@@ -204,6 +206,7 @@ export const useRepoStateStore = defineStore("repoState", () => {
 
   async function openConflictWorkspace(repoId: string) {
     if (activeRepoId !== repoId) return;
+    conflictWorkspaceGeneration++;
     conflictWorkspaceOpen.value = true;
     conflictError.value = null;
     await refreshConflicts(repoId);
@@ -272,14 +275,21 @@ export const useRepoStateStore = defineStore("repoState", () => {
   ) {
     if (activeRepoId !== repoId) return;
     const requestId = ++snapshotRequestId;
+    const workspaceGeneration = conflictWorkspaceGeneration;
     loading.value = true;
     conflictError.value = null;
     try {
       const next = await action();
       if (!isCurrentSnapshotRequest(repoId, requestId)) return;
       snapshot.value = next;
+      if (!conflictWorkspaceOpen.value || conflictWorkspaceGeneration !== workspaceGeneration) return;
       await refreshConflicts(repoId);
-      if (activeRepoId !== repoId || !isCurrentSnapshotRequest(repoId, requestId)) return;
+      if (
+        activeRepoId !== repoId
+        || !isCurrentSnapshotRequest(repoId, requestId)
+        || !conflictWorkspaceOpen.value
+        || conflictWorkspaceGeneration !== workspaceGeneration
+      ) return;
       await selectNextConflict(repoId);
     }
     catch (e: any) {
