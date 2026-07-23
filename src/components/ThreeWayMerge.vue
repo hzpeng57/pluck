@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from "vue";
-import { ArrowLeft, ArrowRight, GitCompareArrows } from "lucide-vue-next";
+import { ArrowLeft, ArrowRight, GitCompareArrows, X } from "lucide-vue-next";
 import {
   buildSourceRows,
   createThreeWayMerge,
@@ -9,7 +9,11 @@ import {
   type MergeSourceSide,
   type ThreeWayMergeModel,
 } from "../lib/threeWayMerge";
-import type { ResultRange } from "../lib/mergeResultRanges";
+import {
+  isResultRangeResolved,
+  type MergeSideAction,
+  type ResultRange,
+} from "../lib/mergeResultRanges";
 import MergeResultEditor from "./MergeResultEditor.vue";
 
 const props = defineProps<{
@@ -35,7 +39,7 @@ const selectedConflictId = ref<string | null>(model.value.conflicts[0]?.id ?? nu
 const showBase = ref(false);
 const currentRows = computed(() => buildSourceRows(model.value.currentLines, model.value.conflicts, "current"));
 const incomingRows = computed(() => buildSourceRows(model.value.incomingLines, model.value.conflicts, "incoming"));
-const unresolvedCount = computed(() => ranges.value.filter(range => range.resolution === "unresolved").length);
+const unresolvedCount = computed(() => ranges.value.filter(range => !isResultRangeResolved(range)).length);
 const selectedConflict = computed(() => (
   model.value.conflicts.find(block => block.id === selectedConflictId.value) ?? null
 ));
@@ -49,7 +53,9 @@ function makeRanges(conflicts: MergeConflictBlock[]): ResultRange[] {
     id: block.id,
     from: block.resultStart,
     to: block.resultEnd,
-    resolution: block.resolution,
+    current: "pending",
+    incoming: "pending",
+    manual: false,
   }));
 }
 
@@ -67,21 +73,25 @@ function displayLine(content: string) {
   return content.replace(/(?:\r\n|\r|\n)$/, "");
 }
 
-function resolutionFor(id: string | null) {
-  return ranges.value.find(range => range.id === id)?.resolution ?? null;
+function sideIsPending(id: string | null, side: MergeSourceSide) {
+  const range = ranges.value.find(item => item.id === id);
+  return !!range && !range.manual && range[side] === "pending";
 }
 
 function blockFor(id: string | null) {
   return model.value.conflicts.find(block => block.id === id) ?? null;
 }
 
-function accept(row: MergeSourceRow, side: MergeSourceSide) {
+function applySide(row: MergeSourceRow, side: MergeSourceSide, action: MergeSideAction) {
   if (!row.conflictId) return;
   const block = blockFor(row.conflictId);
   if (!block) return;
   selectedConflictId.value = block.id;
-  const content = side === "current" ? block.currentLines.join("") : block.incomingLines.join("");
-  editor.value?.accept(block.id, side, content);
+  editor.value?.applySide(block.id, side, action, {
+    base: block.baseLines.join(""),
+    current: block.currentLines.join(""),
+    incoming: block.incomingLines.join(""),
+  });
 }
 
 function selectBlock(id: string | null) {
@@ -97,7 +107,7 @@ function updateResult(value: string) {
 
 function updateRanges(value: ResultRange[]) {
   ranges.value = value;
-  emit("update:unresolved", value.filter(range => range.resolution === "unresolved").length);
+  emit("update:unresolved", value.filter(range => !isResultRangeResolved(range)).length);
 }
 
 function syncSourceScroll(side: MergeSourceSide, event: Event) {
@@ -136,18 +146,24 @@ onMounted(() => {
           <div v-for="(row, index) in currentRows" :key="`current:${index}:${row.conflictId ?? ''}`"
                class="gl-merge-source-row"
                :class="{
-                 'is-conflict': row.conflictId,
-                 'is-selected': row.conflictId === selectedConflictId,
-                 'is-resolved': row.conflictId && resolutionFor(row.conflictId) !== 'unresolved',
+                 'is-conflict': sideIsPending(row.conflictId, 'current'),
+                 'is-selected': row.conflictId === selectedConflictId && sideIsPending(row.conflictId, 'current'),
                }"
                @click="selectBlock(row.conflictId)">
             <span class="gl-merge-line-no">{{ row.lineNumber ?? "" }}</span>
             <span class="gl-merge-code" :class="{ 'is-placeholder': row.placeholder }">{{ displayLine(row.content) }}</span>
-            <button v-if="row.firstInConflict" class="gl-icon-btn gl-merge-accept"
-                    :title="`Use ${currentLabel} for this conflict`"
-                    @click.stop="accept(row, 'current')">
-              <ArrowRight :size="13" />
-            </button>
+            <div v-if="row.firstInConflict && sideIsPending(row.conflictId, 'current')" class="gl-merge-side-actions">
+              <button class="gl-icon-btn gl-merge-ignore"
+                      :title="`Ignore ${currentLabel} for this conflict`"
+                      @click.stop="applySide(row, 'current', 'ignore')">
+                <X :size="12" />
+              </button>
+              <button class="gl-icon-btn gl-merge-accept"
+                      :title="`Use ${currentLabel} for this conflict`"
+                      @click.stop="applySide(row, 'current', 'accept')">
+                <ArrowRight :size="13" />
+              </button>
+            </div>
           </div>
         </div>
       </section>
@@ -182,20 +198,26 @@ onMounted(() => {
         <div ref="incomingSource" class="gl-merge-source" aria-label="Incoming version"
              @scroll.passive="syncSourceScroll('incoming', $event)">
           <div v-for="(row, index) in incomingRows" :key="`incoming:${index}:${row.conflictId ?? ''}`"
-               class="gl-merge-source-row"
+               class="gl-merge-source-row is-incoming"
                :class="{
-                 'is-conflict': row.conflictId,
-                 'is-selected': row.conflictId === selectedConflictId,
-                 'is-resolved': row.conflictId && resolutionFor(row.conflictId) !== 'unresolved',
+                 'is-conflict': sideIsPending(row.conflictId, 'incoming'),
+                 'is-selected': row.conflictId === selectedConflictId && sideIsPending(row.conflictId, 'incoming'),
                }"
                @click="selectBlock(row.conflictId)">
+            <div v-if="row.firstInConflict && sideIsPending(row.conflictId, 'incoming')" class="gl-merge-side-actions">
+              <button class="gl-icon-btn gl-merge-accept"
+                      :title="`Use ${incomingLabel} for this conflict`"
+                      @click.stop="applySide(row, 'incoming', 'accept')">
+                <ArrowLeft :size="13" />
+              </button>
+              <button class="gl-icon-btn gl-merge-ignore"
+                      :title="`Ignore ${incomingLabel} for this conflict`"
+                      @click.stop="applySide(row, 'incoming', 'ignore')">
+                <X :size="12" />
+              </button>
+            </div>
             <span class="gl-merge-line-no">{{ row.lineNumber ?? "" }}</span>
             <span class="gl-merge-code" :class="{ 'is-placeholder': row.placeholder }">{{ displayLine(row.content) }}</span>
-            <button v-if="row.firstInConflict" class="gl-icon-btn gl-merge-accept"
-                    :title="`Use ${incomingLabel} for this conflict`"
-                    @click.stop="accept(row, 'incoming')">
-              <ArrowLeft :size="13" />
-            </button>
           </div>
         </div>
       </section>

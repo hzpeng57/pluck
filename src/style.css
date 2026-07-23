@@ -567,12 +567,15 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   }
   .gl-merge-source-row {
     display: grid;
-    grid-template-columns: 44px minmax(max-content, 1fr) 28px;
+    grid-template-columns: 44px minmax(max-content, 1fr) 52px;
     align-items: stretch;
     width: max-content;
     min-width: 100%;
     min-height: 22px;
     color: var(--fg-2);
+  }
+  .gl-merge-source-row.is-incoming {
+    grid-template-columns: 52px 44px minmax(max-content, 1fr);
   }
   .gl-merge-source-row.is-conflict {
     background: var(--warning-soft-weak);
@@ -580,10 +583,6 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   }
   .gl-merge-source-row.is-selected {
     background: color-mix(in srgb, var(--warning-soft-weak) 72%, var(--active));
-  }
-  .gl-merge-source-row.is-resolved {
-    background: color-mix(in srgb, var(--success-soft) 56%, var(--diff-bg));
-    box-shadow: inset 3px 0 0 var(--success);
   }
   .gl-merge-line-no {
     padding: 2px 8px 2px 4px;
@@ -604,13 +603,27 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
     color: var(--fg-3);
     font-style: italic;
   }
-  .gl-merge-accept {
+  .gl-merge-side-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    width: 52px;
+  }
+  .gl-merge-accept,
+  .gl-merge-ignore {
     align-self: center;
     width: 24px;
     height: 20px;
-    margin: 1px 2px;
+    margin: 1px 0;
+  }
+  .gl-merge-accept {
     color: var(--accent-2);
     background: var(--accent-soft);
+  }
+  .gl-merge-ignore {
+    color: var(--fg-3);
+    background: var(--raised);
   }
   .gl-merge-editor-wrap {
     flex: 1;

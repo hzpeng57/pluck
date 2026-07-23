@@ -18,6 +18,7 @@
     "website:lighthouse:mobile": "lhci autorun --config=website/lighthouserc.mobile.cjs"
   },
   "dependencies": {
+    "@codemirror/commands": "^6.10.4",
     "@codemirror/state": "^6.7.1",
     "@codemirror/view": "^6.43.6",
     "@tauri-apps/api": "^2",

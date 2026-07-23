@@ -4,21 +4,30 @@ import {
   Annotation,
   Compartment,
   EditorState,
-  StateEffect,
-  StateField,
+  Transaction,
 } from "@codemirror/state";
+import { isolateHistory } from "@codemirror/commands";
 import {
   Decoration,
   EditorView,
   WidgetType,
   type DecorationSet,
-  type ViewUpdate,
 } from "@codemirror/view";
 import { basicSetup } from "codemirror";
 import {
-  replaceConflictBlock,
+  applyConflictSide,
+  isResultRangeResolved,
+  type ConflictBlockContents,
+  type MergeSide,
+  type MergeSideAction,
   type ResultRange,
 } from "../lib/mergeResultRanges";
+import {
+  getResultRanges,
+  resultRangeHistory,
+  resultRangesField,
+  setResultRanges,
+} from "../lib/mergeResultHistory";
 
 const props = defineProps<{
   modelValue: string;
@@ -32,10 +41,8 @@ const emit = defineEmits<{
 
 const host = ref<HTMLElement | null>(null);
 let view: EditorView | null = null;
-let currentRanges = props.ranges.map(range => ({ ...range }));
 const readOnlyCompartment = new Compartment();
-const programmaticUpdate = Annotation.define<boolean>();
-const setDecorations = StateEffect.define<DecorationSet>();
+const externalUpdate = Annotation.define<boolean>();
 
 class EmptyConflictMarker extends WidgetType {
   toDOM(): HTMLElement {
@@ -48,7 +55,7 @@ class EmptyConflictMarker extends WidgetType {
 
 function buildDecorations(ranges: ResultRange[], documentLength: number): DecorationSet {
   const decorations = ranges
-    .filter(range => range.resolution === "unresolved")
+    .filter(range => !isResultRangeResolved(range))
     .map(range => {
       const from = Math.max(0, Math.min(range.from, documentLength));
       const to = Math.max(from, Math.min(range.to, documentLength));
@@ -60,17 +67,10 @@ function buildDecorations(ranges: ResultRange[], documentLength: number): Decora
   return Decoration.set(decorations, true);
 }
 
-const decorationField = StateField.define<DecorationSet>({
-  create: state => buildDecorations(currentRanges, state.doc.length),
-  update(value, transaction) {
-    let next = value.map(transaction.changes);
-    for (const effect of transaction.effects) {
-      if (effect.is(setDecorations)) next = effect.value;
-    }
-    return next;
-  },
-  provide: field => EditorView.decorations.from(field),
-});
+const resultDecorations = EditorView.decorations.compute(
+  [resultRangesField],
+  state => buildDecorations([...getResultRanges(state)], state.doc.length),
+);
 
 const editorTheme = EditorView.theme({
   "&": {
@@ -82,6 +82,7 @@ const editorTheme = EditorView.theme({
   },
   ".cm-scroller": { overflow: "auto", fontFamily: "var(--mono)" },
   ".cm-content": { padding: "10px 12px", minHeight: "100%", caretColor: "var(--accent)" },
+  ".cm-cursor, .cm-dropCursor": { borderLeftColor: "var(--accent) !important" },
   ".cm-gutters": { backgroundColor: "var(--diff-gutter-bg)", color: "var(--fg-3)", border: "none" },
   ".cm-activeLine, .cm-activeLineGutter": { backgroundColor: "var(--hover)" },
   ".cm-selectionBackground, ::selection": { backgroundColor: "var(--accent-soft)" },
@@ -98,61 +99,47 @@ const editorTheme = EditorView.theme({
   },
 });
 
-function rangeTouched(update: ViewUpdate, range: ResultRange): boolean {
-  let touched = false;
-  update.changes.iterChanges((fromA, toA) => {
-    if (touched) return;
-    touched = fromA === toA
-      ? fromA >= range.from && fromA <= range.to
-      : fromA < range.to && toA > range.from;
-  });
-  return touched;
-}
-
-function mapUserRanges(update: ViewUpdate): ResultRange[] {
-  return currentRanges.map(range => ({
-    ...range,
-    from: update.changes.mapPos(range.from, -1),
-    to: update.changes.mapPos(range.to, 1),
-    resolution: rangeTouched(update, range) ? "manual" : range.resolution,
-  }));
-}
-
-function refreshDecorations() {
+function applySide(
+  id: string,
+  side: MergeSide,
+  action: MergeSideAction,
+  contents: ConflictBlockContents,
+) {
   if (!view) return;
-  view.dispatch({
-    effects: setDecorations.of(buildDecorations(currentRanges, view.state.doc.length)),
-  });
-}
-
-function accept(id: string, side: "current" | "incoming", content: string) {
-  if (!view) return;
-  const target = currentRanges.find(range => range.id === id);
+  const ranges = getResultRanges(view.state);
+  const target = ranges.find(range => range.id === id);
   if (!target) return;
-  const next = replaceConflictBlock(
+  const next = applyConflictSide(
     view.state.doc.toString(),
-    currentRanges,
+    [...ranges],
     id,
-    content,
     side,
+    action,
+    contents,
   );
-  currentRanges = next.ranges;
+  const nextTarget = next.ranges.find(range => range.id === id);
   view.dispatch({
-    changes: { from: target.from, to: target.to, insert: content },
-    annotations: programmaticUpdate.of(true),
-    effects: EditorView.scrollIntoView(target.from, { y: "center" }),
+    changes: {
+      from: target.from,
+      to: target.to,
+      insert: next.document.slice(target.from, nextTarget?.to ?? target.from),
+    },
+    annotations: isolateHistory.of("full"),
+    effects: [
+      setResultRanges.of(next.ranges),
+      EditorView.scrollIntoView(target.from, { y: "center" }),
+    ],
   });
-  emit("update:modelValue", next.document);
-  emit("update:ranges", next.ranges);
+  view.focus();
 }
 
 function focusBlock(id: string) {
   if (!view) return;
-  const target = currentRanges.find(range => range.id === id);
+  const target = getResultRanges(view.state).find(range => range.id === id);
   if (target) view.dispatch({ effects: EditorView.scrollIntoView(target.from, { y: "center" }) });
 }
 
-defineExpose({ accept, focusBlock });
+defineExpose({ applySide, focusBlock });
 
 onMounted(() => {
   if (!host.value) return;
@@ -163,20 +150,23 @@ onMounted(() => {
       EditorState.tabSize.of(2),
       EditorView.lineWrapping,
       editorTheme,
-      decorationField,
+      resultRangeHistory(props.ranges),
+      resultDecorations,
       readOnlyCompartment.of([
         EditorState.readOnly.of(!!props.readOnly),
         EditorView.editable.of(!props.readOnly),
       ]),
       EditorView.updateListener.of(update => {
-        if (!update.docChanged) return;
-        const isProgrammatic = update.transactions.some(transaction => (
-          transaction.annotation(programmaticUpdate)
+        const rangesChanged = update.transactions.some(transaction => (
+          transaction.effects.some(effect => effect.is(setResultRanges))
         ));
-        if (isProgrammatic) return;
-        currentRanges = mapUserRanges(update);
-        emit("update:modelValue", update.state.doc.toString());
-        emit("update:ranges", currentRanges);
+        if (!update.docChanged && !rangesChanged) return;
+        const isExternal = update.transactions.some(transaction => (
+          transaction.annotation(externalUpdate)
+        ));
+        if (isExternal) return;
+        if (update.docChanged) emit("update:modelValue", update.state.doc.toString());
+        emit("update:ranges", [...getResultRanges(update.state)]);
       }),
     ],
   });
@@ -187,13 +177,27 @@ watch(() => props.modelValue, value => {
   if (!view || value === view.state.doc.toString()) return;
   view.dispatch({
     changes: { from: 0, to: view.state.doc.length, insert: value },
-    annotations: programmaticUpdate.of(true),
+    annotations: [externalUpdate.of(true), Transaction.addToHistory.of(false)],
+    effects: setResultRanges.of(props.ranges),
   });
 });
 
 watch(() => props.ranges, value => {
-  currentRanges = value.map(range => ({ ...range }));
-  refreshDecorations();
+  if (!view) return;
+  const current = getResultRanges(view.state);
+  const unchanged = current.length === value.length && current.every((range, index) => (
+    range.id === value[index].id
+    && range.from === value[index].from
+    && range.to === value[index].to
+    && range.current === value[index].current
+    && range.incoming === value[index].incoming
+    && range.manual === value[index].manual
+  ));
+  if (unchanged) return;
+  view.dispatch({
+    annotations: [externalUpdate.of(true), Transaction.addToHistory.of(false)],
+    effects: setResultRanges.of(value),
+  });
 }, { deep: true });
 
 watch(() => props.readOnly, value => {

@@ -14,15 +14,16 @@ pub enum GitOp {
 
 pub async fn detect_in_progress(repo: &Path) -> Option<GitOp> {
     let gd = git_dir(repo);
-    if let Ok(s) = fs::read_to_string(gd.join("MERGE_MSG")).await {
-        let from = s.lines().find_map(|l| l.strip_prefix("Merge branch '").and_then(|x| x.split('\'').next())).unwrap_or("").to_string();
-        return Some(GitOp::Merging { from });
-    }
     if gd.join("rebase-merge").is_dir() || gd.join("rebase-apply").is_dir() {
         let base = if gd.join("rebase-merge").is_dir() { gd.join("rebase-merge") } else { gd.join("rebase-apply") };
         let onto = fs::read_to_string(base.join("onto")).await.unwrap_or_default().trim().to_string();
         let head = fs::read_to_string(base.join("head-name")).await.unwrap_or_default().trim().to_string();
         return Some(GitOp::Rebasing { onto, head });
+    }
+    if gd.join("MERGE_HEAD").exists() {
+        let message = fs::read_to_string(gd.join("MERGE_MSG")).await.unwrap_or_default();
+        let from = message.lines().find_map(|l| l.strip_prefix("Merge branch '").and_then(|x| x.split('\'').next())).unwrap_or("").to_string();
+        return Some(GitOp::Merging { from });
     }
     if gd.join("CHERRY_PICK_HEAD").exists() {
         return Some(GitOp::CherryPicking);
@@ -49,8 +50,17 @@ mod tests {
     async fn detects_merging() {
         let dir = tempdir().unwrap();
         std::fs::create_dir(dir.path().join(".git")).unwrap();
+        std::fs::write(dir.path().join(".git/MERGE_HEAD"), "abc123\n").unwrap();
         std::fs::write(dir.path().join(".git/MERGE_MSG"), "Merge branch 'feature/x'\n").unwrap();
         assert_eq!(detect_in_progress(dir.path()).await, Some(GitOp::Merging { from: "feature/x".into() }));
+    }
+
+    #[tokio::test]
+    async fn ignores_merge_message_without_merge_head() {
+        let dir = tempdir().unwrap();
+        std::fs::create_dir(dir.path().join(".git")).unwrap();
+        std::fs::write(dir.path().join(".git/MERGE_MSG"), "commit message\n").unwrap();
+        assert_eq!(detect_in_progress(dir.path()).await, None);
     }
 
     #[tokio::test]
@@ -63,6 +73,20 @@ mod tests {
             GitOp::Rebasing { onto, head } => { assert_eq!(onto, "abc123"); assert_eq!(head, "refs/heads/main"); }
             other => panic!("expected Rebasing, got {:?}", other),
         }
+    }
+
+    #[tokio::test]
+    async fn detects_rebasing_when_merge_message_exists() {
+        let dir = tempdir().unwrap();
+        std::fs::create_dir_all(dir.path().join(".git/rebase-merge")).unwrap();
+        std::fs::write(dir.path().join(".git/MERGE_MSG"), "rebased commit message\n").unwrap();
+        std::fs::write(dir.path().join(".git/rebase-merge/onto"), "abc123\n").unwrap();
+        std::fs::write(dir.path().join(".git/rebase-merge/head-name"), "refs/heads/feature\n").unwrap();
+
+        assert_eq!(
+            detect_in_progress(dir.path()).await,
+            Some(GitOp::Rebasing { onto: "abc123".into(), head: "refs/heads/feature".into() }),
+        );
     }
 
     #[tokio::test]
