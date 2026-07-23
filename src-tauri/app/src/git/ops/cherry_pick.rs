@@ -1,5 +1,7 @@
 use crate::error::{GitError, GitResult};
 use crate::git::cmd::git_command;
+use crate::git::git_dir;
+use crate::git::ops::conflict::ensure_no_unresolved_conflicts;
 use std::path::Path;
 
 /// Apply the given commits as new commits on top of HEAD.
@@ -21,7 +23,7 @@ pub async fn cherry_pick(repo: &Path, hashes: &[String]) -> GitResult<()> {
     if output.status.success() {
         return Ok(());
     }
-    if repo.join(".git/CHERRY_PICK_HEAD").exists() {
+    if git_dir(repo).join("CHERRY_PICK_HEAD").exists() {
         return Ok(());
     }
     let stderr = String::from_utf8_lossy(&output.stderr);
@@ -29,6 +31,7 @@ pub async fn cherry_pick(repo: &Path, hashes: &[String]) -> GitResult<()> {
 }
 
 pub async fn cherry_pick_continue(repo: &Path) -> GitResult<()> {
+    ensure_no_unresolved_conflicts(repo).await?;
     let output = git_command(repo)
         .args(["cherry-pick", "--continue"])
         .output()
@@ -37,7 +40,7 @@ pub async fn cherry_pick_continue(repo: &Path) -> GitResult<()> {
     if output.status.success() {
         return Ok(());
     }
-    if repo.join(".git/CHERRY_PICK_HEAD").exists() {
+    if git_dir(repo).join("CHERRY_PICK_HEAD").exists() {
         return Ok(());
     }
     let stderr = String::from_utf8_lossy(&output.stderr);

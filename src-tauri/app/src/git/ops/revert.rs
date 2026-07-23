@@ -1,5 +1,7 @@
 use crate::error::{GitError, GitResult};
 use crate::git::cmd::{git_command, run_git};
+use crate::git::git_dir;
+use crate::git::ops::conflict::ensure_no_unresolved_conflicts;
 use std::path::Path;
 
 /// For each hash, generate a new commit that undoes its changes.
@@ -35,7 +37,7 @@ pub async fn revert(repo: &Path, hashes: &[String]) -> GitResult<()> {
     if output.status.success() {
         return Ok(());
     }
-    if repo.join(".git/REVERT_HEAD").exists() {
+    if git_dir(repo).join("REVERT_HEAD").exists() {
         return Ok(());
     }
     let stderr = String::from_utf8_lossy(&output.stderr);
@@ -43,6 +45,7 @@ pub async fn revert(repo: &Path, hashes: &[String]) -> GitResult<()> {
 }
 
 pub async fn revert_continue(repo: &Path) -> GitResult<()> {
+    ensure_no_unresolved_conflicts(repo).await?;
     let output = git_command(repo)
         .args(["revert", "--continue"])
         .output()
@@ -51,7 +54,7 @@ pub async fn revert_continue(repo: &Path) -> GitResult<()> {
     if output.status.success() {
         return Ok(());
     }
-    if repo.join(".git/REVERT_HEAD").exists() {
+    if git_dir(repo).join("REVERT_HEAD").exists() {
         return Ok(());
     }
     let stderr = String::from_utf8_lossy(&output.stderr);
