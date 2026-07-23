@@ -1,5 +1,5 @@
 use crate::error::{GitError, GitResult};
-use crate::git::cmd::{git_command, run_git};
+use crate::git::cmd::{git_command, run_git, run_git_non_interactive};
 use crate::git::git_dir;
 use crate::git::ops::conflict::ensure_no_unresolved_conflicts;
 use std::path::Path;
@@ -46,7 +46,7 @@ pub async fn rebase_interactive(
 
 pub async fn rebase_continue(repo: &Path) -> GitResult<()> {
     ensure_no_unresolved_conflicts(repo).await?;
-    run_git(repo, &["rebase", "--continue"]).await?;
+    run_git_non_interactive(repo, &["rebase", "--continue"]).await?;
     Ok(())
 }
 

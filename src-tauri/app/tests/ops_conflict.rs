@@ -44,7 +44,16 @@ fn setup_repo() -> TempDir {
     git(repo.path(), &["init", "-b", "main"]);
     git(repo.path(), &["config", "user.email", "test@example.com"]);
     git(repo.path(), &["config", "user.name", "Test User"]);
-    git(repo.path(), &["config", "core.editor", "true"]);
+    // A configured editor that would leave a marker and fail must not run during
+    // resolved continuations; the operation layer supplies its own env.
+    git(
+        repo.path(),
+        &[
+            "config",
+            "core.editor",
+            "sh -c 'touch editor-invoked; exit 42'",
+        ],
+    );
     write(repo.path(), "base\n");
     git(repo.path(), &["add", "conflict.txt"]);
     git(repo.path(), &["commit", "-m", "base"]);
@@ -92,6 +101,7 @@ async fn rebase_continue_rejects_unresolved_conflicts() {
         .unwrap();
     rebase_continue(repo.path()).await.unwrap();
     assert_no_unmerged_paths(repo.path());
+    assert!(!repo.path().join("editor-invoked").exists());
 }
 
 #[tokio::test]

@@ -392,6 +392,7 @@ export const useRepoStateStore = defineStore("repoState", () => {
     if (!operation) return;
     const requestId = ++snapshotRequestId;
     const workspaceGeneration = conflictWorkspaceGeneration;
+    const workspaceWasOpen = conflictWorkspaceOpen.value;
     loading.value = true;
     conflictError.value = null;
     try {
@@ -414,7 +415,11 @@ export const useRepoStateStore = defineStore("repoState", () => {
       }
     }
     catch (e: any) {
-      if (isCurrentSnapshotRequest(repoId, requestId)) conflictError.value = formatErr(e);
+      if (isCurrentSnapshotRequest(repoId, requestId)) {
+        const message = formatErr(e);
+        conflictError.value = message;
+        if (!workspaceWasOpen) pushToast("error", message);
+      }
     }
     finally {
       if (isCurrentSnapshotRequest(repoId, requestId)) loading.value = false;
@@ -433,6 +438,7 @@ export const useRepoStateStore = defineStore("repoState", () => {
     if (!operation) return;
     const requestId = ++snapshotRequestId;
     const workspaceGeneration = conflictWorkspaceGeneration;
+    const workspaceWasOpen = conflictWorkspaceOpen.value;
     loading.value = true;
     conflictError.value = null;
     try {
@@ -451,7 +457,11 @@ export const useRepoStateStore = defineStore("repoState", () => {
       }
     }
     catch (e: any) {
-      if (isCurrentSnapshotRequest(repoId, requestId)) conflictError.value = formatErr(e);
+      if (isCurrentSnapshotRequest(repoId, requestId)) {
+        const message = formatErr(e);
+        conflictError.value = message;
+        if (!workspaceWasOpen) pushToast("error", message);
+      }
     }
     finally {
       if (isCurrentSnapshotRequest(repoId, requestId)) loading.value = false;

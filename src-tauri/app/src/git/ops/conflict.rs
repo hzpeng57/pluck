@@ -61,12 +61,30 @@ pub async fn conflict_detail(repo: &Path, path: &str) -> GitResult<ConflictFileD
 
 pub async fn resolve_conflict_text(repo: &Path, path: &str, content: &str) -> GitResult<()> {
     let conflict = unresolved_conflict(repo, path).await?;
-    let mode = conflict
-        .stage2
-        .as_ref()
-        .or(conflict.stage3.as_ref())
-        .map(|stage| stage.mode.as_str())
-        .ok_or_else(|| GitError::parse(format!("conflict has no selectable stage: {path}")))?;
+    if content.as_bytes().len() > MAX_CONFLICT_BYTES {
+        return Err(GitError::parse(format!(
+            "resolved conflict content is too large (maximum {MAX_CONFLICT_BYTES} bytes)"
+        )));
+    }
+    if content.as_bytes().contains(&b'\0') {
+        return Err(GitError::parse("resolved conflict content contains a NUL byte"));
+    }
+
+    // The index mode must come from the same textual candidate that was inspected.
+    // A gitlink in stage 2 must never cause a regular text result to be written as
+    // mode 160000; fall back to stage 3 when it is the first safe text candidate.
+    let mut selected_mode = None;
+    for (stage_number, stage) in [(2u8, conflict.stage2), (3u8, conflict.stage3)] {
+        let Some(stage) = stage else { continue };
+        if let Some(blob) = load_stage(repo, path, stage_number, Some(stage)).await? {
+            if blob.content.is_some() && !blob.binary && !blob.too_large {
+                selected_mode = Some(blob.stage.mode);
+                break;
+            }
+        }
+    }
+    let mode = selected_mode
+        .ok_or_else(|| GitError::parse(format!("conflict has no selectable textual stage: {path}")))?;
     let output = run_git_bytes_with_stdin(repo, &["hash-object", "-w", "--stdin"], content.as_bytes()).await?;
     let oid = parse_hash_object_oid(&output.stdout)?;
     let cache_info = format!("{mode},{oid},{path}");
@@ -197,6 +215,20 @@ async fn load_stage(
             content: None,
             binary: true,
             too_large: false,
+        }));
+    }
+    let size_output = run_git(repo, &["cat-file", "-s", &stage.oid]).await?;
+    let size = size_output
+        .stdout
+        .trim()
+        .parse::<usize>()
+        .map_err(|_| GitError::parse(format!("invalid size for conflict blob {}", stage.oid)))?;
+    if size > MAX_CONFLICT_BYTES {
+        return Ok(Some(ConflictBlob {
+            stage,
+            content: None,
+            binary: false,
+            too_large: true,
         }));
     }
     let spec = format!(":{stage_number}:{path}");
@@ -373,6 +405,92 @@ mod tests {
             .unwrap();
 
         assert!(list_conflicts(repo.path()).await.unwrap().is_empty());
+        assert_eq!(
+            run_git_bytes(repo.path(), &["show", ":0:conflict.txt"])
+                .await
+                .unwrap()
+                .stdout,
+            b"resolved\n"
+        );
+    }
+
+    #[tokio::test]
+    async fn rejects_unsafe_direct_resolution_content() {
+        let repo = text_conflict();
+        let error = resolve_conflict_text(repo.path(), "conflict.txt", "bad\0content")
+            .await
+            .unwrap_err();
+        assert!(format!("{error}").contains("NUL"));
+
+        let too_large = "x".repeat(MAX_CONFLICT_BYTES + 1);
+        let error = resolve_conflict_text(repo.path(), "conflict.txt", &too_large)
+            .await
+            .unwrap_err();
+        assert!(format!("{error}").contains("too large"));
+    }
+
+    #[tokio::test]
+    async fn rejects_text_resolution_when_all_stages_are_gitlinks() {
+        let repo = gitlink_conflict();
+        let error = resolve_conflict_text(repo.path(), "module", "resolved\n")
+            .await
+            .unwrap_err();
+        assert!(format!("{error}").contains("textual stage"));
+        assert_eq!(
+            run_git_bytes(repo.path(), &["ls-files", "--stage", "--", "module"])
+                .await
+                .unwrap()
+                .stdout
+                .split(|byte| *byte == b'\n')
+                .filter(|line| !line.is_empty())
+                .count(),
+            3
+        );
+    }
+
+    #[tokio::test]
+    async fn text_resolution_falls_back_from_gitlink_stage_to_text_stage() {
+        let repo = text_conflict();
+        let gitlink_oid = git_output(repo.path(), &["rev-parse", "HEAD"])
+            .trim()
+            .to_string();
+        let stage3_oid = git_output(repo.path(), &["rev-parse", ":3:conflict.txt"])
+            .trim()
+            .to_string();
+        let index_info = format!(
+            "160000 {gitlink_oid} 2\tconflict.txt\n100644 {stage3_oid} 3\tconflict.txt\n"
+        );
+        let mut child = Command::new("git")
+            .current_dir(repo.path())
+            .args(["update-index", "--index-info"])
+            .stdin(Stdio::piped())
+            .spawn()
+            .unwrap();
+        child
+            .stdin
+            .take()
+            .unwrap()
+            .write_all(index_info.as_bytes())
+            .unwrap();
+        let output = child.wait_with_output().unwrap();
+        assert!(
+            output.status.success(),
+            "git update-index --index-info failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+
+        resolve_conflict_text(repo.path(), "conflict.txt", "resolved\n")
+            .await
+            .unwrap();
+        let staged = String::from_utf8(
+            run_git_bytes(repo.path(), &["ls-files", "--stage", "--", "conflict.txt"])
+                .await
+                .unwrap()
+                .stdout,
+        )
+        .unwrap();
+        assert!(staged.starts_with("100644 "));
+        assert!(staged.contains(" 0\tconflict.txt\n"));
         assert_eq!(
             run_git_bytes(repo.path(), &["show", ":0:conflict.txt"])
                 .await

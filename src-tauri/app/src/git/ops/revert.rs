@@ -1,5 +1,5 @@
 use crate::error::{GitError, GitResult};
-use crate::git::cmd::{git_command, run_git};
+use crate::git::cmd::{git_command, non_interactive_git_command, run_git};
 use crate::git::git_dir;
 use crate::git::ops::conflict::ensure_no_unresolved_conflicts;
 use std::path::Path;
@@ -46,7 +46,7 @@ pub async fn revert(repo: &Path, hashes: &[String]) -> GitResult<()> {
 
 pub async fn revert_continue(repo: &Path) -> GitResult<()> {
     ensure_no_unresolved_conflicts(repo).await?;
-    let output = git_command(repo)
+    let output = non_interactive_git_command(repo)
         .args(["revert", "--continue"])
         .output()
         .await

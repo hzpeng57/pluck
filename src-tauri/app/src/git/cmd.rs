@@ -34,6 +34,29 @@ pub async fn run_git(cwd: &Path, args: &[&str]) -> GitResult<GitOutput> {
     Ok(GitOutput { stdout, stderr })
 }
 
+/// Build a git command for operations that must never invoke a user's editor.
+/// Keep the normal repository cwd and PATH setup from `git_command` intact.
+pub fn non_interactive_git_command(cwd: &Path) -> Command {
+    let mut command = git_command(cwd);
+    command.env("GIT_EDITOR", "true");
+    command.env("GIT_SEQUENCE_EDITOR", "true");
+    command
+}
+
+pub async fn run_git_non_interactive(cwd: &Path, args: &[&str]) -> GitResult<GitOutput> {
+    let output = non_interactive_git_command(cwd)
+        .args(args)
+        .output()
+        .await
+        .map_err(|e| GitError::spawn(format!("spawn git failed: {e}")))?;
+    let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
+    let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
+    if !output.status.success() {
+        return Err(GitError::from_stderr(output.status.code().unwrap_or(-1), &stderr));
+    }
+    Ok(GitOutput { stdout, stderr })
+}
+
 pub async fn run_git_bytes(cwd: &Path, args: &[&str]) -> GitResult<GitBytesOutput> {
     let output = git_command(cwd)
         .args(args)
