@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createThreeWayMerge } from "./threeWayMerge";
+import { buildSourceRows, createThreeWayMerge } from "./threeWayMerge";
 
 describe("createThreeWayMerge", () => {
   it("pre-applies independent edits separated by stable context", () => {
@@ -70,5 +70,26 @@ describe("createThreeWayMerge", () => {
 
     expect(merge.conflicts[0].baseLines).toEqual(["base\r\n"]);
     expect(merge.initialResult).toBe("base\r\n");
+  });
+
+  it("builds source rows with an actionable placeholder for a deleted side", () => {
+    const merge = createThreeWayMerge("", "delete-me\n", "incoming\n");
+
+    expect(buildSourceRows(merge.currentLines, merge.conflicts, "current")).toEqual([
+      {
+        lineNumber: null,
+        content: "",
+        conflictId: "conflict-0",
+        firstInConflict: true,
+        placeholder: true,
+      },
+    ]);
+    expect(buildSourceRows(merge.incomingLines, merge.conflicts, "incoming")[0]).toMatchObject({
+      lineNumber: 1,
+      content: "incoming\n",
+      conflictId: "conflict-0",
+      firstInConflict: true,
+      placeholder: false,
+    });
   });
 });

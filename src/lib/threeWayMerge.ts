@@ -22,6 +22,16 @@ export interface ThreeWayMergeModel {
   conflicts: MergeConflictBlock[];
 }
 
+export type MergeSourceSide = "current" | "incoming";
+
+export interface MergeSourceRow {
+  lineNumber: number | null;
+  content: string;
+  conflictId: string | null;
+  firstInConflict: boolean;
+  placeholder: boolean;
+}
+
 export function splitTextLines(text: string): string[] {
   return text.match(/[^\r\n]*(?:\r\n|\r|\n)|[^\r\n]+$/g) ?? [];
 }
@@ -74,4 +84,48 @@ export function createThreeWayMerge(
     initialResult: resultParts.join(""),
     conflicts,
   };
+}
+
+export function buildSourceRows(
+  lines: string[],
+  conflicts: MergeConflictBlock[],
+  side: MergeSourceSide,
+): MergeSourceRow[] {
+  const starts = new Map<number, MergeConflictBlock[]>();
+  const lineOwners = new Map<number, { block: MergeConflictBlock; first: boolean }>();
+
+  for (const block of conflicts) {
+    const start = side === "current" ? block.currentStartLine : block.incomingStartLine;
+    const blockLines = side === "current" ? block.currentLines : block.incomingLines;
+    if (blockLines.length === 0) {
+      starts.set(start, [...(starts.get(start) ?? []), block]);
+      continue;
+    }
+    for (let offset = 0; offset < blockLines.length; offset++) {
+      lineOwners.set(start + offset, { block, first: offset === 0 });
+    }
+  }
+
+  const rows: MergeSourceRow[] = [];
+  for (let index = 0; index <= lines.length; index++) {
+    for (const block of starts.get(index) ?? []) {
+      rows.push({
+        lineNumber: null,
+        content: "",
+        conflictId: block.id,
+        firstInConflict: true,
+        placeholder: true,
+      });
+    }
+    if (index === lines.length) break;
+    const owner = lineOwners.get(index);
+    rows.push({
+      lineNumber: index + 1,
+      content: lines[index],
+      conflictId: owner?.block.id ?? null,
+      firstInConflict: owner?.first ?? false,
+      placeholder: false,
+    });
+  }
+  return rows;
 }
