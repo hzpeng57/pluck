@@ -5,6 +5,10 @@ use crate::git::ops::branch::{
 use crate::git::ops::checkout::checkout_branch;
 use crate::git::ops::cherry_pick::{cherry_pick, cherry_pick_abort, cherry_pick_continue};
 use crate::git::ops::commit::commit_files;
+use crate::git::ops::conflict::{
+    conflict_detail, delete_conflict_path, list_conflicts, resolve_conflict_text,
+    take_conflict_stage, ConflictFile, ConflictFileDetail,
+};
 use crate::git::ops::diff::{
     commit_file_diff as git_commit_file_diff, rollback_file as git_rollback_file,
     working_file_diff as git_working_file_diff, DiffOptions, FileDiff,
@@ -325,6 +329,80 @@ pub async fn working_file_diff(
         ignore_whitespace: ignore_whitespace.unwrap_or(false),
     };
     git_working_file_diff(&repo, &path, old_path.as_deref(), &status, options).await
+}
+
+#[tauri::command]
+pub async fn conflict_list_cmd(
+    id: String,
+    state: State<'_, AppState>,
+) -> GitResult<Vec<ConflictFile>> {
+    let sess = state
+        .get(&id)
+        .await
+        .ok_or_else(|| GitError::parse("unknown repo id"))?;
+    let repo = { sess.lock().await.path.clone() };
+    list_conflicts(&repo).await
+}
+
+#[tauri::command]
+pub async fn conflict_detail_cmd(
+    id: String,
+    path: String,
+    state: State<'_, AppState>,
+) -> GitResult<ConflictFileDetail> {
+    let sess = state
+        .get(&id)
+        .await
+        .ok_or_else(|| GitError::parse("unknown repo id"))?;
+    let repo = { sess.lock().await.path.clone() };
+    conflict_detail(&repo, &path).await
+}
+
+#[tauri::command]
+pub async fn conflict_resolve_text_cmd(
+    id: String,
+    path: String,
+    content: String,
+    state: State<'_, AppState>,
+) -> GitResult<RepoSnapshot> {
+    let sess = state
+        .get(&id)
+        .await
+        .ok_or_else(|| GitError::parse("unknown repo id"))?;
+    let repo = { sess.lock().await.path.clone() };
+    resolve_conflict_text(&repo, &path, &content).await?;
+    refresh_session_force(&sess).await
+}
+
+#[tauri::command]
+pub async fn conflict_take_stage_cmd(
+    id: String,
+    path: String,
+    stage: u8,
+    state: State<'_, AppState>,
+) -> GitResult<RepoSnapshot> {
+    let sess = state
+        .get(&id)
+        .await
+        .ok_or_else(|| GitError::parse("unknown repo id"))?;
+    let repo = { sess.lock().await.path.clone() };
+    take_conflict_stage(&repo, &path, stage).await?;
+    refresh_session_force(&sess).await
+}
+
+#[tauri::command]
+pub async fn conflict_delete_path_cmd(
+    id: String,
+    path: String,
+    state: State<'_, AppState>,
+) -> GitResult<RepoSnapshot> {
+    let sess = state
+        .get(&id)
+        .await
+        .ok_or_else(|| GitError::parse("unknown repo id"))?;
+    let repo = { sess.lock().await.path.clone() };
+    delete_conflict_path(&repo, &path).await?;
+    refresh_session_force(&sess).await
 }
 
 #[tauri::command]

@@ -8,6 +8,9 @@ import type {
   FileDiff,
   FileStatus,
   ChangedFileStatus,
+  ConflictFile,
+  ConflictFileDetail,
+  ConflictStageChoice,
   DiffOptions,
   BranchKind,
 } from "../types/git";
@@ -25,6 +28,15 @@ export const api = {
     invoke<CommitDetail>("commit_detail", { id, hash }),
   workingFileDiff: (id: string, path: string, oldPath: string | null, status: FileStatus, options: DiffOptions) =>
     invoke<FileDiff>("working_file_diff", { id, path, oldPath, status, ignoreWhitespace: options.ignoreWhitespace }),
+  conflictList: (id: string) => invoke<ConflictFile[]>("conflict_list_cmd", { id }),
+  conflictDetail: (id: string, path: string) =>
+    invoke<ConflictFileDetail>("conflict_detail_cmd", { id, path }),
+  conflictResolveText: (id: string, path: string, content: string) =>
+    invoke<RepoSnapshot>("conflict_resolve_text_cmd", { id, path, content }),
+  conflictTakeStage: (id: string, path: string, stage: ConflictStageChoice) =>
+    invoke<RepoSnapshot>("conflict_take_stage_cmd", { id, path, stage }),
+  conflictDeletePath: (id: string, path: string) =>
+    invoke<RepoSnapshot>("conflict_delete_path_cmd", { id, path }),
   commitFileDiff: (id: string, hash: string, path: string, oldPath: string | null, status: ChangedFileStatus, options: DiffOptions) =>
     invoke<FileDiff>("commit_file_diff", { id, hash, path, oldPath, status, ignoreWhitespace: options.ignoreWhitespace }),
   rollbackFile: (id: string, path: string, oldPath: string | null, status: FileStatus) =>
@@ -57,4 +69,10 @@ export const ops = {
   merge: (id: string, branch: string) => invoke<RepoSnapshot>("merge", { id, branch }),
   mergeAbort: (id: string) => invoke<RepoSnapshot>("merge_abort_cmd", { id }),
   mergeContinue: (id: string) => invoke<RepoSnapshot>("merge_continue_cmd", { id }),
+  rebaseAbort: (id: string) => invoke<RepoSnapshot>("rebase_abort_cmd", { id }),
+  rebaseContinue: (id: string) => invoke<RepoSnapshot>("rebase_continue_cmd", { id }),
+  cherryPickAbort: (id: string) => invoke<RepoSnapshot>("cherry_pick_abort_cmd", { id }),
+  cherryPickContinue: (id: string) => invoke<RepoSnapshot>("cherry_pick_continue_cmd", { id }),
+  revertAbort: (id: string) => invoke<RepoSnapshot>("revert_abort_cmd", { id }),
+  revertContinue: (id: string) => invoke<RepoSnapshot>("revert_continue_cmd", { id }),
 };

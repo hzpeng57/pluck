@@ -71,3 +71,23 @@ export interface DeletePrecheck {
   upstream: string | null;
   aheadOfHead: number;
 }
+export type ConflictStageChoice = 2 | 3;
+export interface ConflictStage { mode: string; oid: string }
+export interface ConflictFile {
+  path: string;
+  base: ConflictStage | null;
+  stage2: ConflictStage | null;
+  stage3: ConflictStage | null;
+}
+export interface ConflictBlob {
+  stage: ConflictStage;
+  content: string | null;
+  binary: boolean;
+  tooLarge: boolean;
+}
+export interface ConflictFileDetail {
+  path: string;
+  base: ConflictBlob | null;
+  stage2: ConflictBlob | null;
+  stage3: ConflictBlob | null;
+}
