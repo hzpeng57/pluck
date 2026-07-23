@@ -2,6 +2,7 @@ pub mod branch;
 pub mod checkout;
 pub mod cherry_pick;
 pub mod commit;
+pub mod conflict;
 pub mod diff;
 pub mod fetch;
 pub mod merge;

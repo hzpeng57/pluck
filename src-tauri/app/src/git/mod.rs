@@ -1,6 +1,7 @@
 pub mod cmd;
 pub mod detect;
 pub mod ops;
+pub(crate) mod path;
 pub mod parse;
 pub mod snapshot;
 

@@ -3,12 +3,20 @@ use std::{
     env,
     ffi::OsString,
     path::{Path, PathBuf},
+    process::Stdio,
 };
+use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 
 #[derive(Debug)]
 pub struct GitOutput {
     pub stdout: String,
+    pub stderr: String,
+}
+
+#[derive(Debug)]
+pub struct GitBytesOutput {
+    pub stdout: Vec<u8>,
     pub stderr: String,
 }
 
@@ -24,6 +32,58 @@ pub async fn run_git(cwd: &Path, args: &[&str]) -> GitResult<GitOutput> {
         return Err(GitError::from_stderr(output.status.code().unwrap_or(-1), &stderr));
     }
     Ok(GitOutput { stdout, stderr })
+}
+
+pub async fn run_git_bytes(cwd: &Path, args: &[&str]) -> GitResult<GitBytesOutput> {
+    let output = git_command(cwd)
+        .args(args)
+        .output()
+        .await
+        .map_err(|e| GitError::spawn(format!("spawn git failed: {e}")));
+    bytes_output(output?)
+}
+
+pub async fn run_git_bytes_with_stdin(
+    cwd: &Path,
+    args: &[&str],
+    stdin: &[u8],
+) -> GitResult<GitBytesOutput> {
+    let mut child = git_command(cwd)
+        .args(args)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| GitError::spawn(format!("spawn git failed: {e}")))?;
+    let mut child_stdin = child
+        .stdin
+        .take()
+        .ok_or_else(|| GitError::spawn("git stdin is unavailable"))?;
+    child_stdin
+        .write_all(stdin)
+        .await
+        .map_err(|e| GitError::spawn(format!("write git stdin failed: {e}")))?;
+    drop(child_stdin);
+
+    let output = child
+        .wait_with_output()
+        .await
+        .map_err(|e| GitError::spawn(format!("wait for git failed: {e}")))?;
+    bytes_output(output)
+}
+
+fn bytes_output(output: std::process::Output) -> GitResult<GitBytesOutput> {
+    let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
+    if !output.status.success() {
+        return Err(GitError::from_stderr(
+            output.status.code().unwrap_or(-1),
+            &stderr,
+        ));
+    }
+    Ok(GitBytesOutput {
+        stdout: output.stdout,
+        stderr,
+    })
 }
 
 pub async fn run_git_allow_exit_codes(
@@ -153,5 +213,23 @@ mod tests {
         assert_eq!(code, 1);
         assert!(out.stdout.contains("-one"));
         assert!(out.stdout.contains("+two"));
+    }
+
+    #[tokio::test]
+    async fn run_git_bytes_with_stdin_preserves_hash_object_oid_bytes() {
+        let dir = tempdir().unwrap();
+        run_git(dir.path(), &["init"]).await.unwrap();
+
+        let out = run_git_bytes_with_stdin(
+            dir.path(),
+            &["hash-object", "-w", "--stdin"],
+            b"conflict content\n",
+        )
+        .await
+        .unwrap();
+        let oid = out.stdout.strip_suffix(b"\n").unwrap_or(&out.stdout);
+
+        assert_eq!(oid.len(), 40);
+        assert!(oid.iter().all(u8::is_ascii_hexdigit));
     }
 }

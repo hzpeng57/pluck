@@ -1,7 +1,8 @@
 use crate::error::{GitError, GitResult};
 use crate::git::cmd::{run_git, run_git_allow_exit_codes};
+use crate::git::path::validate_repo_relative;
 use serde::Serialize;
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -73,31 +74,6 @@ pub struct FileDiff {
 }
 
 const MAX_DIFF_BYTES: usize = 1_500_000;
-
-fn validate_repo_relative(path: &str) -> GitResult<()> {
-    let p = Path::new(path);
-    if path.is_empty()
-        || path.contains('\0')
-        || p.is_absolute()
-        || p.components().any(|c| {
-            matches!(
-                c,
-                Component::CurDir
-                    | Component::ParentDir
-                    | Component::Prefix(_)
-                    | Component::RootDir
-            )
-                || matches!(
-                    c,
-                    Component::Normal(name)
-                        if name.to_string_lossy().eq_ignore_ascii_case(".git")
-                )
-        })
-    {
-        return Err(GitError::parse(format!("unsafe repository path: {path}")));
-    }
-    Ok(())
-}
 
 fn repo_path(repo: &Path, path: &str) -> GitResult<PathBuf> {
     validate_repo_relative(path)?;
