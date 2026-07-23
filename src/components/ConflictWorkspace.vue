@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { RefreshCw, Ban, Check, Trash2 } from "lucide-vue-next";
+import { Ban, Check, RefreshCw, Trash2 } from "lucide-vue-next";
 import { useReposStore } from "../stores/repos";
 import { useRepoStateStore } from "../stores/repoState";
 import type { ConflictBlob, ConflictStageChoice, GitOp } from "../types/git";
 import ConflictEditor from "./ConflictEditor.vue";
+import ThreeWayMerge from "./ThreeWayMerge.vue";
 
 const repos = useReposStore();
 const state = useRepoStateStore();
 const sourceTab = ref<"base" | 2 | 3>("base");
 const editorValue = ref("");
+const unresolvedBlockCount = ref(0);
 
 const detail = computed(() => state.selectedConflict);
 const operation = computed(() => state.snapshot?.inProgress ?? null);
@@ -25,6 +27,7 @@ function stageLabels(op: GitOp | null) {
     default: return { 2: "Current branch", 3: "Incoming branch" };
   }
 }
+
 const labels = computed(() => stageLabels(operation.value));
 const operationTitle = computed(() => {
   const op = operation.value;
@@ -40,59 +43,92 @@ const operationTitle = computed(() => {
 function isTextual(blob: ConflictBlob | null | undefined): blob is ConflictBlob & { content: string } {
   return !!blob && !blob.binary && !blob.tooLarge && typeof blob.content === "string";
 }
+
 function blobForTab(tab: "base" | 2 | 3) {
   if (tab === "base") return detail.value?.base ?? null;
   return tab === 2 ? detail.value?.stage2 ?? null : detail.value?.stage3 ?? null;
 }
+
 function blobExplanation(blob: ConflictBlob | null) {
   if (!blob) return "This version is not present for the selected path.";
-  if (blob.binary) return "Binary content cannot be edited in Pluck. Use a complete version or resolve the file outside the app.";
-  if (blob.tooLarge) return "This file is too large for the in-app editor. Use a complete version or resolve it outside the app.";
+  if (blob.binary) return "Binary content cannot be edited in Pluck. Use a complete version or resolve the path as deletion.";
+  if (blob.tooLarge) return "This file is too large for the in-app editor. Use a complete version or resolve the path as deletion.";
   return "No textual content is available for this version.";
 }
+
 const selectedBlob = computed(() => blobForTab(sourceTab.value));
 const initialStage = computed(() => {
   const current = detail.value?.stage2;
-  if (current?.content !== null && current?.content !== undefined) return current;
-  return detail.value?.stage3 ?? null;
+  if (isTextual(current)) return current;
+  const incoming = detail.value?.stage3;
+  return isTextual(incoming) ? incoming : null;
 });
-const canEdit = computed(() => isTextual(initialStage.value));
-const canMarkResolved = computed(() => !!detail.value && canEdit.value && !state.loading);
+const baseAvailableForMerge = computed(() => !detail.value?.base || isTextual(detail.value.base));
+const canThreeWayMerge = computed(() => (
+  !!detail.value
+  && isTextual(detail.value.stage2)
+  && isTextual(detail.value.stage3)
+  && baseAvailableForMerge.value
+));
+const mergeBase = computed(() => isTextual(detail.value?.base) ? detail.value.base.content : "");
+const mergeKey = computed(() => {
+  const selected = detail.value;
+  if (!selected) return "none";
+  return [selected.path, selected.base?.stage.oid, selected.stage2?.stage.oid, selected.stage3?.stage.oid].join(":");
+});
+const canEditFallback = computed(() => !!initialStage.value);
+const canMarkResolved = computed(() => (
+  !!detail.value
+  && !state.loading
+  && (canThreeWayMerge.value ? unresolvedBlockCount.value === 0 : canEditFallback.value)
+));
+const markResolvedTitle = computed(() => {
+  if (canThreeWayMerge.value && unresolvedBlockCount.value > 0) {
+    return `${unresolvedBlockCount.value} conflict ${unresolvedBlockCount.value === 1 ? "block remains" : "blocks remain"}`;
+  }
+  return "Write the Result to the Git index";
+});
 
 watch(detail, next => {
-  const initial = next?.stage2?.content ?? next?.stage3?.content ?? "";
-  editorValue.value = initial;
+  editorValue.value = next?.stage2?.content ?? next?.stage3?.content ?? "";
+  unresolvedBlockCount.value = next && isTextual(next.stage2) && isTextual(next.stage3) ? 1 : 0;
   sourceTab.value = "base";
 }, { immediate: true });
 
 function selectFile(path: string) {
   if (activeRepoId.value) void state.selectConflict(activeRepoId.value, path);
 }
+
 function takeStage(stage: ConflictStageChoice) {
   if (!activeRepoId.value || !detail.value) return;
   void state.takeConflictStage(activeRepoId.value, detail.value.path, stage);
 }
+
 function resolveText() {
   if (!activeRepoId.value || !detail.value || !canMarkResolved.value) return;
   void state.resolveConflictText(activeRepoId.value, detail.value.path, editorValue.value);
 }
+
 function deletePath() {
   if (!activeRepoId.value || !detail.value) return;
   void state.deleteConflictPath(activeRepoId.value, detail.value.path);
 }
+
 function refresh() {
   if (activeRepoId.value) void state.refreshConflictWorkspace(activeRepoId.value);
 }
+
 function abort() {
   if (activeRepoId.value) void state.abortInProgress(activeRepoId.value);
 }
+
 function continueOperation() {
   if (activeRepoId.value && unresolvedCount.value === 0) void state.continueInProgress(activeRepoId.value);
 }
 </script>
 
 <template>
-  <div class="h-full min-h-0 min-w-0 grid" style="grid-template-columns: 300px 6px minmax(620px, 1fr)">
+  <div class="h-full min-h-0 min-w-0 grid" style="grid-template-columns: 260px 6px minmax(620px, 1fr)">
     <aside class="min-h-0 overflow-auto" style="background: var(--panel)">
       <div class="gl-panel-header">
         <span class="font-semibold">Conflicts</span>
@@ -111,7 +147,9 @@ function continueOperation() {
         </button>
       </div>
     </aside>
+
     <div class="gl-splitter flex justify-center"><div class="gl-splitter-line" /></div>
+
     <main class="min-h-0 min-w-0 overflow-hidden flex flex-col" style="background: var(--panel)">
       <template v-if="detail">
         <header class="gl-panel-header shrink-0">
@@ -121,6 +159,7 @@ function continueOperation() {
           </div>
           <span v-if="state.loadingConflictDetail" class="gl-spinner ml-auto" />
         </header>
+
         <section class="shrink-0 px-3 py-2 border-b" style="border-color: var(--border-soft)">
           <div class="gl-mono text-[13px] truncate">{{ detail.path }}</div>
           <div class="flex flex-wrap gap-2 mt-1 text-[11px]" style="color: var(--fg-3)">
@@ -129,36 +168,48 @@ function continueOperation() {
             <span>stage 3: {{ detail.stage3 ? detail.stage3.stage.oid.slice(0, 8) : "missing" }}</span>
           </div>
         </section>
-        <section class="min-h-0 flex-1 overflow-auto p-3 space-y-3">
-          <div>
-            <div class="gl-segmented" role="tablist" aria-label="Conflict sources">
-              <button class="gl-segmented-btn px-2 w-auto" :class="{ 'is-active': sourceTab === 'base' }" @click="sourceTab = 'base'">Common base</button>
-              <button class="gl-segmented-btn px-2 w-auto" :class="{ 'is-active': sourceTab === 2 }" @click="sourceTab = 2">{{ labels[2] }}</button>
-              <button class="gl-segmented-btn px-2 w-auto" :class="{ 'is-active': sourceTab === 3 }" @click="sourceTab = 3">{{ labels[3] }}</button>
-            </div>
-            <div class="gl-conflict-source mt-2">
-              <pre v-if="isTextual(selectedBlob)">{{ selectedBlob.content }}</pre>
-              <div v-else class="gl-conflict-empty">{{ blobExplanation(selectedBlob) }}</div>
-            </div>
+
+        <section v-if="canThreeWayMerge" class="min-h-0 flex-1 overflow-hidden">
+          <ThreeWayMerge :key="mergeKey"
+                         :base="mergeBase"
+                         :current="detail.stage2!.content!"
+                         :incoming="detail.stage3!.content!"
+                         :current-label="labels[2]"
+                         :incoming-label="labels[3]"
+                         @update:result="editorValue = $event"
+                         @update:unresolved="unresolvedBlockCount = $event" />
+        </section>
+
+        <section v-else class="min-h-0 flex-1 overflow-auto p-3 space-y-3">
+          <div class="gl-segmented" role="tablist" aria-label="Conflict sources">
+            <button class="gl-segmented-btn px-2 w-auto" :class="{ 'is-active': sourceTab === 'base' }" @click="sourceTab = 'base'">Common base</button>
+            <button class="gl-segmented-btn px-2 w-auto" :class="{ 'is-active': sourceTab === 2 }" @click="sourceTab = 2">{{ labels[2] }}</button>
+            <button class="gl-segmented-btn px-2 w-auto" :class="{ 'is-active': sourceTab === 3 }" @click="sourceTab = 3">{{ labels[3] }}</button>
           </div>
-          <div class="min-h-0 flex flex-col">
-            <div class="flex items-center gap-2 mb-2">
-              <span class="font-semibold">Resolved result</span>
-              <span v-if="!canEdit" class="text-[12px]" style="color: var(--fg-3)">Editing disabled for binary or large content</span>
-            </div>
+          <div class="gl-conflict-source">
+            <pre v-if="isTextual(selectedBlob)">{{ selectedBlob.content }}</pre>
+            <div v-else class="gl-conflict-empty">{{ blobExplanation(selectedBlob) }}</div>
+          </div>
+          <div v-if="canEditFallback" class="min-h-0 flex flex-col">
+            <div class="font-semibold mb-2">Result</div>
             <div class="gl-conflict-editor-wrap">
-              <ConflictEditor v-model="editorValue" :read-only="!canEdit" />
+              <ConflictEditor v-model="editorValue" />
             </div>
-          </div>
-          <div class="flex flex-wrap gap-2">
-            <button v-if="detail.stage2" class="gl-command-btn" :disabled="state.loading" @click="takeStage(2)">Use {{ labels[2] }}</button>
-            <button v-if="detail.stage3" class="gl-command-btn" :disabled="state.loading" @click="takeStage(3)">Use {{ labels[3] }}</button>
-            <button class="gl-command-btn" :disabled="state.loading" @click="deletePath"><Trash2 :size="14" /> Resolve as deletion</button>
-            <button class="gl-command-btn gl-btn-primary" :disabled="!canMarkResolved" @click="resolveText"><Check :size="14" /> Mark resolved</button>
           </div>
         </section>
+
+        <div class="shrink-0 flex flex-wrap items-center gap-2 px-3 py-2 border-t" style="border-color: var(--border-soft)">
+          <button v-if="detail.stage2" class="gl-command-btn" :disabled="state.loading" @click="takeStage(2)">Use entire {{ labels[2] }}</button>
+          <button v-if="detail.stage3" class="gl-command-btn" :disabled="state.loading" @click="takeStage(3)">Use entire {{ labels[3] }}</button>
+          <button class="gl-command-btn" :disabled="state.loading" @click="deletePath"><Trash2 :size="14" /> Resolve as deletion</button>
+          <button class="gl-command-btn gl-btn-primary ml-auto" :disabled="!canMarkResolved" :title="markResolvedTitle" @click="resolveText">
+            <Check :size="14" /> Mark resolved
+          </button>
+        </div>
       </template>
+
       <div v-else class="gl-conflict-empty flex-1">{{ state.loadingConflictDetail ? "Loading conflict" : "Select a conflict to resolve" }}</div>
+
       <footer class="shrink-0 flex items-center gap-2 px-3 py-2 border-t" style="border-color: var(--border-soft)">
         <button class="gl-command-btn" :disabled="state.loadingConflicts || state.loading" @click="refresh"><RefreshCw :size="14" /> Refresh</button>
         <button class="gl-command-btn" :disabled="state.loading" @click="abort"><Ban :size="14" /> Abort</button>

@@ -518,6 +518,130 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   }
   .gl-conflict-editor { height: 100%; }
   .gl-conflict-editor.is-read-only { opacity: 0.72; }
+  .gl-merge-shell {
+    height: 100%;
+    min-height: 0;
+    min-width: 0;
+    overflow: auto;
+    background: var(--diff-bg);
+  }
+  .gl-merge-grid {
+    display: grid;
+    grid-template-columns: minmax(240px, 1fr) minmax(340px, 1.2fr) minmax(240px, 1fr);
+    width: 100%;
+    min-width: 980px;
+    height: 100%;
+    min-height: 0;
+  }
+  .gl-merge-pane {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    background: var(--diff-bg);
+  }
+  .gl-merge-result {
+    background: var(--bg);
+    border-inline: 1px solid var(--border-soft);
+  }
+  .gl-merge-pane-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 38px;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--border-soft);
+    background: var(--raised);
+    color: var(--fg-2);
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .gl-merge-source {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.55;
+  }
+  .gl-merge-source-row {
+    display: grid;
+    grid-template-columns: 44px minmax(max-content, 1fr) 28px;
+    align-items: stretch;
+    width: max-content;
+    min-width: 100%;
+    min-height: 22px;
+    color: var(--fg-2);
+  }
+  .gl-merge-source-row.is-conflict {
+    background: var(--warning-soft-weak);
+    box-shadow: inset 3px 0 0 var(--warning);
+  }
+  .gl-merge-source-row.is-selected {
+    background: color-mix(in srgb, var(--warning-soft-weak) 72%, var(--active));
+  }
+  .gl-merge-source-row.is-resolved {
+    background: color-mix(in srgb, var(--success-soft) 56%, var(--diff-bg));
+    box-shadow: inset 3px 0 0 var(--success);
+  }
+  .gl-merge-line-no {
+    padding: 2px 8px 2px 4px;
+    background: var(--diff-gutter-bg);
+    color: var(--fg-3);
+    text-align: right;
+    user-select: none;
+  }
+  .gl-merge-code {
+    min-width: 100%;
+    padding: 2px 8px;
+    white-space: pre;
+    user-select: text;
+    -webkit-user-select: text;
+  }
+  .gl-merge-code.is-placeholder::after {
+    content: "deleted";
+    color: var(--fg-3);
+    font-style: italic;
+  }
+  .gl-merge-accept {
+    align-self: center;
+    width: 24px;
+    height: 20px;
+    margin: 1px 2px;
+    color: var(--accent-2);
+    background: var(--accent-soft);
+  }
+  .gl-merge-editor-wrap {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .gl-merge-editor { height: 100%; }
+  .gl-merge-editor.is-read-only { opacity: 0.72; }
+  .gl-merge-base {
+    max-height: 150px;
+    overflow: auto;
+    border-bottom: 1px solid var(--border-soft);
+    background: var(--diff-gutter-bg);
+    color: var(--fg-3);
+  }
+  .gl-merge-base-label {
+    padding: 5px 10px 0;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .gl-merge-base pre {
+    margin: 0;
+    padding: 6px 10px 9px;
+    min-width: max-content;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.5;
+    white-space: pre;
+    user-select: text;
+    -webkit-user-select: text;
+  }
   .gl-conflict-empty {
     display: flex;
     align-items: center;
