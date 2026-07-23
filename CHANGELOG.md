@@ -2,6 +2,19 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 规范，版本号采用 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [0.1.15] - 2026-07-23
+
+### Added
+- 新增应用内冲突解决工作区，可集中处理 merge、rebase、cherry-pick 和 revert 冲突，并在解决后继续或中止当前 Git 操作。
+- 文本冲突新增 Current / Result / Incoming 三栏合并视图，支持查看 Common base、按冲突块接收或忽略任一侧内容，以及直接编辑最终结果。
+- 冲突结果编辑器支持 `Command+Z` 撤销和 `Command+Shift+Z` 重做，文本内容、冲突高亮与两侧处理状态同步回滚。
+- 支持二进制、大文件、删除和 gitlink 冲突，通过选择完整版本或删除路径完成解决。
+
+### Fixed
+- 加固冲突工作区刷新、关闭和异步选择流程，避免旧请求回填、debounce 缓存及中止操作导致界面状态滞后。
+- 加固冲突路径、stage 内容和继续操作校验，避免未解决冲突或不安全路径进入 Git mutation。
+- 修复 rebase 冲突产生 `MERGE_MSG` 时被误判为 merge，导致 Continue / Abort 调用错误命令的问题。
+
 ## [0.1.14] - 2026-07-14
 
 ### Added
@@ -165,6 +178,7 @@
 - 快捷键：⌘K commit / ⌘⇧K push / ⌘T fetch / ⌘R refresh。
 - Toast tray 替代内联 lastError。
 
+[0.1.15]: https://github.com/hzpeng57/pluck/compare/v0.1.14...v0.1.15
 [0.1.14]: https://github.com/hzpeng57/pluck/compare/v0.1.13...v0.1.14
 [0.1.13]: https://github.com/hzpeng57/pluck/compare/v0.1.12...v0.1.13
 [0.1.12]: https://github.com/hzpeng57/pluck/compare/v0.1.11...v0.1.12
